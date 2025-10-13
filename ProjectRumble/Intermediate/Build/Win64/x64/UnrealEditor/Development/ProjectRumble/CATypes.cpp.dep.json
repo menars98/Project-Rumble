@@ -1,0 +1,15 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\source\\projectrumble\\private\\catypes.cpp",
+        "ProvidedModule": "",
+        "PCH": "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\intermediate\\build\\win64\\x64\\projectrumbleeditor\\development\\unrealed\\sharedpch.unrealed.project.valapi.valexpapi.cpp20.h.pch",
+        "Includes": [
+            "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\projectrumble\\definitions.projectrumble.h",
+            "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\source\\projectrumble\\public\\catypes.h",
+            "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\intermediate\\build\\win64\\unrealeditor\\inc\\projectrumble\\uht\\catypes.generated.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

@@ -1,0 +1,81 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "PREntityBase.h" 
+#include "CoreMinimal.h"
+#include "GameFramework/Character.h"
+#include "InputActionValue.h"
+#include "PRCharacterBase.generated.h"
+
+class USpringArmComponent;
+class UCameraComponent;
+class UInputAction; 
+class UInputMappingContext; 
+
+UCLASS()
+class PROJECTRUMBLE_API APRCharacterBase : public APREntityBase
+{
+	GENERATED_BODY()
+
+public:
+	// Sets default values for this character's properties
+	APRCharacterBase();
+
+protected:
+	// -- INPUT --
+	// This is the main Input Mapping Context that will be loaded for gameplay.
+	// It's assigned in the Blueprint derived from this class.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> DefaultMappingContext;
+
+	// Input Action for Movement (WASD). This is an asset reference.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> MoveAction;
+
+	// Input Action for Looking around (Mouse). This is an asset reference.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> LookAction;
+
+	// Input Action for Jumping.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> JumpAction;
+
+	// -- CORE FUNCTIONS --
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+	// Called to bind functionality to input
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	// -- INPUT HANDLING FUNCTIONS --
+	/** Called for movement input */
+	void Move(const FInputActionValue& Value);
+
+	/** Called for looking input */
+	void Look(const FInputActionValue& Value);
+
+	// -- COMPONENTS --
+	// The Spring Arm (or camera boom) positions the camera behind the character.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<USpringArmComponent> SpringArmComp;
+
+	// The camera that follows the character.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UCameraComponent> CameraComp;
+
+	// --- CAMERA SETTINGS ---
+	// These values will be exposed to our Blueprint class, so we can tweak them without recompiling.
+
+	/** The lowest angle the camera can look down to, in degrees. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+	float CameraPitchMin = -70.0f;
+
+	/** The highest angle the camera can look up to, in degrees. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+	float CameraPitchMax = 45.0f;
+
+};
+
+
+

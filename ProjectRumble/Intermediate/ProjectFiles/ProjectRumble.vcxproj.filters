@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="..\..\ProjectRumble.uproject" />
+    <Filter Include="Source">
+      <UniqueIdentifier>{F31BBDD1-B3E8-3BCC-9652-680E16935819}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\ProjectRumble.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="..\..\Source\ProjectRumbleEditor.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="..\..\.vsconfig" />
+    <Filter Include="Config">
+      <UniqueIdentifier>{FA535FFB-25E1-3D20-B416-52F9BE21E06E}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Config\DefaultEditor.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultEngine.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultGame.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultInput.ini">
+      <Filter>Config</Filter>
+    </None>
+    <Filter Include="Source\ProjectRumble">
+      <UniqueIdentifier>{2A7F5A38-B0CF-36B0-BC62-2B27B1072B8D}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\ProjectRumble\ProjectRumble.Build.cs">
+      <Filter>Source\ProjectRumble</Filter>
+    </None>
+    <ClCompile Include="..\..\Source\ProjectRumble\ProjectRumble.cpp">
+      <Filter>Source\ProjectRumble</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\ProjectRumble\ProjectRumble.h">
+      <Filter>Source\ProjectRumble</Filter>
+    </ClInclude>
+    <Filter Include="Source\ProjectRumble\Private">
+      <UniqueIdentifier>{8BEB6606-2C09-316B-862C-5AA10731E925}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\PRTypes.cpp">
+      <Filter>Source\ProjectRumble\Private</Filter>
+    </ClCompile>
+    <Filter Include="Source\ProjectRumble\Private\Characters">
+      <UniqueIdentifier>{A7B0BE68-A18E-3037-B4E1-0CDE373392F5}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\Characters\PRCharacterBase.cpp">
+      <Filter>Source\ProjectRumble\Private\Characters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\Characters\PREntityBase.cpp">
+      <Filter>Source\ProjectRumble\Private\Characters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\Characters\PRMainCharacter.cpp">
+      <Filter>Source\ProjectRumble\Private\Characters</Filter>
+    </ClCompile>
+    <Filter Include="Source\ProjectRumble\Private\Components">
+      <UniqueIdentifier>{753CB240-E0B6-3997-8065-C0AE535DC502}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\Components\PRStatsComponent.cpp">
+      <Filter>Source\ProjectRumble\Private\Components</Filter>
+    </ClCompile>
+    <Filter Include="Source\ProjectRumble\Private\GameModes">
+      <UniqueIdentifier>{FD6DBF03-87FD-38DB-98F3-2A0C1153EFCC}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\GameModes\PRGameMode.cpp">
+      <Filter>Source\ProjectRumble\Private\GameModes</Filter>
+    </ClCompile>
+    <Filter Include="Source\ProjectRumble\Public">
+      <UniqueIdentifier>{BF1F5E52-5B5B-3336-B2C3-DF04A3E94B43}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\PRTypes.h">
+      <Filter>Source\ProjectRumble\Public</Filter>
+    </ClInclude>
+    <Filter Include="Source\ProjectRumble\Public\Characters">
+      <UniqueIdentifier>{5E2882A8-587B-3A69-AF8C-5A22A36987B4}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\Characters\PRCharacterBase.h">
+      <Filter>Source\ProjectRumble\Public\Characters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\Characters\PREntityBase.h">
+      <Filter>Source\ProjectRumble\Public\Characters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\Characters\PRMainCharacter.h">
+      <Filter>Source\ProjectRumble\Public\Characters</Filter>
+    </ClInclude>
+    <Filter Include="Source\ProjectRumble\Public\Components">
+      <UniqueIdentifier>{E3FDA609-A42B-3FBA-8DCF-7D2C5504E542}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\Components\PRStatsComponent.h">
+      <Filter>Source\ProjectRumble\Public\Components</Filter>
+    </ClInclude>
+    <Filter Include="Source\ProjectRumble\Public\GameModes">
+      <UniqueIdentifier>{27FA393D-34A2-3E6B-AAA6-A78005F38C14}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\GameModes\PRGameMode.h">
+      <Filter>Source\ProjectRumble\Public\GameModes</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

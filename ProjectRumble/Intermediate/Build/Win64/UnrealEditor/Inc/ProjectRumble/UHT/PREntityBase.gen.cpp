@@ -102,7 +102,7 @@ const UECodeGen_Private::FPropertyParamsBase* const Z_Construct_UFunction_APREnt
 	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::NewProp_ReturnValue,
 };
 static_assert(UE_ARRAY_COUNT(Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::PropPointers) < 2048);
-const UECodeGen_Private::FFunctionParams Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::FuncParams = { { (UObject*(*)())Z_Construct_UClass_APREntityBase, nullptr, "GetStatsComponent", Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::PropPointers, UE_ARRAY_COUNT(Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::PropPointers), sizeof(Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::PREntityBase_eventGetStatsComponent_Parms), RF_Public|RF_Transient|RF_MarkAsNative, (EFunctionFlags)0x54020401, 0, 0, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::Function_MetaDataParams), Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::Function_MetaDataParams)},  };
+const UECodeGen_Private::FFunctionParams Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::FuncParams = { { (UObject*(*)())Z_Construct_UClass_APREntityBase, nullptr, "GetStatsComponent", Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::PropPointers, UE_ARRAY_COUNT(Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::PropPointers), sizeof(Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::PREntityBase_eventGetStatsComponent_Parms), RF_Public|RF_Transient|RF_MarkAsNative, (EFunctionFlags)0x54020400, 0, 0, METADATA_PARAMS(UE_ARRAY_COUNT(Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::Function_MetaDataParams), Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::Function_MetaDataParams)},  };
 static_assert(sizeof(Z_Construct_UFunction_APREntityBase_GetStatsComponent_Statics::PREntityBase_eventGetStatsComponent_Parms) < MAX_uint16);
 UFunction* Z_Construct_UFunction_APREntityBase_GetStatsComponent()
 {
@@ -259,17 +259,6 @@ struct Z_Construct_UClass_APREntityBase_Statics
 		{ "IncludePath", "Characters/PREntityBase.h" },
 		{ "ModuleRelativePath", "Public/Characters/PREntityBase.h" },
 	};
-	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_StatsComponent_MetaData[] = {
-		{ "Category", "Components" },
-#if !UE_BUILD_SHIPPING
-		{ "Comment", "// -- COMPONENTS --\n" },
-#endif
-		{ "EditInline", "true" },
-		{ "ModuleRelativePath", "Public/Characters/PREntityBase.h" },
-#if !UE_BUILD_SHIPPING
-		{ "ToolTip", "-- COMPONENTS --" },
-#endif
-	};
 	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_Faction_MetaData[] = {
 		{ "Category", "Combat" },
 #if !UE_BUILD_SHIPPING
@@ -281,14 +270,13 @@ struct Z_Construct_UClass_APREntityBase_Statics
 #endif
 	};
 #endif // WITH_METADATA
-	static const UECodeGen_Private::FObjectPropertyParams NewProp_StatsComponent;
 	static const UECodeGen_Private::FBytePropertyParams NewProp_Faction_Underlying;
 	static const UECodeGen_Private::FEnumPropertyParams NewProp_Faction;
 	static const UECodeGen_Private::FPropertyParamsBase* const PropPointers[];
 	static UObject* (*const DependentSingletons[])();
 	static constexpr FClassFunctionLinkInfo FuncInfo[] = {
 		{ &Z_Construct_UFunction_APREntityBase_GetFaction, "GetFaction" }, // 3914408080
-		{ &Z_Construct_UFunction_APREntityBase_GetStatsComponent, "GetStatsComponent" }, // 2501754286
+		{ &Z_Construct_UFunction_APREntityBase_GetStatsComponent, "GetStatsComponent" }, // 2943575766
 		{ &Z_Construct_UFunction_APREntityBase_OnDeath, "OnDeath" }, // 3245300973
 		{ &Z_Construct_UFunction_APREntityBase_OnHealthChanged, "OnHealthChanged" }, // 3700949402
 	};
@@ -298,11 +286,9 @@ struct Z_Construct_UClass_APREntityBase_Statics
 	};
 	static const UECodeGen_Private::FClassParams ClassParams;
 };
-const UECodeGen_Private::FObjectPropertyParams Z_Construct_UClass_APREntityBase_Statics::NewProp_StatsComponent = { "StatsComponent", nullptr, (EPropertyFlags)0x01240800000a001d, UECodeGen_Private::EPropertyGenFlags::Object | UECodeGen_Private::EPropertyGenFlags::ObjectPtr, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(APREntityBase, StatsComponent), Z_Construct_UClass_UPRStatsComponent_NoRegister, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_StatsComponent_MetaData), NewProp_StatsComponent_MetaData) };
 const UECodeGen_Private::FBytePropertyParams Z_Construct_UClass_APREntityBase_Statics::NewProp_Faction_Underlying = { "UnderlyingType", nullptr, (EPropertyFlags)0x0000000000000000, UECodeGen_Private::EPropertyGenFlags::Byte, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, 0, nullptr, METADATA_PARAMS(0, nullptr) };
 const UECodeGen_Private::FEnumPropertyParams Z_Construct_UClass_APREntityBase_Statics::NewProp_Faction = { "Faction", nullptr, (EPropertyFlags)0x0020080000010015, UECodeGen_Private::EPropertyGenFlags::Enum, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(APREntityBase, Faction), Z_Construct_UEnum_ProjectRumble_EFaction, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_Faction_MetaData), NewProp_Faction_MetaData) }; // 3868884884
 const UECodeGen_Private::FPropertyParamsBase* const Z_Construct_UClass_APREntityBase_Statics::PropPointers[] = {
-	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_APREntityBase_Statics::NewProp_StatsComponent,
 	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_APREntityBase_Statics::NewProp_Faction_Underlying,
 	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_APREntityBase_Statics::NewProp_Faction,
 };
@@ -343,10 +329,10 @@ APREntityBase::~APREntityBase() {}
 struct Z_CompiledInDeferFile_FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PREntityBase_h__Script_ProjectRumble_Statics
 {
 	static constexpr FClassRegisterCompiledInInfo ClassInfo[] = {
-		{ Z_Construct_UClass_APREntityBase, APREntityBase::StaticClass, TEXT("APREntityBase"), &Z_Registration_Info_UClass_APREntityBase, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(APREntityBase), 1276450618U) },
+		{ Z_Construct_UClass_APREntityBase, APREntityBase::StaticClass, TEXT("APREntityBase"), &Z_Registration_Info_UClass_APREntityBase, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(APREntityBase), 4271531848U) },
 	};
 };
-static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PREntityBase_h__Script_ProjectRumble_4277923360(TEXT("/Script/ProjectRumble"),
+static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PREntityBase_h__Script_ProjectRumble_1017551055(TEXT("/Script/ProjectRumble"),
 	Z_CompiledInDeferFile_FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PREntityBase_h__Script_ProjectRumble_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PREntityBase_h__Script_ProjectRumble_Statics::ClassInfo),
 	nullptr, 0,
 	nullptr, 0);

@@ -19,7 +19,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 // ********** Begin Class APRCharacterBase *********************************************************
 PROJECTRUMBLE_API UClass* Z_Construct_UClass_APRCharacterBase_NoRegister();
 
-#define FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_19_INCLASS_NO_PURE_DECLS \
+#define FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_22_INCLASS_NO_PURE_DECLS \
 private: \
 	static void StaticRegisterNativesAPRCharacterBase(); \
 	friend struct Z_Construct_UClass_APRCharacterBase_Statics; \
@@ -30,7 +30,7 @@ public: \
 	DECLARE_SERIALIZER(APRCharacterBase)
 
 
-#define FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_19_ENHANCED_CONSTRUCTORS \
+#define FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_22_ENHANCED_CONSTRUCTORS \
 	/** Deleted move- and copy-constructors, should never be used */ \
 	APRCharacterBase(APRCharacterBase&&) = delete; \
 	APRCharacterBase(const APRCharacterBase&) = delete; \
@@ -40,12 +40,12 @@ public: \
 	NO_API virtual ~APRCharacterBase();
 
 
-#define FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_16_PROLOG
-#define FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_19_GENERATED_BODY \
+#define FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_19_PROLOG
+#define FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_22_GENERATED_BODY \
 PRAGMA_DISABLE_DEPRECATION_WARNINGS \
 public: \
-	FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_19_INCLASS_NO_PURE_DECLS \
-	FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_19_ENHANCED_CONSTRUCTORS \
+	FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_22_INCLASS_NO_PURE_DECLS \
+	FID_Users_muham_Documents_GitHub_Project_Rumble_ProjectRumble_Source_ProjectRumble_Public_Characters_PRCharacterBase_h_22_ENHANCED_CONSTRUCTORS \
 private: \
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 

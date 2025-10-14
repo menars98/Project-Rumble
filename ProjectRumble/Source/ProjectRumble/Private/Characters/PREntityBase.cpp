@@ -4,7 +4,9 @@
 #include "Characters/PREntityBase.h"
 #include "Components/PRStatsComponent.h"
 #include "Components/CapsuleComponent.h"
+#include <Player/PRPlayerState.h>
 #include "GameFramework/CharacterMovementComponent.h"
+
 
 // Sets default values
 APREntityBase::APREntityBase()
@@ -12,23 +14,21 @@ APREntityBase::APREntityBase()
 	// Set this character to call Tick() every frame. You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Create the Stats Component. This will exist on both Player and AI.
-	StatsComponent = CreateDefaultSubobject<UPRStatsComponent>(TEXT("StatsComponent"));
+}
 
+UPRStatsComponent* APREntityBase::GetStatsComponent() const
+{
+	// If this entity is NOT a player-controlled character (e.g., an AI),
+	// it won't have a PlayerState. In that case, it should have its own StatsComponent.
+	// We will handle this in the APR_AIBase class.
+	// For now, we return a component attached to this actor as a fallback.
+	return FindComponentByClass<UPRStatsComponent>();
 }
 
 // Called when the game starts or when spawned
 void APREntityBase::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// It's crucial to bind our functions to the delegates from the StatsComponent.
-	// This is how this class "listens" to events happening inside its component.
-	if (StatsComponent)
-	{
-		StatsComponent->OnHealthChangedDelegate.AddDynamic(this, &APREntityBase::OnHealthChanged);
-		StatsComponent->OnDeathDelegate.AddDynamic(this, &APREntityBase::OnDeath);
-	}
 	
 }
 
@@ -38,9 +38,14 @@ float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	// If damage was actually applied, pass it to our stats component to handle health reduction.
-	if (ActualDamage > 0.f && StatsComponent)
+	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
 	{
-		StatsComponent->ApplyDamage(ActualDamage);
+		if (ActualDamage > 0.f)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("--- EntityBase::TakeDamage() --- Applying %.2f damage to StatsComponent."), ActualDamage);
+			// Tell the component to handle the logic.
+			MyStatsComponent->ApplyDamage(ActualDamage);
+		}
 	}
 
 	return ActualDamage;
@@ -56,12 +61,8 @@ void APREntityBase::OnHealthChanged(float CurrentHealth, float MaxHealth)
 
 void APREntityBase::OnDeath()
 {
-	// Base implementation for death.
-	// We can add logic here like detaching the controller and enabling ragdoll.
-	// Child classes can override this to add player-specific (e.g., show game over screen) or AI-specific logic.
-	UE_LOG(LogTemp, Warning, TEXT("%s has died!"), *GetName());
-
-	// Example: Disable collision and stop movement.
+	// Base implementation can handle universal death logic.
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetCharacterMovement()->DisableMovement();
+	
 }

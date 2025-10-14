@@ -1,0 +1,17 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\source\\projectrumble\\private\\player\\prplayerstate.cpp",
+        "ProvidedModule": "",
+        "PCH": "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\intermediate\\build\\win64\\x64\\projectrumbleeditor\\development\\unrealed\\sharedpch.unrealed.project.valapi.valexpapi.cpp20.h.pch",
+        "Includes": [
+            "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\projectrumble\\definitions.projectrumble.h",
+            "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\source\\projectrumble\\public\\player\\prplayerstate.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\source\\runtime\\engine\\classes\\gameframework\\playerstate.h",
+            "c:\\program files\\epic games\\ue_5.6\\engine\\intermediate\\build\\win64\\unrealeditor\\inc\\engine\\uht\\playerstate.generated.h",
+            "c:\\users\\muham\\documents\\github\\project-rumble\\projectrumble\\intermediate\\build\\win64\\unrealeditor\\inc\\projectrumble\\uht\\prplayerstate.generated.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

@@ -50,6 +50,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
 	void ApplyDamage(float DamageAmount);
 
+	void InitializeWithDataTable(UDataTable* DataTableToUse);
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

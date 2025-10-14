@@ -21,7 +21,7 @@ public:
 
 	// A public getter to allow other classes to easily access the Stats Component.
 	UFUNCTION(BlueprintPure, Category = "PR | Components")
-	UPRStatsComponent* GetStatsComponent() const { return StatsComponent; }
+	virtual UPRStatsComponent* GetStatsComponent() const;
 
 	// A public getter for the entity's faction.
 	UFUNCTION(BlueprintPure, Category = "PR | Combat")
@@ -44,10 +44,6 @@ protected:
 	// It's virtual so that child classes (like Player and AI) can have different death behaviors.
 	UFUNCTION()
 	virtual void OnDeath();
-
-	// -- COMPONENTS --
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	TObjectPtr<UPRStatsComponent> StatsComponent;
 
 	// -- COMBAT --
 	// This entity's faction. Should be set in the derived Blueprint classes.

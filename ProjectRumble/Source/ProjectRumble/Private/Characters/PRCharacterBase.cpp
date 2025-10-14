@@ -9,6 +9,8 @@
 #include "GameFramework/PlayerController.h"
 #include "PRTypes.h"
 #include "Components/PRStatsComponent.h"
+#include <Player/PRPlayerState.h>
+#include "Engine/DamageEvents.h" 
 
 APRCharacterBase::APRCharacterBase()
 {
@@ -38,24 +40,93 @@ APRCharacterBase::APRCharacterBase()
 	}
 }
 
+UPRStatsComponent* APRCharacterBase::GetStatsComponent() const
+{
+	// First, check if we've already found and cached it.
+	if (CachedStatsComponent)
+	{
+		return CachedStatsComponent;
+	}
+
+	// If not, get it from the PlayerState. This is player-specific logic.
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		// Cache the result so we don't have to do this lookup again.
+		CachedStatsComponent = PS->StatsComponent;
+		return CachedStatsComponent;
+	}
+
+	// As a last resort, call the base class's implementation (which looks on the actor itself).
+	// This is good practice for safety, but for a player, it should always be on the PlayerState.
+	return Super::GetStatsComponent();
+}
+
 void APRCharacterBase::BeginPlay()
 {
 	Super::BeginPlay(); 
 
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	InitializeFromDataAsset();
+	InitializeInput();
+
+	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		// Bind to the virtual functions inherited from EntityBase.
+		MyStatsComponent->OnHealthChangedDelegate.AddDynamic(this, &APRCharacterBase::OnHealthChanged);
+		MyStatsComponent->OnDeathDelegate.AddDynamic(this, &APRCharacterBase::OnDeath);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("CharacterBase %s could not find its StatsComponent!"), *GetName());
+	}
+}
+
+void APRCharacterBase::InitializeFromDataAsset()
+{
+	UPRStatsComponent* MyStatsComponent = GetStatsComponent();
+
+	if (!MyStatsComponent)
+	{
+		return;
+	}
+
+	// Check if the CharacterDefinition is valid
+	if (CharacterDefinition)
+	{
+		// 1. Set the Skeletal Mesh
+		if (GetMesh() && CharacterDefinition->CharacterMesh)
 		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+			GetMesh()->SetSkeletalMesh(CharacterDefinition->CharacterMesh);
 		}
 
-		// --- SET CAMERA LIMITS FROM OUR EXPOSED VARIABLES ---
-		if (PlayerController->PlayerCameraManager)
+		// 2. Initialize Stats Component with the correct Data Table
+		if (MyStatsComponent && CharacterDefinition->StartingStatsTable)
 		{
-			// Instead of hard-coded numbers, we now use the variables from our header file.
-			// These can be changed in the BP_CharacterBase Blueprint.
-			PlayerController->PlayerCameraManager->ViewPitchMin = CameraPitchMin;
-			PlayerController->PlayerCameraManager->ViewPitchMax = CameraPitchMax;
+			MyStatsComponent->InitializeWithDataTable(CharacterDefinition->StartingStatsTable);
+		}
+
+		// 3. (Future) Set Animation Blueprint
+		// if (GetMesh() && CharacterDefinition->AnimationBlueprintClass)
+		// {
+		// 	GetMesh()->SetAnimInstanceClass(CharacterDefinition->AnimationBlueprintClass);
+		// }
+	}
+	else
+	{
+		// Log an error if no Data Asset is assigned. This helps debugging.
+		UE_LOG(LogTemp, Error, TEXT("Character %s has NO CharacterDefinition assigned!"), *GetName());
+	}
+}
+
+void APRCharacterBase::InitializeInput()
+{
+	// Make sure we are dealing with a player controller
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	{
+		// Get the Enhanced Input Local Player Subsystem from the Local Player
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			// Add the mapping context. The 0 is the priority.
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
 }
@@ -74,6 +145,8 @@ void APRCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APRCharacterBase::Look);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(DebugDamageAction, ETriggerEvent::Started, this, &APRCharacterBase::TakeDebugDamage);
+
 	}
 
 	// We will add Action bindings for Jump, Dash, Ability etc. here later.
@@ -107,4 +180,34 @@ void APRCharacterBase::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void APRCharacterBase::TakeDebugDamage()
+{
+	// Apply 10 damage to ourselves
+	TakeDamage(10.f, FDamageEvent(), GetController(), this);
+	UE_LOG(LogTemp, Warning, TEXT("Applied 10 debug damage."));
+}
+
+
+void APRCharacterBase::OnHealthChanged(float CurrentHealth, float MaxHealth)
+{
+	Super::OnHealthChanged(CurrentHealth, MaxHealth); // Call parent implementation if it has any logic.
+
+	// Player-specific logic here:
+	// For example, update the Health Bar UI.
+	UE_LOG(LogTemp, Log, TEXT("Player Health Changed: %.1f / %.1f"), CurrentHealth, MaxHealth);
+}
+
+void APRCharacterBase::OnDeath()
+{
+	Super::OnDeath(); // Call parent implementation to disable collision/movement.
+
+	// Player-specific logic here:
+	// For example, disable input and show a "Game Over" screen.
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		DisableInput(PC);
+	}
+	UE_LOG(LogTemp, Warning, TEXT("PLAYER HAS DIED. GAME OVER."));
 }

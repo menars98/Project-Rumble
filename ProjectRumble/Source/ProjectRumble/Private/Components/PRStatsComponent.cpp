@@ -103,6 +103,29 @@ void UPRStatsComponent::ApplyDamage(float DamageAmount)
 	}
 }
 
+void UPRStatsComponent::InitializeWithDataTable(UDataTable* DataTableToUse)
+{
+	// Check if a valid data table was provided
+	if (!DataTableToUse)
+	{
+		UE_LOG(LogTemp, Error, TEXT("StatsComponent on %s was told to initialize with a NULL DataTable!"), *GetOwner()->GetName());
+		return;
+	}
+
+	// This is the same logic as BeginPlay, but now it can be called from outside with a specific table.
+	const TArray<FName> RowNames = DataTableToUse->GetRowNames();
+	for (const FName& RowName : RowNames)
+	{
+		FStatDefinition* StatRow = DataTableToUse->FindRow<FStatDefinition>(RowName, TEXT("StatsComponent InitializeWithDataTable"));
+		if (StatRow)
+		{
+			CurrentStats.Add(RowName, StatRow->DefaultValue);
+		}
+	}
+
+	BroadcastHealth(); // Broadcast initial health after setup
+}
+
 void UPRStatsComponent::Die()
 {
 	// Broadcast the death event.

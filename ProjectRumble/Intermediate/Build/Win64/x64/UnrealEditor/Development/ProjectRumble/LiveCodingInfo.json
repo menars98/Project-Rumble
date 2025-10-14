@@ -1,5 +1,15 @@
 {
 	"RemapUnityFiles": 
 	{
+		"Module.ProjectRumble.gen.cpp.obj": [
+			"PRGameMode.gen.cpp.obj",
+			"PRStatsComponent.gen.cpp.obj",
+			"PRTypes.gen.cpp.obj",
+			"PRCharacterBase.gen.cpp.obj",
+			"PRCharacterDefinition.gen.cpp.obj",
+			"PREntityBase.gen.cpp.obj",
+			"ProjectRumble.init.gen.cpp.obj",
+			"PRPlayerState.gen.cpp.obj"
+		]
 	}
 }

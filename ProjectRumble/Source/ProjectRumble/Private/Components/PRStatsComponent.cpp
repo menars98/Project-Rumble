@@ -1,7 +1,8 @@
 
 
 #include "Components/PRStatsComponent.h"
-#include <PRTypes.h>
+#include "PRTypes.h"
+#include "PRGameplayTags.h"
 
 UPRStatsComponent::UPRStatsComponent()
 {
@@ -34,26 +35,24 @@ void UPRStatsComponent::InitializeStats()
 	// Loop through each row name and find its data
 	for (const FName& RowName : RowNames)
 	{
-		// FindRow is a function that looks up a row by its name.
-		// The second parameter is a "context string" for error messages.
-		FStatDefinition* StatRow = StatsDataTable->FindRow<FStatDefinition>(RowName, TEXT("StatsComponent InitializeStats"));
+		FStatDefinition* StatRow = StatsDataTable->FindRow<FStatDefinition>(RowName, TEXT("..."));
 
 		if (StatRow)
 		{
-			// Add the stat and its default value to our runtime map.
-			CurrentStats.Add(RowName, StatRow->DefaultValue);
-			UE_LOG(LogTemp, Log, TEXT("Initialized Stat: %s with value: %f"), *RowName.ToString(), StatRow->DefaultValue);
+			// Use the GameplayTag from the data row as the key for our map.
+			CurrentStats.Add(StatRow->StatID, StatRow->DefaultValue);
+
+			UE_LOG(LogTemp, Log, TEXT("Initialized Stat: %s with value: %f"), *StatRow->StatID.ToString(), StatRow->DefaultValue);
 		}
 	}
-
-	// After initializing all stats, broadcast the initial health so the UI can be updated.
+	
 	BroadcastHealth();
 }
 
-float UPRStatsComponent::GetStatValue(FName StatID) const
+float UPRStatsComponent::GetStatValue(FGameplayTag StatTag) const
 {
 	// Find() returns a pointer to the value if the key exists in the map.
-	const float* FoundValue = CurrentStats.Find(StatID);
+	const float* FoundValue = CurrentStats.Find(StatTag);
 
 	if (FoundValue)
 	{
@@ -61,22 +60,25 @@ float UPRStatsComponent::GetStatValue(FName StatID) const
 	}
 
 	// If the stat was not found, log a warning and return 0 as a safe default.
-	UE_LOG(LogTemp, Warning, TEXT("GetStatValue: Stat '%s' not found in StatsComponent on %s."), *StatID.ToString(), *GetOwner()->GetName());
+	UE_LOG(LogTemp, Warning, TEXT("GetStatValue: Stat '%s' not found in StatsComponent on %s."), *StatTag.ToString(), *GetOwner()->GetName());
 	return 0.f;
 }
 
-void UPRStatsComponent::SetStatValue(FName StatID, float NewValue)
+void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 {
 	// Find() here returns a pointer that we can change.
-	float* FoundValue = CurrentStats.Find(StatID);
+	float* FoundValue = CurrentStats.Find(StatTag);
 
 	if (FoundValue)
 	{
 		*FoundValue = NewValue;
+
+		// Broadcast that a generic stat has changed
+		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SetStatValue: Stat '%s' not found in StatsComponent on %s."), *StatID.ToString(), *GetOwner()->GetName());
+		UE_LOG(LogTemp, Warning, TEXT("SetStatValue: Stat '%s' not found in StatsComponent on %s."), *StatTag.ToString(), *GetOwner()->GetName());
 	}
 }
 
@@ -88,10 +90,13 @@ void UPRStatsComponent::ApplyDamage(float DamageAmount)
 		return;
 	}
 
-	const float CurrentHealth = GetStatValue(FName("Health"));
-	const float NewHealth = FMath::Clamp(CurrentHealth - DamageAmount, 0.f, GetStatValue(FName("MaxHealth")));
+	const FGameplayTag HealthTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health.GetTag();
+	const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxHP.GetTag();
 
-	SetStatValue(FName("Health"), NewHealth);
+	const float CurrentHealth = GetStatValue(HealthTag);
+	const float NewHealth = FMath::Clamp(CurrentHealth - DamageAmount, 0.f, GetStatValue(MaxHPTag));
+
+	SetStatValue(HealthTag, NewHealth);
 
 	// Broadcast the change to any listeners (like the Character or UI).
 	BroadcastHealth();
@@ -116,14 +121,16 @@ void UPRStatsComponent::InitializeWithDataTable(UDataTable* DataTableToUse)
 	const TArray<FName> RowNames = DataTableToUse->GetRowNames();
 	for (const FName& RowName : RowNames)
 	{
-		FStatDefinition* StatRow = DataTableToUse->FindRow<FStatDefinition>(RowName, TEXT("StatsComponent InitializeWithDataTable"));
+		FStatDefinition* StatRow = DataTableToUse->FindRow<FStatDefinition>(RowName, TEXT("..."));
 		if (StatRow)
 		{
-			CurrentStats.Add(RowName, StatRow->DefaultValue);
+			// The key is now StatRow->StatID, which is an FGameplayTag.
+			// The old version used RowName as the key.
+			CurrentStats.Add(StatRow->StatID, StatRow->DefaultValue);
 		}
 	}
 
-	BroadcastHealth(); // Broadcast initial health after setup
+	BroadcastHealth();
 }
 
 void UPRStatsComponent::Die()
@@ -138,11 +145,57 @@ void UPRStatsComponent::Die()
 
 void UPRStatsComponent::BroadcastHealth()
 {
-	// Ensure the delegate is bound by at least one object before broadcasting to avoid issues.
+	// Ensure the delegate is bound before broadcasting.
 	if (OnHealthChangedDelegate.IsBound())
 	{
-		const float CurrentHealth = GetStatValue(FName("Health"));
-		const float MaxHealth = GetStatValue(FName("MaxHealth"));
+		// Request the tags once for clarity. In a real project, you might store these in a central header.
+		const FGameplayTag HealthTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health.GetTag();
+		const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxHP.GetTag();
+
+		const float CurrentHealth = GetStatValue(HealthTag);
+		const float MaxHealth = GetStatValue(MaxHPTag);
 		OnHealthChangedDelegate.Broadcast(CurrentHealth, MaxHealth);
 	}
+}
+
+void UPRStatsComponent::AddXP(float XPAmount)
+{
+	if (XPAmount <= 0.f)
+	{
+		return;
+	}
+	
+	// Define all the tags we'll need for this function.
+	const FGameplayTag XPTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_XP.GetTag();
+	const FGameplayTag MaxXPTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxXP.GetTag();
+	const FGameplayTag LevelTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Level.GetTag();
+
+	float CurrentXP = GetStatValue(XPTag);
+	float MaxXP = GetStatValue(MaxXPTag);
+
+	CurrentXP += XPAmount;
+
+	// Check for Level Up
+	while (CurrentXP >= MaxXP)
+	{
+		// Level Up!
+		CurrentXP -= MaxXP; // Subtract the required XP and keep the remainder
+
+		float CurrentLevel = GetStatValue(LevelTag);
+		SetStatValue(LevelTag, CurrentLevel + 1);
+
+		// Increase the XP required for the next level (e.g., by 20%)
+		MaxXP *= 1.2f;
+		SetStatValue(MaxXPTag, MaxXP);
+
+		// Broadcast the level up event
+		OnLevelUpDelegate.Broadcast(GetStatValue(LevelTag));
+		UE_LOG(LogTemp, Warning, TEXT("LEVEL UP! New Level: %d"), (int32)GetStatValue(LevelTag));
+	}
+
+	// Update the current XP
+	SetStatValue(XPTag, CurrentXP);
+
+	// Broadcast the XP change
+	OnXPChangedDelegate.Broadcast(CurrentXP, MaxXP);
 }

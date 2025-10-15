@@ -11,6 +11,8 @@
 #include "Components/PRStatsComponent.h"
 #include <Player/PRPlayerState.h>
 #include "Engine/DamageEvents.h" 
+#include <AI/PRAIBase.h>
+#include <Kismet/GameplayStatics.h>
 
 APRCharacterBase::APRCharacterBase()
 {
@@ -184,9 +186,35 @@ void APRCharacterBase::Look(const FInputActionValue& Value)
 
 void APRCharacterBase::TakeDebugDamage()
 {
-	// Apply 10 damage to ourselves
-	TakeDamage(10.f, FDamageEvent(), GetController(), this);
-	UE_LOG(LogTemp, Warning, TEXT("Applied 10 debug damage."));
+	// Simple sphere trace in front of the character to find an enemy to damage
+	FVector Start = GetActorLocation();
+	FVector End = Start + (GetActorForwardVector() * 200.0f);
+	TArray<FHitResult> HitResults;
+	FCollisionShape Sphere = FCollisionShape::MakeSphere(100.0f);
+
+	bool bHit = GetWorld()->SweepMultiByChannel(HitResults, Start, End, FQuat::Identity, ECC_Pawn, Sphere);
+
+	if (bHit)
+	{
+		for (auto& Hit : HitResults)
+		{
+			// We still cast to AIBase to make sure we are not damaging another player or ourselves.
+			if (APRAIBase* AI = Cast<APRAIBase>(Hit.GetActor()))
+			{
+				// --- THIS IS THE CORRECT WAY TO APPLY DAMAGE ---
+				UGameplayStatics::ApplyDamage(
+					AI,       // The actor that will take damage
+					50.f,     // The base damage amount
+					GetController(), // The controller that instigated the damage
+					this,     // The actor that caused the damage
+					nullptr   // The damage type class (can be null for generic damage)
+				);
+
+				UE_LOG(LogTemp, Warning, TEXT("Applied 50 damage to %s"), *AI->GetName());
+				break; // Damage only one enemy per key press
+			}
+		}
+	}
 }
 
 

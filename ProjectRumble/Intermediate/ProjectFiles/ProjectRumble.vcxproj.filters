@@ -24,8 +24,17 @@
     <None Include="..\..\Config\DefaultGame.ini">
       <Filter>Config</Filter>
     </None>
+    <None Include="..\..\Config\DefaultGameplayTags.ini">
+      <Filter>Config</Filter>
+    </None>
     <None Include="..\..\Config\DefaultInput.ini">
       <Filter>Config</Filter>
+    </None>
+    <Filter Include="Config\Tags">
+      <UniqueIdentifier>{C23A97B6-B409-38D2-A57B-078A593D2FB3}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Config\Tags\GameplayTags.ini">
+      <Filter>Config\Tags</Filter>
     </None>
     <Filter Include="Source\ProjectRumble">
       <UniqueIdentifier>{2A7F5A38-B0CF-36B0-BC62-2B27B1072B8D}</UniqueIdentifier>
@@ -42,8 +51,17 @@
     <Filter Include="Source\ProjectRumble\Private">
       <UniqueIdentifier>{8BEB6606-2C09-316B-862C-5AA10731E925}</UniqueIdentifier>
     </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\PRGameplayTags.cpp">
+      <Filter>Source\ProjectRumble\Private</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Source\ProjectRumble\Private\PRTypes.cpp">
       <Filter>Source\ProjectRumble\Private</Filter>
+    </ClCompile>
+    <Filter Include="Source\ProjectRumble\Private\AI">
+      <UniqueIdentifier>{5E05A35E-4369-3A4D-947E-7194D05C502C}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\AI\PRAIBase.cpp">
+      <Filter>Source\ProjectRumble\Private\AI</Filter>
     </ClCompile>
     <Filter Include="Source\ProjectRumble\Private\Characters">
       <UniqueIdentifier>{A7B0BE68-A18E-3037-B4E1-0CDE373392F5}</UniqueIdentifier>
@@ -57,6 +75,9 @@
     <Filter Include="Source\ProjectRumble\Private\Components">
       <UniqueIdentifier>{753CB240-E0B6-3997-8065-C0AE535DC502}</UniqueIdentifier>
     </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\Components\PRInventoryComponent.cpp">
+      <Filter>Source\ProjectRumble\Private\Components</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Source\ProjectRumble\Private\Components\PRStatsComponent.cpp">
       <Filter>Source\ProjectRumble\Private\Components</Filter>
     </ClCompile>
@@ -66,23 +87,50 @@
     <ClCompile Include="..\..\Source\ProjectRumble\Private\Datas\PRCharacterDefinition.cpp">
       <Filter>Source\ProjectRumble\Private\Datas</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\Datas\PRUpgradeData.cpp">
+      <Filter>Source\ProjectRumble\Private\Datas</Filter>
+    </ClCompile>
     <Filter Include="Source\ProjectRumble\Private\GameModes">
       <UniqueIdentifier>{FD6DBF03-87FD-38DB-98F3-2A0C1153EFCC}</UniqueIdentifier>
     </Filter>
     <ClCompile Include="..\..\Source\ProjectRumble\Private\GameModes\PRGameMode.cpp">
       <Filter>Source\ProjectRumble\Private\GameModes</Filter>
     </ClCompile>
+    <Filter Include="Source\ProjectRumble\Private\Managers">
+      <UniqueIdentifier>{5012068C-4E79-3358-85F4-763ABAA7BFC9}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\Managers\PRRewardManager.cpp">
+      <Filter>Source\ProjectRumble\Private\Managers</Filter>
+    </ClCompile>
     <Filter Include="Source\ProjectRumble\Private\Player">
       <UniqueIdentifier>{C2EBF54D-59A9-386A-96F3-6F03DE3AF276}</UniqueIdentifier>
     </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\Player\PRPlayerController.cpp">
+      <Filter>Source\ProjectRumble\Private\Player</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Source\ProjectRumble\Private\Player\PRPlayerState.cpp">
       <Filter>Source\ProjectRumble\Private\Player</Filter>
+    </ClCompile>
+    <Filter Include="Source\ProjectRumble\Private\UI">
+      <UniqueIdentifier>{4255DAAC-8B5A-3B79-9DC8-2F958B38B379}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Source\ProjectRumble\Private\UI\PRHUD.cpp">
+      <Filter>Source\ProjectRumble\Private\UI</Filter>
     </ClCompile>
     <Filter Include="Source\ProjectRumble\Public">
       <UniqueIdentifier>{BF1F5E52-5B5B-3336-B2C3-DF04A3E94B43}</UniqueIdentifier>
     </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\PRGameplayTags.h">
+      <Filter>Source\ProjectRumble\Public</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Source\ProjectRumble\Public\PRTypes.h">
       <Filter>Source\ProjectRumble\Public</Filter>
+    </ClInclude>
+    <Filter Include="Source\ProjectRumble\Public\AI">
+      <UniqueIdentifier>{A711474F-9291-3E15-9F63-0A4E9C49F468}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\AI\PRAIBase.h">
+      <Filter>Source\ProjectRumble\Public\AI</Filter>
     </ClInclude>
     <Filter Include="Source\ProjectRumble\Public\Characters">
       <UniqueIdentifier>{5E2882A8-587B-3A69-AF8C-5A22A36987B4}</UniqueIdentifier>
@@ -96,6 +144,9 @@
     <Filter Include="Source\ProjectRumble\Public\Components">
       <UniqueIdentifier>{E3FDA609-A42B-3FBA-8DCF-7D2C5504E542}</UniqueIdentifier>
     </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\Components\PRInventoryComponent.h">
+      <Filter>Source\ProjectRumble\Public\Components</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Source\ProjectRumble\Public\Components\PRStatsComponent.h">
       <Filter>Source\ProjectRumble\Public\Components</Filter>
     </ClInclude>
@@ -105,17 +156,35 @@
     <ClInclude Include="..\..\Source\ProjectRumble\Public\Datas\PRCharacterDefinition.h">
       <Filter>Source\ProjectRumble\Public\Datas</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\Datas\PRUpgradeData.h">
+      <Filter>Source\ProjectRumble\Public\Datas</Filter>
+    </ClInclude>
     <Filter Include="Source\ProjectRumble\Public\GameModes">
       <UniqueIdentifier>{27FA393D-34A2-3E6B-AAA6-A78005F38C14}</UniqueIdentifier>
     </Filter>
     <ClInclude Include="..\..\Source\ProjectRumble\Public\GameModes\PRGameMode.h">
       <Filter>Source\ProjectRumble\Public\GameModes</Filter>
     </ClInclude>
+    <Filter Include="Source\ProjectRumble\Public\Managers">
+      <UniqueIdentifier>{EA3782E3-EBA6-3BC3-85CC-14529051A78E}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\Managers\PRRewardManager.h">
+      <Filter>Source\ProjectRumble\Public\Managers</Filter>
+    </ClInclude>
     <Filter Include="Source\ProjectRumble\Public\Player">
       <UniqueIdentifier>{7A75C49B-E15A-334B-AECD-C3846A3B2276}</UniqueIdentifier>
     </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\Player\PRPlayerController.h">
+      <Filter>Source\ProjectRumble\Public\Player</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Source\ProjectRumble\Public\Player\PRPlayerState.h">
       <Filter>Source\ProjectRumble\Public\Player</Filter>
+    </ClInclude>
+    <Filter Include="Source\ProjectRumble\Public\UI">
+      <UniqueIdentifier>{13FC62C6-97D0-33B2-9685-9E985121F9BC}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="..\..\Source\ProjectRumble\Public\UI\PRHUD.h">
+      <Filter>Source\ProjectRumble\Public\UI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

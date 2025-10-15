@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProjectRumbleModuleRules")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Development")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ca9fd8448b91ea7e010b52eef26ceefd059c0925")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1060a1f2d8aa4d0a099de27484e614a080a76d10")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProjectRumbleModuleRules")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProjectRumbleModuleRules")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

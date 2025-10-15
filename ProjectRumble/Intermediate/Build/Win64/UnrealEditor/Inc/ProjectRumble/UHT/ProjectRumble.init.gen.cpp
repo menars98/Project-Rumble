@@ -9,6 +9,9 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 void EmptyLinkFunctionForGeneratedCodeProjectRumble_init() {}
 	PROJECTRUMBLE_API UFunction* Z_Construct_UDelegateFunction_ProjectRumble_OnDeathSignature__DelegateSignature();
 	PROJECTRUMBLE_API UFunction* Z_Construct_UDelegateFunction_ProjectRumble_OnHealthChangedSignature__DelegateSignature();
+	PROJECTRUMBLE_API UFunction* Z_Construct_UDelegateFunction_ProjectRumble_OnLevelUpSignature__DelegateSignature();
+	PROJECTRUMBLE_API UFunction* Z_Construct_UDelegateFunction_ProjectRumble_OnStatChangedSignature__DelegateSignature();
+	PROJECTRUMBLE_API UFunction* Z_Construct_UDelegateFunction_ProjectRumble_OnXPChangedSignature__DelegateSignature();
 	static FPackageRegistrationInfo Z_Registration_Info_UPackage__Script_ProjectRumble;
 	FORCENOINLINE UPackage* Z_Construct_UPackage__Script_ProjectRumble()
 	{
@@ -17,19 +20,22 @@ void EmptyLinkFunctionForGeneratedCodeProjectRumble_init() {}
 			static UObject* (*const SingletonFuncArray[])() = {
 				(UObject* (*)())Z_Construct_UDelegateFunction_ProjectRumble_OnDeathSignature__DelegateSignature,
 				(UObject* (*)())Z_Construct_UDelegateFunction_ProjectRumble_OnHealthChangedSignature__DelegateSignature,
+				(UObject* (*)())Z_Construct_UDelegateFunction_ProjectRumble_OnLevelUpSignature__DelegateSignature,
+				(UObject* (*)())Z_Construct_UDelegateFunction_ProjectRumble_OnStatChangedSignature__DelegateSignature,
+				(UObject* (*)())Z_Construct_UDelegateFunction_ProjectRumble_OnXPChangedSignature__DelegateSignature,
 			};
 			static const UECodeGen_Private::FPackageParams PackageParams = {
 				"/Script/ProjectRumble",
 				SingletonFuncArray,
 				UE_ARRAY_COUNT(SingletonFuncArray),
 				PKG_CompiledIn | 0x00000000,
-				0x55BC3497,
-				0x4BAD519C,
+				0x2416A997,
+				0xE9C426B1,
 				METADATA_PARAMS(0, nullptr)
 			};
 			UECodeGen_Private::ConstructUPackage(Z_Registration_Info_UPackage__Script_ProjectRumble.OuterSingleton, PackageParams);
 		}
 		return Z_Registration_Info_UPackage__Script_ProjectRumble.OuterSingleton;
 	}
-	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_ProjectRumble(Z_Construct_UPackage__Script_ProjectRumble, TEXT("/Script/ProjectRumble"), Z_Registration_Info_UPackage__Script_ProjectRumble, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0x55BC3497, 0x4BAD519C));
+	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_ProjectRumble(Z_Construct_UPackage__Script_ProjectRumble, TEXT("/Script/ProjectRumble"), Z_Registration_Info_UPackage__Script_ProjectRumble, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0x2416A997, 0xE9C426B1));
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

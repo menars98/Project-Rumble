@@ -3190,3 +3190,146 @@ Script call stack:
 [2025.10.15-17.16.22:033][778]LogSavePackage: Moving output files for package: /Temp/Autosaves/Game/Blueprints/UI/WBP_Level_Auto1
 [2025.10.15-17.16.22:033][778]LogSavePackage: Moving '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Saved/WBP_Level_Auto1D32B17F346836AFFF40510ACDBC54BA9.tmp' to '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Saved/Autosaves/Game/Blueprints/UI/WBP_Level_Auto1.uasset'
 [2025.10.15-17.16.22:034][778]LogFileHelpers: Auto-saving content packages took 0.068
+[2025.10.15-17.20.18:979][573]LogEOSSDK: LogEOS: Updating Product SDK Config, Time: 1022.623779
+[2025.10.15-17.20.19:980][576]LogEOSSDK: LogEOS: SDK Config Product Update Request Completed - No Change
+[2025.10.15-17.20.19:980][576]LogEOSSDK: LogEOS: ScheduleNextSDKConfigDataUpdate - Time: 1023.290405, Update Interval: 303.892944
+[2025.10.15-17.25.36:856][245]LogEOSSDK: LogEOS: Updating Product SDK Config, Time: 1340.508667
+[2025.10.15-17.25.37:856][248]LogEOSSDK: LogEOS: SDK Config Product Update Request Completed - No Change
+[2025.10.15-17.25.37:856][248]LogEOSSDK: LogEOS: ScheduleNextSDKConfigDataUpdate - Time: 1341.175293, Update Interval: 352.199463
+[2025.10.15-17.31.47:573][357]LogEOSSDK: LogEOS: Updating Product SDK Config, Time: 1711.236450
+[2025.10.15-17.31.48:573][360]LogEOSSDK: LogEOS: SDK Config Product Update Request Completed - No Change
+[2025.10.15-17.31.48:573][360]LogEOSSDK: LogEOS: ScheduleNextSDKConfigDataUpdate - Time: 1711.903320, Update Interval: 325.749084
+[2025.10.15-17.37.52:422][506]LogEOSSDK: LogEOS: Updating Product SDK Config, Time: 2076.094238
+[2025.10.15-17.37.53:421][509]LogEOSSDK: LogEOS: SDK Config Product Update Request Completed - No Change
+[2025.10.15-17.37.53:421][509]LogEOSSDK: LogEOS: ScheduleNextSDKConfigDataUpdate - Time: 2076.761230, Update Interval: 306.049988
+[2025.10.15-17.39.45:280][901]LogUObjectHash: Compacting FUObjectHashTables data took   0.85ms
+[2025.10.15-17.39.46:120][901]LogSlate: Window 'Save Content' being destroyed
+[2025.10.15-17.39.46:128][901]LogFileHelpers: InternalPromptForCheckoutAndSave started...
+[2025.10.15-17.39.46:152][901]OBJ SavePackage: Generating thumbnails for [1] asset(s) in package [/Game/Blueprints/UI/WBP_Level] ([2] browsable assets)...
+[2025.10.15-17.39.46:152][901]OBJ SavePackage: Finished generating thumbnails for package [/Game/Blueprints/UI/WBP_Level]
+[2025.10.15-17.39.46:152][901]Cmd: OBJ SAVEPACKAGE PACKAGE="/Game/Blueprints/UI/WBP_Level" FILE="../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Content/Blueprints/UI/WBP_Level.uasset" SILENT=true
+[2025.10.15-17.39.46:164][901]LogSavePackage: Moving output files for package: /Game/Blueprints/UI/WBP_Level
+[2025.10.15-17.39.46:165][901]LogSavePackage: Moving '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Saved/WBP_LevelB232E1D44F07F5ABE4BECDAB6815D978.tmp' to '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Content/Blueprints/UI/WBP_Level.uasset'
+[2025.10.15-17.39.46:166][901]OBJ SavePackage: Generating thumbnails for [1] asset(s) in package [/Game/Blueprints/UI/WBP_LevelUpChoice] ([2] browsable assets)...
+[2025.10.15-17.39.46:166][901]OBJ SavePackage: Finished generating thumbnails for package [/Game/Blueprints/UI/WBP_LevelUpChoice]
+[2025.10.15-17.39.46:177][901]LogSavePackage: Moving output files for package: /Game/Blueprints/UI/WBP_LevelUpChoice
+[2025.10.15-17.39.46:178][901]LogSavePackage: Moving '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Saved/WBP_LevelUpChoice84551DCC46C52F8F45D2F8B0C6095E9B.tmp' to '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Content/Blueprints/UI/WBP_LevelUpChoice.uasset'
+[2025.10.15-17.39.46:179][901]OBJ SavePackage: Generating thumbnails for [1] asset(s) in package [/Game/Blueprints/UI/WBP_PlayerHUD] ([2] browsable assets)...
+[2025.10.15-17.39.46:179][901]OBJ SavePackage: Finished generating thumbnails for package [/Game/Blueprints/UI/WBP_PlayerHUD]
+[2025.10.15-17.39.46:179][901]Cmd: OBJ SAVEPACKAGE PACKAGE="/Game/Blueprints/UI/WBP_PlayerHUD" FILE="../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Content/Blueprints/UI/WBP_PlayerHUD.uasset" SILENT=true
+[2025.10.15-17.39.46:190][901]LogSavePackage: Moving output files for package: /Game/Blueprints/UI/WBP_PlayerHUD
+[2025.10.15-17.39.46:190][901]LogSavePackage: Moving '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Saved/WBP_PlayerHUD1C31700740CC6C67CEBD07BDDB2DB315.tmp' to '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Content/Blueprints/UI/WBP_PlayerHUD.uasset'
+[2025.10.15-17.39.46:191][901]OBJ SavePackage: Generating thumbnails for [1] asset(s) in package [/Game/Blueprints/UI/WBP_RewardCard] ([2] browsable assets)...
+[2025.10.15-17.39.46:191][901]OBJ SavePackage: Finished generating thumbnails for package [/Game/Blueprints/UI/WBP_RewardCard]
+[2025.10.15-17.39.46:191][901]Cmd: OBJ SAVEPACKAGE PACKAGE="/Game/Blueprints/UI/WBP_RewardCard" FILE="../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Content/Blueprints/UI/WBP_RewardCard.uasset" SILENT=true
+[2025.10.15-17.39.46:203][901]LogSavePackage: Moving output files for package: /Game/Blueprints/UI/WBP_RewardCard
+[2025.10.15-17.39.46:203][901]LogSavePackage: Moving '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Saved/WBP_RewardCardEC7605DF4ED45F231EAFF8B97433E758.tmp' to '../../../../../../Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Content/Blueprints/UI/WBP_RewardCard.uasset'
+[2025.10.15-17.39.46:211][901]LogFileHelpers: InternalPromptForCheckoutAndSave took 82.877 ms (total: 164.721 ms)
+[2025.10.15-17.39.46:253][901]LogStall: Shutdown...
+[2025.10.15-17.39.46:253][901]LogStall: Shutdown complete.
+[2025.10.15-17.39.46:308][901]LogWorld: UWorld::CleanupWorld for World_2, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:308][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:315][901]LogWorld: UWorld::CleanupWorld for World_1, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:315][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:362][901]LogWorld: UWorld::CleanupWorld for World_4, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:362][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:367][901]LogWorld: UWorld::CleanupWorld for World_3, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:367][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:405][901]LogWorld: UWorld::CleanupWorld for World_5, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:405][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:460][901]LogWorld: UWorld::CleanupWorld for World_7, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:460][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:465][901]LogWorld: UWorld::CleanupWorld for World_6, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:465][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:509][901]LogWorld: UWorld::CleanupWorld for World_39, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:509][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:514][901]LogWorld: UWorld::CleanupWorld for World_38, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:514][901]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:576][901]LogSlate: Window 'ProjectRumble - Unreal Editor' being destroyed
+[2025.10.15-17.39.46:713][901]LogContentValidation: Display: Starting to validate 4 assets
+[2025.10.15-17.39.46:713][901]LogContentValidation: Enabled validators:
+[2025.10.15-17.39.46:713][901]LogContentValidation: 	/Script/DataValidation.EditorValidator_Material
+[2025.10.15-17.39.46:713][901]LogContentValidation: 	/Script/DataValidation.DirtyFilesChangelistValidator
+[2025.10.15-17.39.46:713][901]LogContentValidation: 	/Script/DataValidation.EditorValidator_Localization
+[2025.10.15-17.39.46:713][901]LogContentValidation: 	/Script/DataValidation.PackageFileValidator
+[2025.10.15-17.39.46:713][901]LogContentValidation: 	/Script/DataValidation.WorldPartitionChangelistValidator
+[2025.10.15-17.39.46:713][901]LogContentValidation: 	/Script/InputBlueprintNodes.EnhancedInputUserWidgetValidator
+[2025.10.15-17.39.46:713][901]AssetCheck: /Game/Blueprints/UI/WBP_Level Validating asset
+[2025.10.15-17.39.46:715][901]AssetCheck: /Game/Blueprints/UI/WBP_LevelUpChoice Validating asset
+[2025.10.15-17.39.46:715][901]AssetCheck: /Game/Blueprints/UI/WBP_PlayerHUD Validating asset
+[2025.10.15-17.39.46:716][901]AssetCheck: /Game/Blueprints/UI/WBP_RewardCard Validating asset
+[2025.10.15-17.39.46:751][901]LogUObjectHash: Compacting FUObjectHashTables data took   0.93ms
+[2025.10.15-17.39.46:777][901]Cmd: QUIT_EDITOR
+[2025.10.15-17.39.46:777][902]LogCore: Engine exit requested (reason: UUnrealEdEngine::CloseEditor())
+[2025.10.15-17.39.46:782][902]LogCore: Engine exit requested (reason: EngineExit() was called; note: exit was already requested)
+[2025.10.15-17.39.46:785][902]LogStaticMesh: Abandoning remaining async distance field tasks for shutdown
+[2025.10.15-17.39.46:785][902]LogStaticMesh: Abandoning remaining async card representation tasks for shutdown
+[2025.10.15-17.39.46:795][902]LogWorld: UWorld::CleanupWorld for BlankMap, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:795][902]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:795][902]LogWorldPartition: UWorldPartition::Uninitialize : World = /Game/Maps/BlankMap.BlankMap
+[2025.10.15-17.39.46:804][902]LogStylusInput: Shutting down StylusInput subsystem.
+[2025.10.15-17.39.46:804][902]LogTedsSettings: UTedsSettingsEditorSubsystem::Deinitialize
+[2025.10.15-17.39.46:804][902]LogLevelSequenceEditor: LevelSequenceEditor subsystem deinitialized.
+[2025.10.15-17.39.46:811][902]LogWorld: UWorld::CleanupWorld for World_0, bSessionEnded=true, bCleanupResources=true
+[2025.10.15-17.39.46:811][902]LogSlate: InvalidateAllWidgets triggered.  All widgets were invalidated
+[2025.10.15-17.39.46:814][902]LogRuntimeTelemetry: Recording EnginePreExit events
+[2025.10.15-17.39.46:814][902]LogStudioTelemetry: Ended StudioTelemetry Session
+[2025.10.15-17.39.46:822][902]LogAnalytics: Display: [UEEditor.Rocket.Release] AnalyticsET::EndSession
+[2025.10.15-17.39.47:243][902]LogAudio: Display: Beginning Audio Device Manager Shutdown (Module: AudioMixerXAudio2)...
+[2025.10.15-17.39.47:243][902]LogAudio: Display: Destroying 1 Remaining Audio Device(s)...
+[2025.10.15-17.39.47:243][902]LogAudio: Display: Audio Device unregistered from world 'BlankMap'.
+[2025.10.15-17.39.47:243][902]LogAudio: Display: Shutting down audio device while 1 references to it are still alive. For more information, compile with INSTRUMENT_AUDIODEVICE_HANDLES.
+[2025.10.15-17.39.47:243][902]LogAudioMixer: Display: FMixerPlatformXAudio2::StopAudioStream() called. InstanceID=1, StreamState=4
+[2025.10.15-17.39.47:244][902]LogAudioMixer: Display: FMixerPlatformXAudio2::StopAudioStream() called. InstanceID=1, StreamState=2
+[2025.10.15-17.39.47:249][902]LogAudioMixer: Deinitializing Audio Bus Subsystem for audio device with ID -1
+[2025.10.15-17.39.47:249][902]LogAudio: Display: Audio Device Manager Shutdown
+[2025.10.15-17.39.47:250][902]LogWindowsTextInputMethodSystem: Activated input method: Türkçe (Türkiye) - (Keyboard).
+[2025.10.15-17.39.47:252][902]LogSlate: Slate User Destroyed.  User Index 0, Is Virtual User: 0
+[2025.10.15-17.39.47:252][902]LogExit: Preparing to exit.
+[2025.10.15-17.39.47:282][902]LogUObjectHash: Compacting FUObjectHashTables data took   0.87ms
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/add_controls_for_selected_PY.add_controls_for_selected_options' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/add_controls_for_selected_PY.add_controls_for_selected' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/add_null_above_selected_PY.add_null_above_selected' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/align_items_PY.align_translation_rotation' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/align_items_PY.align_translation_all' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/align_items_PY.align_translation_x' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/align_items_PY.align_translation_y' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/align_items_PY.align_translation_z' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/align_items_PY.align_rotation' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/align_items_PY.align_scale' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/rename_items_PY.search_replace_name_dialog' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/rename_items_PY.search_replace_entry' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/rename_items_PY.add_prefix_dialog' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/rename_items_PY.add_prefix_entry' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/rename_items_PY.add_suffix_dialog' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/rename_items_PY.add_suffix_entry' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/rename_items_PY.do_rename_dialog' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/rename_items_PY.do_rename_entry' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/set_bone_reference_pose_PY.set_bone_reference_pose' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/ControlRigWorkflows/workflow_fbik_import_ik_rig_PY.import_ik_rig_options' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:285][902]LogPython: Display: Object '/ControlRig/Python/RigHierarchy/add_controls_for_selected_PY.ControlOutputFormat' was externally referenced when shutting down Python. Forcibly releasing its Python resources!
+[2025.10.15-17.39.47:786][902]LogEditorDataStorage: Deinitializing
+[2025.10.15-17.39.47:881][902]LogDemo: Cleaned up 0 splitscreen connections, owner deletion: enabled
+[2025.10.15-17.39.47:895][902]LogExit: Editor shut down
+[2025.10.15-17.39.47:897][902]LogExit: Transaction tracking system shut down
+[2025.10.15-17.39.48:034][902]LogExit: Object subsystem successfully closed.
+[2025.10.15-17.39.48:074][902]LogShaderCompilers: Display: Shaders left to compile 0
+[2025.10.15-17.39.48:147][902]LogMemoryProfiler: Shutdown
+[2025.10.15-17.39.48:147][902]LogNetworkingProfiler: Shutdown
+[2025.10.15-17.39.48:147][902]LoadingProfiler: Shutdown
+[2025.10.15-17.39.48:147][902]LogTimingProfiler: Shutdown
+[2025.10.15-17.39.48:147][902]LogChaosVDEditor: [FChaosVDExtensionsManager::UnRegisterExtension] UnRegistering CVD Extension [FChaosVDGenericDebugDrawExtension] ...
+[2025.10.15-17.39.48:147][902]LogChaosVDEditor: [FChaosVDExtensionsManager::UnRegisterExtension] UnRegistering CVD Extension [FChaosVDAccelerationStructuresExtension] ...
+[2025.10.15-17.39.48:406][902]LogChaosDD: Chaos Debug Draw Shutdown
+[2025.10.15-17.39.48:409][902]LogNFORDenoise: NFORDenoise function shutting down
+[2025.10.15-17.39.48:436][902]LogHttp: Warning: [FHttpManager::Shutdown] Unbinding delegates for 1 outstanding Http Requests:
+[2025.10.15-17.39.48:436][902]LogHttp: Warning: 	verb=[POST] url=[https://datarouter.ol.epicgames.com/datarouter/api/v1/public/data?SessionID=%7B66A90979-4BCA-BD78-2228-2F931D131548%7D&AppID=UEEditor.Rocket.Release&AppVersion=5.6.1-44394996%2B%2B%2BUE5%2BRelease-5.6&UserID=262334dc47d8b620b35183b777130fc6%7C1cbafe0a85d8420f8d46231daead71bf%7C3e9906f7-21cf-4e76-9759-5887ba6bb4ac&AppEnvironment=datacollector-binary&UploadType=eteventstream] refs=[2] status=Processing
+[2025.10.15-17.39.48:960][902]LogEOSShared: FEOSSDKManager::Shutdown EOS_Shutdown Result=[EOS_Success]
+[2025.10.15-17.39.48:960][902]RenderDocPlugin: plugin has been unloaded.
+[2025.10.15-17.39.48:960][902]LogXGEController: Cleaning working directory: C:/Users/muham/AppData/Local/Temp/UnrealXGEWorkingDir/
+[2025.10.15-17.39.48:963][902]LogIris: FNetObjectFactoryRegistry::UnregisterFactory is unregistering factory: None name: NetActorFactory id: 0
+[2025.10.15-17.39.48:963][902]LogIris: FNetObjectFactoryRegistry::UnregisterFactory is unregistering factory: None name: NetSubObjectFactory id: 1
+[2025.10.15-17.39.48:963][902]LogPakFile: Destroying PakPlatformFile
+[2025.10.15-17.39.49:576][902]LogD3D12RHI: ~FD3D12DynamicRHI
+[2025.10.15-17.39.49:598][902]LogExit: Exiting.
+[2025.10.15-17.39.49:616][902]Log file closed, 10/15/25 20:39:49

@@ -3,5 +3,4 @@
 #include "C:/Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Intermediate/Build/Win64/UnrealEditor/Inc/ProjectRumble/UHT/PRCharacterDefinition.gen.cpp"
 #include "C:/Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Intermediate/Build/Win64/UnrealEditor/Inc/ProjectRumble/UHT/PREntityBase.gen.cpp"
 #include "C:/Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Intermediate/Build/Win64/UnrealEditor/Inc/ProjectRumble/UHT/PRGameMode.gen.cpp"
-#include "C:/Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Intermediate/Build/Win64/UnrealEditor/Inc/ProjectRumble/UHT/PRInventoryComponent.gen.cpp"
 #include "C:/Users/muham/Documents/GitHub/Project-Rumble/ProjectRumble/Intermediate/Build/Win64/UnrealEditor/Inc/ProjectRumble/UHT/PRPlayerState.gen.cpp"

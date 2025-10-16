@@ -3,8 +3,10 @@
 
 #include "Player/PRPlayerState.h"
 #include "Components/PRStatsComponent.h"
+#include "Components/PRInventoryComponent.h"
 
 APRPlayerState::APRPlayerState()
 {
     StatsComponent = CreateDefaultSubobject<UPRStatsComponent>(TEXT("StatsComponent"));
+    InventoryComponent = CreateDefaultSubobject<UPRInventoryComponent>(TEXT("InventoryComponent"));
 }

@@ -6,6 +6,11 @@
 #include "Components/ActorComponent.h"
 #include "PRInventoryComponent.generated.h"
 
+class UPRBaseItem;
+class UPRUpgradeData;
+class UPRItemDefinition;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdatedSignature);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROJECTRUMBLE_API UPRInventoryComponent : public UActorComponent
@@ -16,13 +21,55 @@ public:
 	// Sets default values for this component's properties
 	UPRInventoryComponent();
 
+	/**
+	 * The main entry point for applying a chosen reward.
+	 * It checks if the item is new or an upgrade and calls the appropriate function.
+	 * @param ChosenUpgrade The dynamically generated upgrade data from the RewardManager.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddOrUpgradeItem(UPRUpgradeData* ChosenUpgrade);
+
+	/**
+	 * Checks if an item with the given definition already exists in the inventory.
+	 * @param ItemDef The item definition to check for.
+	 * @return The UPRBaseItem instance if found, otherwise nullptr.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	UPRBaseItem* FindItemByDefinition(const UPRItemDefinition* ItemDef) const;
+
+	// -- DELEGATES --
+	// Broadcasts whenever the inventory changes (item added or upgraded).
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FOnInventoryUpdatedSignature OnInventoryUpdated;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	/** Adds a new item to the inventory based on its definition. */
+	void AddNewItem(UPRItemDefinition* ItemDef);
+
+	/** Finds an existing item in the inventory and calls its LevelUp function. */
+	void UpgradeExistingItem(UPRItemDefinition* ItemDef);
+
+	// The list of all WEAPONS the player currently owns.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TArray<TObjectPtr<UPRBaseItem>> OwnedWeapons;
+
+	// The list of all TOMES the player currently owns.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TArray<TObjectPtr<UPRBaseItem>> OwnedTomes;
+
+	// The list of all RELICS the player currently owns.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TArray<TObjectPtr<UPRBaseItem>> OwnedRelics;
+
+	// Maximum number of items of each type the player can hold.
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory|Limits")
+	int32 MaxWeapons = 6;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory|Limits")
+	int32 MaxTomes = 6;
 
 		
 };

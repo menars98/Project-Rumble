@@ -18,39 +18,54 @@ enum class EUpgradeRarity : uint8
 	Legendary
 };
 
+class UPRItemDefinition;
+
 UCLASS(BlueprintType)
-class PROJECTRUMBLE_API UPRUpgradeData : public UDataAsset
+class PROJECTRUMBLE_API UPRUpgradeData : public UObject
 {
 	GENERATED_BODY()
 	
 public:
-	// The type of this upgrade. This determines how it will be applied.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrade")
-	EUpgradeType UpgradeType;
+	// -- DISPLAY & IDENTITY --
+	// These properties will be FILLED IN AT RUNTIME by the RewardManager.
 
-	// The text displayed on the reward card.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrade")
+	/** The final, resolved name to show on the card (e.g., "Elven Bow"). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display")
 	FText DisplayName;
 
-	// A more detailed description of what this upgrade does.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrade")
+	/** The final, resolved description to show (e.g., "Damage: +12.7%\nProjectile Speed: +0.35"). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display", meta = (MultiLine = true))
 	FText Description;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrade")
+	/** The icon to display. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display")
 	TObjectPtr<UTexture2D> Icon;
 
-	// --- DATA FOR SPECIFIC UPGRADE TYPES ---
-	// Which Weapon or Passive Item class does this upgrade relate to?
-	// Used for 'NewWeapon', 'UpgradeWeapon', 'NewPassiveItem', 'UpgradePassiveItem'.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrade Data", meta = (EditCondition = "UpgradeType != EUpgradeType::StatBonus"))
-	TSubclassOf<UObject> ItemClass;
-
-	// The rarity of this upgrade. This can affect its values and appearance.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrade")
+	/** The final, resolved rarity of this specific upgrade offer. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display")
 	EUpgradeRarity Rarity;
 
-	// This array holds all the effects this upgrade will apply.
-	// A single upgrade can now modify multiple stats at once.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrade")
+	/** The level this upgrade represents (e.g., "LVL 2"). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display")
+	int32 UpgradeLevel;
+
+	// -- LOGIC --
+	// This array holds the FINAL, "rolled" effects that will be applied if this upgrade is chosen.
+	// All magnitudes are now fixed numbers, not ranges.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Logic")
 	TArray<FUpgradeEffect> Effects;
+	// A reference back to the "rulebook" this offer was generated from.
+	// The InventoryComponent will use this to know which item to add or upgrade.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Logic")
+	TObjectPtr<UPRItemDefinition> SourceItemDefinition;
+
+
+	// We no longer need:
+	// - EUpgradeType
+	// - ItemClass
+	// - TargetStat
+	// - StatValue
+	// - Rarity-based effect counts
+	// All of that logic now lives in the ItemDefinition and is processed by the RewardManager.
+	// This class is just a simple data container.
 };

@@ -20,6 +20,7 @@ namespace NativeGameplayTags
 		{
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_Damage);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_CritChance);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_AttackSpeed);
 		}
 	}
 }

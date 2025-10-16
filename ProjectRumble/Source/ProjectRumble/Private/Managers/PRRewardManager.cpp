@@ -4,78 +4,161 @@
 #include "Managers/PRRewardManager.h"
 #include "Components/PRInventoryComponent.h"
 
-TArray<UPRUpgradeData*> UPRRewardManager::GenerateAndDraftRewards(const TArray<UDataTable*>& AllUpgradePools, const UPRInventoryComponent* PlayerInventory, int32 NumOfChoices)
+void UPRRewardManager::Initialize(UDataTable* InStatsInfoTable)
 {
-	// --- 1. BUILD THE POOL OF ALL POSSIBLE REWARDS ---
-	TArray<FUpgradePoolEntry> MasterPool = BuildMasterRewardPool(AllUpgradePools, PlayerInventory);
+	StatsInfoTable = InStatsInfoTable;
+}
 
-	// --- 2. DRAFT THE REWARDS ---
+TArray<UPRUpgradeData*> UPRRewardManager::GenerateRewards(const UPRInventoryComponent* PlayerInventory, const TArray<UPRItemDefinition*>& AllPossibleItems, int32 NumOfChoices)
+{
+	// TODO: Use PlayerInventory to decide which upgrades to offer
+	// (e.g., offer "Upgrade Bow" only if player HAS a bow).
+
 	TArray<UPRUpgradeData*> OfferedRewards;
-	float TotalWeight = 0.f;
 
-	// Calculate total weight for weighted random selection
-	for (const FUpgradePoolEntry& Entry : MasterPool)
-	{
-		TotalWeight += Entry.Weight;
-	}
+	// --- BUILD A POOL OF POSSIBLE UPGRADE ACTIONS ---
+	// This logic is simplified for now. A real system would be more complex.
+	// For now, let's just pick random items from the "all items" list and generate an upgrade for them.
+	// TODO: Prioritize items the player already has (for level-ups).
+	// TODO: Add new, unowned items to the pool.
+
+	TArray<UPRItemDefinition*> TempItemPool = AllPossibleItems;
 
 	for (int32 i = 0; i < NumOfChoices; ++i)
 	{
-		if (MasterPool.Num() == 0 || TotalWeight <= 0.f)
+		if (TempItemPool.Num() == 0) break;
+
+		// Pick a random item definition from the pool
+		int32 RandomIndex = FMath::RandRange(0, TempItemPool.Num() - 1);
+		UPRItemDefinition* ChosenItemDef = TempItemPool[RandomIndex];
+
+		// For now, we assume all offers are level-ups (bIsNewItem = false).
+		// TODO: Add logic to check if the player owns the item.
+		UPRUpgradeData* NewOffer = CreateUpgradeOfferForItem(ChosenItemDef, false);
+		if (NewOffer)
 		{
-			break; // Stop if we run out of options
+			OfferedRewards.Add(NewOffer);
 		}
 
-		float RandomValue = FMath::FRandRange(0.f, TotalWeight);
-		float CurrentWeight = 0.f;
-
-		for (int32 j = 0; j < MasterPool.Num(); ++j)
-		{
-			CurrentWeight += MasterPool[j].Weight;
-			if (RandomValue <= CurrentWeight)
-			{
-				// We've selected this reward
-				OfferedRewards.Add(MasterPool[j].UpgradeDataAsset);
-
-				// Remove it from the pool so it can't be picked again in the same draft
-				TotalWeight -= MasterPool[j].Weight;
-				MasterPool.RemoveAt(j);
-				break;
-			}
-		}
+		// Remove from temp pool to avoid offering the same item twice
+		TempItemPool.RemoveAt(RandomIndex);
 	}
 
 	return OfferedRewards;
 }
 
-TArray<FUpgradePoolEntry> UPRRewardManager::BuildMasterRewardPool(const TArray<UDataTable*>& AllUpgradePools, const UPRInventoryComponent* PlayerInventory)
+UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, bool bIsNewItem)
 {
-	TArray<FUpgradePoolEntry> MasterPool;
+	if (!ItemDef) return nullptr;
 
-	// For now, our logic is very simple: just add everything from all pools.
-	// In the future, this function will be much smarter.
-	// It will check player's inventory, item levels, etc.
+	// --- 1. ROLL FOR RARITY ---
+	EUpgradeRarity RolledRarity = RollForRarity();
 
-	for (UDataTable* PoolTable : AllUpgradePools)
+	// --- 2. DETERMINE NUMBER OF EFFECTS ---
+	int32 NumEffectsToPick = 0;
+	switch (RolledRarity)
 	{
-		if (PoolTable)
+	case EUpgradeRarity::Common:    NumEffectsToPick = ItemDef->NumEffects_Common; break;
+	case EUpgradeRarity::Uncommon:  NumEffectsToPick = ItemDef->NumEffects_Uncommon; break;
+	case EUpgradeRarity::Rare:      NumEffectsToPick = ItemDef->NumEffects_Rare; break;
+	case EUpgradeRarity::Epic:      NumEffectsToPick = ItemDef->NumEffects_Epic; break;
+	case EUpgradeRarity::Legendary: NumEffectsToPick = ItemDef->NumEffects_Legendary; break;
+	}
+
+	// --- 3. PICK RANDOM EFFECTS FROM THE ITEM'S POTENTIAL LIST ---
+	TArray<FPotentialUpgradeEffect> PotentialEffects = ItemDef->PotentialUpgradeEffects;
+	TArray<FUpgradeEffect> FinalEffects;
+	FString FinalDescription = "";
+
+	for (int32 i = 0; i < NumEffectsToPick; ++i)
+	{
+		if (PotentialEffects.Num() == 0) break;
+
+		// TODO: Implement weighted random selection based on SelectionWeight.
+		// For now, simple random is fine for a prototype.
+		int32 RandomIndex = FMath::RandRange(0, PotentialEffects.Num() - 1);
+		const FPotentialUpgradeEffect& ChosenPotentialEffect = PotentialEffects[RandomIndex];
+
+		// --- Find the DisplayName for the stat ---
+		FString StatDisplayName = "Unknown Stat";
+		// We now use the member variable 'StatsInfoTable'
+		if (StatsInfoTable)
 		{
-			FString ContextString; // Required for FindRow
-			TArray<FName> RowNames = PoolTable->GetRowNames();
-
-			for (const FName& RowName : RowNames)
+			// The rest of this logic is the same as before
+			for (const FName& RowName : StatsInfoTable->GetRowNames())
 			{
-				FUpgradePoolEntry* Entry = PoolTable->FindRow<FUpgradePoolEntry>(RowName, ContextString);
-				if (Entry && Entry->UpgradeDataAsset)
+				FStatDefinition* StatDef = StatsInfoTable->FindRow<FStatDefinition>(RowName, "");
+				if (StatDef && StatDef->StatID == ChosenPotentialEffect.TargetStat)
 				{
-					// TODO: Add logic here to filter out upgrades the player can't get
-					// For example: if(Entry->UpgradeDataAsset->UpgradeType == EUpgradeType::UpgradeWeapon && !PlayerInventory->HasWeapon(Entry->UpgradeDataAsset->ItemClass)) { continue; }
-
-					MasterPool.Add(*Entry);
+					StatDisplayName = StatDef->DisplayName.ToString();
+					break;
 				}
 			}
 		}
+
+		// --- 4. ROLL FOR THE MAGNITUDE ---
+		float RarityBonus = (uint8)RolledRarity * ChosenPotentialEffect.BonusPerRarityTier;
+		float RolledMagnitude = FMath::FRandRange(
+			ChosenPotentialEffect.BaseMinMagnitude + RarityBonus,
+			ChosenPotentialEffect.BaseMaxMagnitude + RarityBonus
+		);
+
+		// Create the final, resolved effect
+		FUpgradeEffect FinalEffect;
+		FinalEffect.TargetStat = ChosenPotentialEffect.TargetStat;
+		FinalEffect.Operation = ChosenPotentialEffect.Operation;
+		FinalEffect.MinMagnitude = RolledMagnitude; // We store the rolled value in both Min and Max
+		FinalEffect.MaxMagnitude = RolledMagnitude; // to make it a fixed value.
+
+		FinalEffects.Add(FinalEffect);
+
+		// --- Build the description string based on the operation type ---
+		if (ChosenPotentialEffect.Operation == EModifierOperation::Additive)
+		{
+			// DOÐRU: Artýk Data Table'dan bulduðumuz "güzel adý" kullanýyoruz.
+			FinalDescription += FString::Printf(TEXT("%s: +%.0f\n"), *StatDisplayName, RolledMagnitude);
+		}
+		else // Multiplicative
+		{
+			// DOÐRU: Burada da ayný þekilde.
+			FinalDescription += FString::Printf(TEXT("%s: +%.1f%%\n"), *StatDisplayName, RolledMagnitude * 100);
+		}
+
+		PotentialEffects.RemoveAt(RandomIndex); // Don't pick the same effect twice
 	}
 
-	return MasterPool;
+	// --- 5. CREATE THE FINAL UPGRADE DATA OBJECT ---
+	UPRUpgradeData* FinalOffer = NewObject<UPRUpgradeData>();
+	FinalOffer->DisplayName = ItemDef->DisplayName;
+	FinalOffer->SourceItemDefinition = ItemDef;
+	FinalOffer->Icon = ItemDef->Icon;
+	FinalOffer->Description = FText::FromString(FinalDescription);
+	FinalOffer->Rarity = RolledRarity;
+	FinalOffer->Effects = FinalEffects;
+
+	// For now, if it's a new item, it's Level 1. If it's an upgrade, we can't know the level yet.
+	// Let's default to 1 for now until we have an inventory.
+	// TODO: Get the real current level from the InventoryComponent.
+	if (bIsNewItem)
+	{
+		FinalOffer->UpgradeLevel = 1;
+	}
+	else
+	{
+		// We don't know the "from -> to" level yet. Let's just put the player's level for now as a placeholder.
+		// A proper implementation needs the InventoryComponent.
+		FinalOffer->UpgradeLevel = 1; // Placeholder
+	}
+	return FinalOffer;
+}
+
+EUpgradeRarity UPRRewardManager::RollForRarity()
+{
+	// Simple rarity roll. A real system would use weighted probabilities and effected by luck.
+	float Roll = FMath::FRand(); // 0.0 to 1.0
+	if (Roll < 0.60f) return EUpgradeRarity::Common;     // 60% chance
+	if (Roll < 0.85f) return EUpgradeRarity::Uncommon;   // 25% chance
+	if (Roll < 0.95f) return EUpgradeRarity::Rare;       // 10% chance
+	if (Roll < 0.99f) return EUpgradeRarity::Epic;       // 4% chance
+	else return EUpgradeRarity::Legendary;               // 1% chance
 }

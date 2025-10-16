@@ -7,6 +7,7 @@
 #include "Components/PRInventoryComponent.h"
 #include "Managers/PRRewardManager.h"
 #include "Datas/PRUpgradeData.h"
+#include "EnhancedInputComponent.h"
 #include "Blueprint/UserWidget.h"
 
 void APRPlayerController::BeginPlay()
@@ -31,72 +32,105 @@ void APRPlayerController::OnPossess(APawn* InPawn)
     }
 }
 
+void APRPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
+	{
+		// ... (Move, Look, Jump baðlama kodlarýn burada) ...
+
+		// --- BIND THE NEW ACTION ---
+		EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &APRPlayerController::ToggleInventoryScreen);
+	}
+}
+
 void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 {
 	// Create an instance of our Reward Manager
 	UPRRewardManager* RewardManager = NewObject<UPRRewardManager>();
-	if (!RewardManager || !RewardDataTable || !LevelUpWidgetClass) return;
+	// --- SETUP THE REWARD MANAGER ---
+	// Initialize the manager with the stat info data table.
+	RewardManager->Initialize(StatsInfoDataTable);
 
-	// Prepare the pools for the manager
-	TArray<UDataTable*> UpgradePools;
-	UpgradePools.Add(RewardDataTable);
+	if (!RewardManager || AllPossibleItems.Num() == 0 || !LevelUpWidgetClass) return;
 
-	// Get the player's inventory (currently null, which is fine for our prototype)
+	// Get the player's inventory from the PlayerState
 	UPRInventoryComponent* PlayerInventory = nullptr;
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		PlayerInventory = PS->InventoryComponent;
+	}
 
-	// Call the manager to get our rewards and store them in the OfferedRewards array
-	OfferedRewards = RewardManager->GenerateAndDraftRewards(UpgradePools, PlayerInventory, 3);
+	
 
-	// --- Show UI ---
-	SetPause(true); // Pause the game
+	// Call the manager with the new parameters to get our rewards
+	OfferedRewards = RewardManager->GenerateRewards(PlayerInventory, AllPossibleItems, 3);
 
-	// Create the widget
+	// --- Show UI (Bu kýsým ayný) ---
+	SetPause(true);
+
 	LevelUpWidgetInstance = CreateWidget(this, LevelUpWidgetClass);
 	if (LevelUpWidgetInstance)
 	{
 		LevelUpWidgetInstance->AddToViewport();
 	}
 
-	// Set input mode to UI only and show the mouse cursor
 	FInputModeUIOnly InputMode;
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
+}
+
+void APRPlayerController::ToggleInventoryScreen()
+{
+	// Check if the widget is already created and visible
+	if (InventoryScreenInstance && InventoryScreenInstance->IsInViewport())
+	{
+		// If it is, remove it.
+		InventoryScreenInstance->RemoveFromParent();
+		InventoryScreenInstance = nullptr; // Clear the pointer
+
+		// Set input mode back to game only and hide the mouse cursor
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+	}
+	else
+	{
+		// If it's not visible, create and show it.
+		if (InventoryScreenWidgetClass)
+		{
+			InventoryScreenInstance = CreateWidget(this, InventoryScreenWidgetClass);
+			if (InventoryScreenInstance)
+			{
+				InventoryScreenInstance->AddToViewport();
+
+				// Set input mode to Game and UI and show the mouse cursor
+				FInputModeGameAndUI InputMode;
+				SetInputMode(InputMode);
+				bShowMouseCursor = true;
+			}
+		}
+	}
 }
 
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {
 	if (!ChosenUpgrade) return;
 
+	// The PlayerController's ONLY job is to forward the request to the correct component.
+	// It doesn't need to know HOW the reward is applied.
+
 	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
 	{
-		if (UPRStatsComponent* StatsComp = PS->StatsComponent)
+		if (UPRInventoryComponent* InvComp = PS->InventoryComponent)
 		{
-			// Loop through all effects in the chosen upgrade data asset
-			for (const FUpgradeEffect& Effect : ChosenUpgrade->Effects)
-			{
-				// In the future, we will "roll" the value here. For now, let's use the Min value.
-				float ValueToApply = Effect.MinMagnitude;
-
-				float CurrentValue = StatsComp->GetStatValue(Effect.TargetStat);
-				float NewValue = 0.f;
-
-				// Apply the effect based on its operation type
-				if (Effect.Operation == EModifierOperation::Additive)
-				{
-					NewValue = CurrentValue + ValueToApply;
-				}
-				else if (Effect.Operation == EModifierOperation::Multiplicative)
-				{
-					NewValue = CurrentValue + ValueToApply; // Note: For now, we also add multiplicative bonuses. A real system would be more complex.
-				}
-
-				StatsComp->SetStatValue(Effect.TargetStat, NewValue);
-				UE_LOG(LogTemp, Warning, TEXT("Applied Reward '%s'! Stat '%s' changed to %f."), *ChosenUpgrade->DisplayName.ToString(), *Effect.TargetStat.ToString(), NewValue);
-			}
+			// Tell the InventoryComponent to handle this upgrade.
+			InvComp->AddOrUpgradeItem(ChosenUpgrade);
 		}
 	}
 
-	// --- Resume Game ---
+	// --- Resume Game (This part stays the same) ---
 	if (LevelUpWidgetInstance)
 	{
 		LevelUpWidgetInstance->RemoveFromParent();

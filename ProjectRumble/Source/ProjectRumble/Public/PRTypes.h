@@ -32,6 +32,15 @@ enum class EUpgradeType : uint8
     StatBonus // A simple, direct stat increase probably we wont use but its for test only right now
 };
 
+UENUM(BlueprintType)
+enum class EItemType : uint8
+{
+    Weapon,
+    Tome,
+    Relic,
+    // Can add more types in the future
+};
+
 USTRUCT(BlueprintType)
 struct FStatDefinition : public FTableRowBase 
 {
@@ -56,6 +65,7 @@ public:
 
 };
 
+//This Struct now useless @TODO Delete everything that uses it or refactor it. (We use FPotentialUpgradeEffect right now, so check PRItemDefinition.)
 // Represents a single effect that an upgrade can apply to a stat.
 USTRUCT(BlueprintType)
 struct FUpgradeEffect
@@ -79,16 +89,38 @@ struct FUpgradeEffect
     float MaxMagnitude;
 };
 
-// An entry in an upgrade pool, used for random selection of upgrades.
 USTRUCT(BlueprintType)
-struct FUpgradePoolEntry : public FTableRowBase
+struct FPotentialUpgradeEffect
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    TObjectPtr<UPRUpgradeData> UpgradeDataAsset;
+    /** Which stat can be upgraded? (e.g., Stat.Offense.Damage) */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FGameplayTag TargetStat;
 
-    // How likely is this upgrade to be picked? (Higher is more likely)
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    float Weight = 1.0f;
+    /** How is the value applied? Additive or Multiplicative? */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    EModifierOperation Operation;
+
+    /** The minimum possible value for this effect at its base level (e.g., Common rarity, Level 1). */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Value")
+    float BaseMinMagnitude;
+
+    /** The maximum possible value for this effect at its base level. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Value")
+    float BaseMaxMagnitude;
+
+    /**
+     * How much extra bonus is added for each rarity level above Common?
+     * This value will be multiplied by the rarity tier (e.g., Rare is tier 2, so 2 * Bonus).
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Value")
+    float BonusPerRarityTier;
+
+    /**
+     * How likely is this specific stat to be chosen from the pool of potential effects?
+     * A higher weight means a higher chance.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weight")
+    float SelectionWeight = 1.0f;
 };

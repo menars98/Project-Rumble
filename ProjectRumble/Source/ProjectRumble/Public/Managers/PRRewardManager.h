@@ -5,11 +5,14 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "PRTypes.h" 
+#include "Datas/PRUpgradeData.h"
+#include "Datas/PRItemDefinition.h"
 #include "PRRewardManager.generated.h"
 
-class UDataTable;
-class UPRUpgradeData; // Forward Declaration
-class UPRInventoryComponent; // Forward Declaration
+
+
+class UPRItemDefinition; 
+class UPRInventoryComponent;
 
 /**
  *  Manages the logic for generating and drafting level-up rewards.
@@ -22,22 +25,39 @@ class PROJECTRUMBLE_API UPRRewardManager : public UObject
 	
 public:
 	/**
-	 * Main function to generate and draft a list of rewards for the player.
-	 * @param AllUpgradePools An array of Data Tables to draw rewards from.
-	 * @param PlayerInventory A reference to the player's inventory to check current items.
-	 * @param NumOfChoices The number of rewards to offer the player.
-	 * @return An array of offered upgrade data assets.
+	 * Sets up the Reward Manager with the necessary data sources before use.
+	 * @param InStatsInfoTable A Data Table containing display names for stats.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Rewards")
-	TArray<UPRUpgradeData*> GenerateAndDraftRewards(const TArray<UDataTable*>& AllUpgradePools, const UPRInventoryComponent* PlayerInventory, int32 NumOfChoices);
+	void Initialize(UDataTable* InStatsInfoTable);
+
+
+	/**
+	 * Main function to generate a list of rewards for the player.
+	 * @param PlayerInventory A reference to the player's inventory to check current items.
+	 * @param AllPossibleItems A list of all item definitions the player could potentially get.
+	 * @param NumOfChoices The number of rewards to offer the player.
+	 * @param PlayerLevel The player's current level, for scaling purposes.
+	 * @return An array of dynamically generated upgrade data objects.
+	 */
+	TArray<UPRUpgradeData*> GenerateRewards(const UPRInventoryComponent* PlayerInventory, const TArray<UPRItemDefinition*>& AllPossibleItems, int32 NumOfChoices);
 
 
 protected:
 	/**
-	 * Builds a master list of all possible upgrades based on the player's current state.
-	 * @param AllUpgradePools All available upgrade data tables.
-	 * @param PlayerInventory The player's current inventory.
-	 * @return A weighted list of possible upgrades.
+	 * Generates a single, fully-formed upgrade offer for a specific item.
+	 * This function handles rarity rolls, effect selection, and value rolls.
+	 * @param ItemDef The definition of the item to generate an upgrade for.
+	 * @param bIsNewItem If true, this will be a "pick up new item" offer. Otherwise, it's a level-up offer.
+	 * @return A dynamically created UPRUpgradeData object.
 	 */
-	TArray<FUpgradePoolEntry> BuildMasterRewardPool(const TArray<UDataTable*>& AllUpgradePools, const UPRInventoryComponent* PlayerInventory);
+	UPRUpgradeData* CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, bool bIsNewItem);
+
+	/** Determines the rarity for an upcoming upgrade offer. */
+	EUpgradeRarity RollForRarity();
+
+private:
+	// A pointer to the data table that holds stat definitions (display names, etc.).
+	// This is set during Initialize.
+	UPROPERTY()
+	TObjectPtr<UDataTable> StatsInfoTable;
 };

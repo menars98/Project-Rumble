@@ -18,6 +18,7 @@ namespace NativeGameplayTags
 		{
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_Damage, "Stat.Offense.Damage");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_CritChance, "Stat.Offense.CritChance");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_AttackSpeed, "Stat.Offense.AttackSpeed");
 		}
 	}
 }

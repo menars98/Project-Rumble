@@ -13,6 +13,11 @@ UCLASS()
 class PROJECTRUMBLE_API APRHUD : public AHUD
 {
 	GENERATED_BODY()
+
+public:
+    /** Returns the main player HUD widget instance. */
+    UFUNCTION(BlueprintPure, Category = "HUD")
+    UUserWidget* GetPlayerHUDWidget() const { return PlayerHUDWidget; }
 	
 protected:
     // The main gameplay widget class to create.

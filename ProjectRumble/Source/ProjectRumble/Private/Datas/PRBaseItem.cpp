@@ -3,6 +3,7 @@
 
 #include "Datas/PRBaseItem.h"
 #include "Datas/PRItemDefinition.h"
+#include "Engine/World.h"
 
 UPRBaseItem::UPRBaseItem()
 {
@@ -27,4 +28,13 @@ void UPRBaseItem::LevelUp()
 
 	// Child classes will override this to add more specific logic,
 	// like reapplying stat bonuses or increasing damage.
+}
+
+UWorld* UPRBaseItem::GetWorld() const
+{
+	if (OwningActor)
+	{
+		return OwningActor->GetWorld();
+	}
+	return nullptr;
 }

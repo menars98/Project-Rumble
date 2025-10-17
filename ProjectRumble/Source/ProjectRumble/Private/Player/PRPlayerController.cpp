@@ -9,6 +9,8 @@
 #include "Datas/PRUpgradeData.h"
 #include "EnhancedInputComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "UI/PRHUD.h"
+#include "Interfaces/PRBPIPlayerHUD.h"
 
 void APRPlayerController::BeginPlay()
 {
@@ -83,34 +85,53 @@ void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 
 void APRPlayerController::ToggleInventoryScreen()
 {
-	// Check if the widget is already created and visible
-	if (InventoryScreenInstance && InventoryScreenInstance->IsInViewport())
+	// Get our custom HUD from the controller.
+	APRHUD* CurrentHUD = Cast<APRHUD>(GetHUD());
+	if (!CurrentHUD)
 	{
-		// If it is, remove it.
-		InventoryScreenInstance->RemoveFromParent();
-		InventoryScreenInstance = nullptr; // Clear the pointer
+		// If we don't have our custom HUD for some reason, we can't do anything.
+		return;
+	}
 
-		// Set input mode back to game only and hide the mouse cursor
+	// Get the main player HUD widget instance from our HUD class.
+	UUserWidget* PlayerHUDWidget = CurrentHUD->GetPlayerHUDWidget();
+	if (!PlayerHUDWidget)
+	{
+		// If the main HUD widget hasn't been created yet, we can't do anything.
+		return;
+	}
+
+	// --- THIS IS THE INTERFACE LOGIC ---
+	// Check if the main HUD widget implements our interface.
+	if (PlayerHUDWidget->GetClass()->ImplementsInterface(UPRBPIPlayerHUD::StaticClass()))
+	{
+		// If it does, we can safely call the interface function on it.
+		// We use Execute_FunctionName for BlueprintImplementableEvents.
+		IPRBPIPlayerHUD::Execute_ToggleInventory(PlayerHUDWidget);
+	}
+
+
+	// --- INPUT MODE & MOUSE CURSOR LOGIC ---
+	// This logic is independent of the widget and handles player input.
+	// Let's assume the UI will tell us if it's now open or closed.
+	// For a simpler approach, we can check the widget's visibility, but that creates a dependency.
+	// A better way is to just toggle the state.
+
+	const bool bIsInventoryOpen = bShowMouseCursor; // A simple way to check the current state
+
+	if (bIsInventoryOpen)
+	{
+		// If it was open, we are closing it. Return to Game Only mode.
 		FInputModeGameOnly InputMode;
 		SetInputMode(InputMode);
 		bShowMouseCursor = false;
 	}
 	else
 	{
-		// If it's not visible, create and show it.
-		if (InventoryScreenWidgetClass)
-		{
-			InventoryScreenInstance = CreateWidget(this, InventoryScreenWidgetClass);
-			if (InventoryScreenInstance)
-			{
-				InventoryScreenInstance->AddToViewport();
-
-				// Set input mode to Game and UI and show the mouse cursor
-				FInputModeGameAndUI InputMode;
-				SetInputMode(InputMode);
-				bShowMouseCursor = true;
-			}
-		}
+		// If it was closed, we are opening it. Switch to Game and UI mode.
+		FInputModeGameAndUI InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
 	}
 }
 

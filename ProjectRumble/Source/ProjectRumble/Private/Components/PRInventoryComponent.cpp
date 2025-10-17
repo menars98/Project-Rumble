@@ -4,6 +4,8 @@
 #include "Datas/PRItemDefinition.h"
 #include "Datas/PRBaseItem.h"
 #include "Datas/PRUpgradeData.h"
+#include "GameFramework/Pawn.h" 
+#include "GameFramework/PlayerState.h"
 
 UPRInventoryComponent::UPRInventoryComponent()
 {
@@ -81,11 +83,26 @@ void UPRInventoryComponent::AddNewItem(UPRItemDefinition* ItemDef)
 		return;
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("INVENTORY: Attempting to add new item: %s"), *ItemDef->DisplayName.ToString());
+
 	// Create a new instance of the item's logic class (e.g., UPRWeaponItem).
 	UPRBaseItem* NewItem = NewObject<UPRBaseItem>(this, ItemDef->ItemClass);
 	if (NewItem)
 	{
-		NewItem->Initialize(ItemDef, GetOwner());
+		// Get the owner of THIS component. We know it should be a PlayerState.
+		APlayerState* MyOwner = GetOwner<APlayerState>();
+		if (!MyOwner)
+		{
+			// If for some reason our owner isn't a player state, we can't find the pawn.
+			// This is a safety check.
+			return;
+		}
+
+		// Get the Pawn that this PlayerState controls.
+		APawn* OwningPawn = MyOwner->GetPawn();
+
+		// Initialize the item with the Pawn as its owner.
+		NewItem->Initialize(ItemDef, OwningPawn);
 
 		// Add the new item to the correct inventory list based on its type.
 		switch (ItemDef->ItemType)

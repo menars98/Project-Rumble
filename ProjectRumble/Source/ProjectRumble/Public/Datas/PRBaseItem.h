@@ -14,7 +14,7 @@ class AActor;
  * This is a UObject, meaning it does not exist in the world physically by itself.
  * It lives inside the InventoryComponent and holds the state of a specific item instance.
  */
-UCLASS(BlueprintType)
+UCLASS(Blueprintable, BlueprintType)
 class PROJECTRUMBLE_API UPRBaseItem : public UObject
 {
 	GENERATED_BODY()
@@ -37,6 +37,9 @@ public:
 	 */
 	virtual void LevelUp();
 
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	virtual UWorld* GetWorld() const override;
+
 	// -- GETTERS --
 
 	UFUNCTION(BlueprintPure, Category = "Item")
@@ -56,6 +59,6 @@ protected:
 
 	// A reference to the actor that owns this item (usually the player character).
 	// This is useful for getting access to the world, other components, etc.
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<AActor> OwningActor;
 };

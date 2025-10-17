@@ -28,6 +28,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Loot")
 	float XPToAward = 25.0f;
 
+	// A pointer to the dynamic material instance for hit flash effects.
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterial;
+
+	// The timer handle to manage the duration of the flash effect.
+	FTimerHandle FlashTimerHandle;
+
+	// Function to start the flash effect.
+	void PlayHitFlash();
+
+	// Function to end the flash effect.
+	void StopHitFlash();
+
 	// -- OVERRIDDEN FUNCTIONS --
 	// We override GetStatsComponent to return our own component.
 	virtual UPRStatsComponent* GetStatsComponent() const override;
@@ -39,5 +52,7 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void BeginPlay() override;
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 };
 

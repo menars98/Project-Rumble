@@ -21,6 +21,49 @@ void APRAIBase::BeginPlay()
 		StatsComponent_AI->OnDeathDelegate.AddDynamic(this, &APRAIBase::OnDeath);
 		StatsComponent_AI->OnHealthChangedDelegate.AddDynamic(this, &APRAIBase::OnHealthChanged);
 	}
+	// Create a dynamic material instance when the AI spawns.
+	if (GetMesh())
+	{
+		UMaterialInterface* OriginalMaterial = GetMesh()->GetMaterial(0);
+		if (OriginalMaterial)
+		{
+			DynamicMaterial = UMaterialInstanceDynamic::Create(OriginalMaterial, this);
+			GetMesh()->SetMaterial(0, DynamicMaterial);
+		}
+	}
+}
+
+float APRAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (ActualDamage > 0.f)
+	{
+		// Play the flash effect whenever damage is taken.
+		PlayHitFlash();
+	}
+
+	return ActualDamage;
+}
+
+void APRAIBase::PlayHitFlash()
+{
+	if (DynamicMaterial)
+	{
+		DynamicMaterial->SetVectorParameterValue(FName("FlashColor"), FLinearColor::White);
+
+		// Set a timer to stop the flash after a short duration.
+		GetWorld()->GetTimerManager().SetTimer(FlashTimerHandle, this, &APRAIBase::StopHitFlash, 0.1f, false);
+	}
+}
+
+void APRAIBase::StopHitFlash()
+{
+	if (DynamicMaterial)
+	{
+		// Reset the color back to black.
+		DynamicMaterial->SetVectorParameterValue(FName("FlashColor"), FLinearColor::Black);
+	}
 }
 
 // Override to return the AI's own component.

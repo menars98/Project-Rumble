@@ -5,6 +5,7 @@
 #include "Characters/PRCharacterBase.h"
 #include "Player/PRPlayerState.h"
 #include "Components/PRStatsComponent.h"
+#include "Datas/PRItemDefinition.h"
 #include "PRGameplayTags.h"
 #include "TimerManager.h" 
 
@@ -12,14 +13,23 @@ void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOw
 {
 	Super::Initialize(InItemDefinition, InOwningActor);
 
-	// Start the attack loop when the weapon is first acquired.
-	Attack();
+	UE_LOG(LogTemp, Error, TEXT("WEAPON INITIALIZE CALLED for %s!"), *InItemDefinition->DisplayName.ToString());
+	// --- START THE ATTACK LOOP ---
+	// Check if we have a valid world to set a timer in.
+	if (UWorld* World = GetWorld())
+	{
+		// Set a timer to call our Attack() function after an initial delay (optional, 0 for immediate)
+		// and then loop forever.
+		// For the first attack, we can call it directly.
+		Attack();
+	}
 }
 
 void UPRWeaponItem::LevelUp()
 {
 	Super::LevelUp();
 
+	
 	// When the weapon levels up, its stats (like cooldown) might change.
 	// We need to restart the timer with the new calculated cooldown.
 	if (OwningActor)
@@ -31,6 +41,10 @@ void UPRWeaponItem::LevelUp()
 
 void UPRWeaponItem::Attack()
 {
+	// Get the actual class name of this object instance and print it.
+	FString ClassName = GetClass()->GetName();
+	UE_LOG(LogTemp, Error, TEXT("ATTACKING WITH CLASS: %s"), *ClassName);
+
 	if (!OwningActor) return;
 
 	// Perform the attack logic defined in the Blueprint.

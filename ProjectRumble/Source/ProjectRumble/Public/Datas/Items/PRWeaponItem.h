@@ -11,7 +11,7 @@ class APRCharacterBase;
 /**
  * Represents a Weapon item that can perform attacks on a timer.
  */
-UCLASS()
+UCLASS(Blueprintable)
 class PROJECTRUMBLE_API UPRWeaponItem : public UPRBaseItem
 {
 	GENERATED_BODY()

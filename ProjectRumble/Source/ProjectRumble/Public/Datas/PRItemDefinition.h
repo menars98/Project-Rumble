@@ -52,4 +52,8 @@ public:
     */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Logic")
     TSubclassOf<UPRBaseItem> ItemClass;
+
+    // This will only be visible in the editor if ItemType is 'Weapon'
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Data", meta = (EditCondition = "ItemType == EItemType::Weapon"))
+    FWeaponStats WeaponStats;
 };

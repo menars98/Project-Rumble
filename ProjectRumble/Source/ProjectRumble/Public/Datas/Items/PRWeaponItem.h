@@ -33,10 +33,42 @@ protected:
 	UFUNCTION()
 	void Attack();
 
+	// -- Helper Functions for Calculations --
 	// A helper function to get the final, calculated cooldown for this weapon.
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedCooldown() const;
+
+	// A helper function to get the final, calculated damage for this weapon.
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedDamage() const;
+
+	// A helper function to get the final, calculated critical hit chance for this weapon.
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedCritChance() const;
+
+	// A helper function to get the final, calculated size for this weapon.
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedSize() const;
+
+	// A helper function to get the final, calculated knockback for this weapon.
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedKnockback() const;
+
+	// A helper function to get the final, calculated duration for this weapon.
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedDuration() const;
+
+	// A helper function to get the final, calculated projectile bounce for this weapon.
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	int32 GetCalculatedProjectileBounce() const;
 
 	// The timer handle that manages the attack loop.
 	FTimerHandle AttackTimerHandle;
+
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	int32 GetCalculatedProjectileCount() const;
+
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedProjectileSpeed() const;
 
 };

@@ -106,21 +106,21 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 		// Create the final, resolved effect
 		FUpgradeEffect FinalEffect;
 		FinalEffect.TargetStat = ChosenPotentialEffect.TargetStat;
-		FinalEffect.Operation = ChosenPotentialEffect.Operation;
 		FinalEffect.MinMagnitude = RolledMagnitude; // We store the rolled value in both Min and Max
 		FinalEffect.MaxMagnitude = RolledMagnitude; // to make it a fixed value.
 
 		FinalEffects.Add(FinalEffect);
 
 		// --- Build the description string based on the operation type ---
-		if (ChosenPotentialEffect.Operation == EModifierOperation::Additive)
+		FString TagName = ChosenPotentialEffect.TargetStat.ToString();
+		if (TagName.EndsWith(TEXT(".Additive")))
 		{
-			// DOÐRU: Artýk Data Table'dan bulduðumuz "güzel adý" kullanýyoruz.
+			// Additive formatlama (+15)
 			FinalDescription += FString::Printf(TEXT("%s: +%.0f\n"), *StatDisplayName, RolledMagnitude);
 		}
-		else // Multiplicative
+		else // Varsayýlan olarak Multiplicative kabul edelim
 		{
-			// DOÐRU: Burada da ayný þekilde.
+			// Multiplicative formatlama (+15.0%)
 			FinalDescription += FString::Printf(TEXT("%s: +%.1f%%\n"), *StatDisplayName, RolledMagnitude * 100);
 		}
 

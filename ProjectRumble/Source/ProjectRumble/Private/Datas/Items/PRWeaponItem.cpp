@@ -57,23 +57,209 @@ void UPRWeaponItem::Attack()
 
 float UPRWeaponItem::GetCalculatedCooldown() const
 {
-	// This is a placeholder. A real implementation would get base cooldown from the ItemDefinition
-	// and the AttackSpeed modifier from the player's StatsComponent.
-	float BaseCooldown = 2.0f; // TODO: Get from ItemDefinition
+	float WeaponBaseCooldown = ItemDefinition->WeaponStats.BaseCooldown;
+
+	float AdditiveBonus = 0.0f;
+	float MultiplicativeBonus = 1.0f;
+
+	float FinalCooldown = 0.0f;
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			AdditiveBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Additive);
+			MultiplicativeBonus = 1.0f + StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
+
+			// FORMULA: (Base - Additive) / Multiplicative
+			// Attack speed increases, cooldown decreases. So we use division.
+			FinalCooldown = (WeaponBaseCooldown - AdditiveBonus) / MultiplicativeBonus;
+		}
+	}
+
+	return FMath::Max(FinalCooldown, 0.1f); // Ensure cooldown doesn't become zero or negative
+}
+
+float UPRWeaponItem::GetCalculatedDamage() const
+{
+	if (!ItemDefinition) return 0.f;
+
+	// 1. Get the weapon's own base damage
+	float WeaponBaseDamage = ItemDefinition->WeaponStats.BaseDamage;
+
+	// TODO: Add damage scaling from the weapon's own level. This could also be an additive bonus.
+
+	float AdditiveBonus = 0.f;
+	float MultiplicativeBonus = 1.0f; // Start at 1.0 for multiplication
+
+	// 2. Get all modifiers from the player's StatsComponent
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			AdditiveBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Additive);
+
+			// Multiplicative bonuses are added together (e.g., 0.1 + 0.05 = 0.15 for +15%)
+			MultiplicativeBonus = 1.0f + StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Multiplicative);
+		}
+	}
+
+	// 3. Calculate the final damage
+	// FORMULA: (Base + Additive) * Multiplicative
+	const float FinalDamage = (WeaponBaseDamage + AdditiveBonus) * MultiplicativeBonus;
+
+	return FinalDamage;
+}
+
+float UPRWeaponItem::GetCalculatedCritChance() const
+{
+	if (!ItemDefinition) return 0.f;
+
+	float WeaponBaseCritChance = 0.0f;
+
+	float AdditiveBonus = 0.0f;
+
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+		{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			WeaponBaseCritChance = ItemDefinition->WeaponStats.BaseCritChance; // FWeaponStats'a eklememiz lazým
+
+			AdditiveBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritChance);
+		}
+	}
+	
+	// FORMULA: Base + Additive
+	return FMath::Clamp(WeaponBaseCritChance + AdditiveBonus, 0.f, 1.f); // Clamp to 0-1 range (0% to 100%)
+}
+
+float UPRWeaponItem::GetCalculatedSize() const
+{
+	if (!ItemDefinition || !OwningActor) return 1.0f;
+
+	float BaseSize = ItemDefinition->WeaponStats.BaseSize;
+	float MultiplicativeBonus = 1.0f;
 
 	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
 	{
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
-			// Assuming AttackSpeed modifier is multiplicative (e.g., 0.1 for +10% speed).
-			// Cooldown = BaseCooldown / (1 + AttackSpeedModifier)
-			const float AttackSpeedMod = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed);
-			if (1.0f + AttackSpeedMod > 0)
-			{
-				return BaseCooldown / (1.0f + AttackSpeedMod);
-			}
+			// Assuming the tag is "Stat.Weapon.Size.Multiplicative"
+			MultiplicativeBonus += StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Size);
 		}
 	}
 
-	return BaseCooldown;
+	// FORMULA: Base * Multiplicative
+	return BaseSize * MultiplicativeBonus;
+}
+
+float UPRWeaponItem::GetCalculatedKnockback() const
+{
+	if (!ItemDefinition || !OwningActor) return 0.f;
+
+	float BaseKnockback = ItemDefinition->WeaponStats.BaseKnockback;
+	float MultiplicativeBonus = 1.0f;
+
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// Assuming the tag is "Stat.Weapon.Knockback.Multiplicative"
+			MultiplicativeBonus += StatsComp->GetStatValue(NativeGameplayTags::Stats::Physics::TAG_Stat_Physics_Knockback);
+		}
+	}
+
+	// FORMULA: Base * Multiplicative
+	return BaseKnockback * MultiplicativeBonus;
+}
+
+float UPRWeaponItem::GetCalculatedDuration() const
+{
+	if (!ItemDefinition || !OwningActor) return 0.f;
+
+	float BaseDuration = ItemDefinition->WeaponStats.BaseDuration;
+	float MultiplicativeBonus = 1.0f;
+
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// Assuming the tag is "Stat.Weapon.Duration.Multiplicative"
+			MultiplicativeBonus += StatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Duration);
+		}
+	}
+
+	// FORMULA: Base * Multiplicative
+	return BaseDuration * MultiplicativeBonus;
+}
+
+int32 UPRWeaponItem::GetCalculatedProjectileBounce() const
+{
+	if (!ItemDefinition || !OwningActor) return 0;
+
+	int32 BaseBounces = ItemDefinition->WeaponStats.BaseProjectileBounce;
+	int32 BonusBounces = 0;
+
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// Assuming the tag is "Stat.Weapon.ProjectileBounce"
+			BonusBounces = static_cast<int32>(StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileBounce));
+		}
+	}
+
+	// FORMULA: Base + Additive
+	return BaseBounces + BonusBounces;
+}
+
+int32 UPRWeaponItem::GetCalculatedProjectileCount() const
+{
+	if (!ItemDefinition || !OwningActor) return 1;
+
+	// 1. Get the base count from the weapon's definition
+	int32 BaseCount = ItemDefinition->WeaponStats.BaseProjectileCount;
+
+	// @TODO: Maybe Add scaling per level from the item itself (e.g., at level 5, BaseCount becomes 2)
+
+	// 2. Get the additive bonus from the player's global stats
+	int32 BonusCount = 0;
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			FGameplayTag ProjectileCountTag = NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileCount;
+			BonusCount = static_cast<int32>(StatsComp->GetStatValue(ProjectileCountTag));
+		}
+	}
+
+	// Final count is the base + bonus
+	return BaseCount + BonusCount;
+}
+
+float UPRWeaponItem::GetCalculatedProjectileSpeed() const
+{
+	if (!ItemDefinition) return 0.f;
+
+	// 1. Get the base projectile speed from the weapon's definition
+	float BaseSpeed = ItemDefinition->WeaponStats.BaseProjectileSpeed;
+
+	// TODO: Add speed scaling based on this item's CurrentLevel.
+
+	// 2. Get the multiplicative speed bonus from the player's global stats
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// Speed = BaseSpeed * (1 + ProjectileSpeedModifier)
+			// Assuming you have a tag for this modifier. If not, you need to create one.
+			// Let's assume the tag is: TAG_Stat_Weapon_ProjectileSpeed
+
+			// FGameplayTag SpeedModifierTag = ...;
+			// const float SpeedModifier = StatsComp->GetStatValue(SpeedModifierTag);
+			// return BaseSpeed * (1.0f + SpeedModifier);
+		}
+	}
+
+	// For now, if we don't have a modifier stat yet, just return the base speed.
+	return BaseSpeed;
 }

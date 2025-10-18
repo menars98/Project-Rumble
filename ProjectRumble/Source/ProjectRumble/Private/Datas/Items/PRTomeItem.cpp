@@ -41,20 +41,23 @@ void UPRTomeItem::ApplyBonuses()
 		// For a Tome, we can just take the average of the min/max magnitude as the bonus.
 		float ValueToAdd = (Effect.BaseMinMagnitude + Effect.BaseMaxMagnitude) / 2.0f;
 
-		float CurrentValue = StatsComp->GetStatValue(Effect.TargetStat);
-		float NewValue = 0.f;
+		// Get the correct stat tag to modify based on the effect's target.
+		// Example: TargetStat is "Stat.Offense.Damage", we need to modify "Stat.Offense.Damage.Multiplicative"
+		// THIS LOGIC IS COMPLEX. LET'S SIMPLIFY FOR THE PROTOTYPE.
 
-		if (Effect.Operation == EModifierOperation::Additive)
-		{
-			NewValue = CurrentValue + ValueToAdd;
-		}
-		else if (Effect.Operation == EModifierOperation::Multiplicative)
-		{
-			NewValue = CurrentValue + ValueToAdd; // Still using additive for now
-		}
+		// --- SIMPLIFIED PROTOTYPE LOGIC ---
+		// Let's assume the Tome's "PotentialUpgradeEffects" already has the CORRECT target stat
+		// (e.g., Stat.Offense.Damage.Multiplicative).
+
+		float CurrentValue = StatsComp->GetStatValue(Effect.TargetStat);
+
+		// We are simply adding the bonus. Since our TargetStat is already specific
+		// (e.g., Additive or Multiplicative), we don't need to check the operation.
+		float NewValue = CurrentValue + ValueToAdd;
 
 		StatsComp->SetStatValue(Effect.TargetStat, NewValue);
-		UE_LOG(LogTemp, Log, TEXT("Tome '%s' applied bonus to stat %s."), *ItemDefinition->DisplayName.ToString(), *Effect.TargetStat.ToString());
+
+		UE_LOG(LogTemp, Log, TEXT("Tome '%s' applied bonus to stat %s. New value: %f"), *ItemDefinition->DisplayName.ToString(), *Effect.TargetStat.ToString(), NewValue);
 	}
 }
 

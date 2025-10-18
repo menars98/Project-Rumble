@@ -5,11 +5,15 @@
 #include "Components/PRStatsComponent.h"
 #include "Characters/PRCharacterBase.h" 
 #include "Kismet/GameplayStatics.h" 
+#include "AI/PRAIController.h"
 
 APRAIBase::APRAIBase()
 {
 	// AI creates its own StatsComponent.
 	StatsComponent_AI = CreateDefaultSubobject<UPRStatsComponent>(TEXT("StatsComponent"));
+
+	// Set the default AI Controller class for ALL pawns that inherit from APRAIBase.
+	AIControllerClass = APRAIController::StaticClass();
 }
 
 void APRAIBase::BeginPlay()
@@ -75,6 +79,25 @@ UPRStatsComponent* APRAIBase::GetStatsComponent() const
 void APRAIBase::OnDeath()
 {
 	Super::OnDeath(); // Run the base logic from EntityBase (disable collision etc.).
+
+	USkeletalMeshComponent* MyMesh = GetMesh();
+	if (MyMesh)
+	{
+		// --- RAGDOLL LOGIC ---
+
+		// Detach from the controller so it no longer receives AI commands
+		if (Controller)
+		{
+			Controller->UnPossess();
+		}
+
+		// Set the collision profile to "Ragdoll" to allow it to collide with the world
+		MyMesh->SetCollisionProfileName(FName("Ragdoll"));
+
+		// Enable physics simulation on the mesh.
+		// The "true" parameter tells it to wake the physics body immediately.
+		MyMesh->SetSimulatePhysics(true);
+	}
 
 	// --- AWARD XP TO THE PLAYER ---
 	// Get a reference to the player character. This is a simple way for single-player.

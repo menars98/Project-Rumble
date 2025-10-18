@@ -16,13 +16,6 @@ enum class EFaction : uint8
 };
 
 UENUM(BlueprintType)
-enum class EModifierOperation : uint8
-{
-    Additive,      // Adds to the base value (e.g., +10 HP, +1 Projectile)
-    Multiplicative // Multiplies the value (e.g., +10% Damage, which is * 1.1)
-};
-
-UENUM(BlueprintType)
 enum class EUpgradeType : uint8
 {
     NewWeapon,
@@ -75,11 +68,6 @@ struct FUpgradeEffect
     // Which stat does this effect modify?
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     FGameplayTag TargetStat;
-
-    // How is the value applied?
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    EModifierOperation Operation;
-
     // The magnitude of the effect will be a random value between Min and Max.
     // For a fixed value, set Min and Max to be the same.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Value")
@@ -97,11 +85,6 @@ struct FPotentialUpgradeEffect
     /** Which stat can be upgraded? (e.g., Stat.Offense.Damage) */
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     FGameplayTag TargetStat;
-
-    /** How is the value applied? Additive or Multiplicative? */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    EModifierOperation Operation;
-
     /** The minimum possible value for this effect at its base level (e.g., Common rarity, Level 1). */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Value")
     float BaseMinMagnitude;
@@ -123,4 +106,37 @@ struct FPotentialUpgradeEffect
      */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weight")
     float SelectionWeight = 1.0f;
+};
+
+USTRUCT(BlueprintType)
+struct FWeaponStats
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseDamage = 10.f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseCooldown = 2.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseCritChance = 0.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseProjectileSpeed = 1500.f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseSize = 1.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseKnockback = 5.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseDuration = 3.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    int32 BaseProjectileCount = 1;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    int32 BaseProjectileBounce = 1;
 };

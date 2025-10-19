@@ -12,11 +12,12 @@ UPRBaseItem::UPRBaseItem()
 	OwningActor = nullptr;
 }
 
-void UPRBaseItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor)
+
+void UPRBaseItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects)
 {
 	ItemDefinition = InItemDefinition;
 	OwningActor = InOwningActor;
-	CurrentLevel = 1; // When an item is first acquired, it's Level 1.
+	CurrentLevel = 1;
 
 	UE_LOG(LogTemp, Log, TEXT("Item '%s' initialized at Level %d."), *ItemDefinition->DisplayName.ToString(), CurrentLevel);
 }

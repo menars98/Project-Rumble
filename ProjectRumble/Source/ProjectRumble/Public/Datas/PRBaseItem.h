@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "PRTypes.h"
 #include "PRBaseItem.generated.h"
 
 class UPRItemDefinition;
@@ -28,8 +29,10 @@ public:
 	 * This is called by the InventoryComponent when the item is first created.
 	 * @param InItemDefinition The Data Asset that defines this item.
 	 * @param InOwningActor The actor (usually the player character) that owns this item.
+	 * @param InitialEffects The initial upgrade effects to apply to this item.
 	 */
-	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor);
+	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects);
+
 
 	/**
 	 * Levels up the item. This function can be overridden by child classes

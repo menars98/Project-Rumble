@@ -18,7 +18,7 @@ class PROJECTRUMBLE_API UPRWeaponItem : public UPRBaseItem
 	
 public:
 	// Override the Initialize function to start the attack timer.
-	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor) override;
+	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects) override;
 
 	// Override the LevelUp function to potentially update the timer.
 	virtual void LevelUp() override;

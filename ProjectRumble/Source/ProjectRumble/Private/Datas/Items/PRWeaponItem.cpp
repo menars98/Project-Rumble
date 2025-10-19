@@ -9,9 +9,9 @@
 #include "PRGameplayTags.h"
 #include "TimerManager.h" 
 
-void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor)
+void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects)
 {
-	Super::Initialize(InItemDefinition, InOwningActor);
+	Super::Initialize(InItemDefinition, InOwningActor, InitialEffects);
 
 	UE_LOG(LogTemp, Error, TEXT("WEAPON INITIALIZE CALLED for %s!"), *InItemDefinition->DisplayName.ToString());
 	// --- START THE ATTACK LOOP ---
@@ -122,7 +122,7 @@ float UPRWeaponItem::GetCalculatedCritChance() const
 		{
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
-			WeaponBaseCritChance = ItemDefinition->WeaponStats.BaseCritChance; // FWeaponStats'a eklememiz lazým
+			WeaponBaseCritChance = ItemDefinition->WeaponStats.BaseCritChance; 
 
 			AdditiveBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritChance);
 		}
@@ -243,23 +243,16 @@ float UPRWeaponItem::GetCalculatedProjectileSpeed() const
 	// 1. Get the base projectile speed from the weapon's definition
 	float BaseSpeed = ItemDefinition->WeaponStats.BaseProjectileSpeed;
 
-	// TODO: Add speed scaling based on this item's CurrentLevel.
+	float ProjectileSpeedModifier = 0.0f;
 
 	// 2. Get the multiplicative speed bonus from the player's global stats
 	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
 	{
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
-			// Speed = BaseSpeed * (1 + ProjectileSpeedModifier)
-			// Assuming you have a tag for this modifier. If not, you need to create one.
-			// Let's assume the tag is: TAG_Stat_Weapon_ProjectileSpeed
-
-			// FGameplayTag SpeedModifierTag = ...;
-			// const float SpeedModifier = StatsComp->GetStatValue(SpeedModifierTag);
-			// return BaseSpeed * (1.0f + SpeedModifier);
+			 ProjectileSpeedModifier += StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileSpeed);
 		}
 	}
 
-	// For now, if we don't have a modifier stat yet, just return the base speed.
-	return BaseSpeed;
+	return BaseSpeed * (1.0f + ProjectileSpeedModifier);
 }

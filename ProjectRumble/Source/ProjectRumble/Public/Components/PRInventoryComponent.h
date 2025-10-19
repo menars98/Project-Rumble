@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "PRTypes.h"
 #include "PRInventoryComponent.generated.h"
 
 class UPRBaseItem;
@@ -47,7 +48,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	/** Adds a new item to the inventory based on its definition. */
-	void AddNewItem(UPRItemDefinition* ItemDef);
+	void AddNewItem(UPRItemDefinition* ItemDef, const TArray<FUpgradeEffect>& InitialEffects);
 
 	/** Finds an existing item in the inventory and calls its LevelUp function. */
 	void UpgradeExistingItem(UPRItemDefinition* ItemDef);

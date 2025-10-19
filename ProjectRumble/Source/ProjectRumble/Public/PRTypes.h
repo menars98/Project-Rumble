@@ -34,6 +34,19 @@ enum class EItemType : uint8
     // Can add more types in the future
 };
 
+UENUM(BlueprintType)
+enum class EStatDisplayType : uint8
+{
+    // Display as a flat number (e.g., 100, 10, 0)
+    Flat,
+
+    // Display as a percentage (e.g., 1%, 0%)
+    Percentage,
+
+    // Display as a multiplier (e.g., 1.0x, 1.2x)
+    Multiplier
+};
+
 USTRUCT(BlueprintType)
 struct FStatDefinition : public FTableRowBase 
 {
@@ -41,7 +54,7 @@ struct FStatDefinition : public FTableRowBase
 
 public:
 
-    // Stat'ýn benzersiz kimliði (ID). Kod içinde bu ID ile stat'a eriþeceðiz.
+    // The stat's unique identifier (ID). We will access the stat using this ID in the code.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stat Definition")
     FGameplayTag StatID; 
 
@@ -55,7 +68,13 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stat Definition")
     float DefaultValue;
 
+    // Should this stat be displayed on the character's main stats panel? 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    bool bShouldDisplayOnPanel = true; 
 
+    /** How should this stat's value be formatted in the UI? */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    EStatDisplayType DisplayType = EStatDisplayType::Flat;
 };
 
 //This Struct now useless @TODO Delete everything that uses it or refactor it. (We use FPotentialUpgradeEffect right now, so check PRItemDefinition.)

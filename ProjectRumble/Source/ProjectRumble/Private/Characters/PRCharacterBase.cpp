@@ -158,7 +158,6 @@ void APRCharacterBase::Move(const FInputActionValue& Value)
 {
 	const FVector2D MovementVector = Value.Get<FVector2D>();
 
-	// MoveForward ve MoveRight mantýðýný bu tek vektörle birleþtir
 	if (Controller)
 	{
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -201,7 +200,7 @@ void APRCharacterBase::TakeDebugDamage()
 			// We still cast to AIBase to make sure we are not damaging another player or ourselves.
 			if (APRAIBase* AI = Cast<APRAIBase>(Hit.GetActor()))
 			{
-				// --- THIS IS THE CORRECT WAY TO APPLY DAMAGE ---
+				// --- We override applydamage ---
 				UGameplayStatics::ApplyDamage(
 					AI,       // The actor that will take damage
 					50.f,     // The base damage amount
@@ -223,7 +222,6 @@ void APRCharacterBase::OnHealthChanged(float CurrentHealth, float MaxHealth)
 	Super::OnHealthChanged(CurrentHealth, MaxHealth); // Call parent implementation if it has any logic.
 
 	// Player-specific logic here:
-	// For example, update the Health Bar UI.
 	UE_LOG(LogTemp, Log, TEXT("Player Health Changed: %.1f / %.1f"), CurrentHealth, MaxHealth);
 }
 

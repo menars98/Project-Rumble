@@ -40,7 +40,6 @@ void APRPlayerController::SetupInputComponent()
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-		// ... (Move, Look, Jump baðlama kodlarýn burada) ...
 
 		// --- BIND THE NEW ACTION ---
 		EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &APRPlayerController::ToggleInventoryScreen);
@@ -69,7 +68,7 @@ void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 	// Call the manager with the new parameters to get our rewards
 	OfferedRewards = RewardManager->GenerateRewards(PlayerInventory, AllPossibleItems, 3);
 
-	// --- Show UI (Bu kýsým ayný) ---
+	// --- Show UI ---
 	SetPause(true);
 
 	LevelUpWidgetInstance = CreateWidget(this, LevelUpWidgetClass);
@@ -151,7 +150,7 @@ void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 		}
 	}
 
-	// --- Resume Game (This part stays the same) ---
+	// --- Resume Game  ---
 	if (LevelUpWidgetInstance)
 	{
 		LevelUpWidgetInstance->RemoveFromParent();

@@ -113,15 +113,14 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 
 		// --- Build the description string based on the operation type ---
 		FString TagName = ChosenPotentialEffect.TargetStat.ToString();
-		if (TagName.EndsWith(TEXT(".Additive")))
+		if (TagName.EndsWith(TEXT(".Multiplicative")))
 		{
-			// Additive formatlama (+15)
-			FinalDescription += FString::Printf(TEXT("%s: +%.0f\n"), *StatDisplayName, RolledMagnitude);
-		}
-		else // Varsayýlan olarak Multiplicative kabul edelim
-		{
-			// Multiplicative formatlama (+15.0%)
 			FinalDescription += FString::Printf(TEXT("%s: +%.1f%%\n"), *StatDisplayName, RolledMagnitude * 100);
+		}
+		else // Diðer her þey (Additive veya son eki olmayanlar)
+		{
+			// Additive formatlama
+			FinalDescription += FString::Printf(TEXT("%s: +%.0f\n"), *StatDisplayName, RolledMagnitude);
 		}
 
 		PotentialEffects.RemoveAt(RandomIndex); // Don't pick the same effect twice

@@ -34,7 +34,7 @@ protected:
 	TArray<TObjectPtr<UPRUpgradeData>> OfferedRewards;
 
 	// This is our main STAT definition table.
-	UPROPERTY(EditDefaultsOnly, Category = "Data")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
 	TObjectPtr<UDataTable> StatsInfoDataTable;
 
 	// -- UI --
@@ -53,6 +53,14 @@ protected:
 	// The instance of the inventory screen, so we can check if it's open.
 	UPROPERTY()
 	TObjectPtr<UUserWidget> InventoryScreenInstance;
+
+	// The Stat screen widget class.
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> StatScreenWidgetClass;
+
+	// The instance of the inventory screen, so we can check if it's open.
+	UPROPERTY()
+	TObjectPtr<UUserWidget> StatScreenInstance;
 
 	// -- CORE --
 	// Called when this controller possesses a pawn (character).

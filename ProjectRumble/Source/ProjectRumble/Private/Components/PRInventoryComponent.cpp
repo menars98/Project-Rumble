@@ -28,14 +28,14 @@ void UPRInventoryComponent::AddOrUpgradeItem(UPRUpgradeData* ChosenUpgrade)
     UPRBaseItem* ExistingItem = FindItemByDefinition(ItemDef);
     if (ExistingItem)
     {
+		// TODO: Pass chosen effects to the upgrade function too
         UpgradeExistingItem(ItemDef);
     }
     else
     {
-        AddNewItem(ItemDef);
+		AddNewItem(ItemDef, ChosenUpgrade->Effects);
     }
 }
-
 
 UPRBaseItem* UPRInventoryComponent::FindItemByDefinition(const UPRItemDefinition* ItemDef) const
 {
@@ -75,7 +75,7 @@ UPRBaseItem* UPRInventoryComponent::FindItemByDefinition(const UPRItemDefinition
 	return nullptr;
 }
 
-void UPRInventoryComponent::AddNewItem(UPRItemDefinition* ItemDef)
+void UPRInventoryComponent::AddNewItem(UPRItemDefinition* ItemDef, const TArray<FUpgradeEffect>& InitialEffects)
 {
 	if (!ItemDef || !ItemDef->ItemClass)
 	{
@@ -99,10 +99,10 @@ void UPRInventoryComponent::AddNewItem(UPRItemDefinition* ItemDef)
 		}
 
 		// Get the Pawn that this PlayerState controls.
-		APawn* OwningPawn = MyOwner->GetPawn();
+		APawn* OwningPawn = MyOwner ? MyOwner->GetPawn() : nullptr;
 
 		// Initialize the item with the Pawn as its owner.
-		NewItem->Initialize(ItemDef, OwningPawn);
+		NewItem->Initialize(ItemDef, OwningPawn, InitialEffects);
 
 		// Add the new item to the correct inventory list based on its type.
 		switch (ItemDef->ItemType)

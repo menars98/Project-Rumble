@@ -8,9 +8,9 @@
 #include "Player/PRPlayerState.h"
 
 
-void UPRTomeItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor)
+void UPRTomeItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects)
 {
-	Super::Initialize(InItemDefinition, InOwningActor);
+	Super::Initialize(InItemDefinition, InOwningActor, InitialEffects);
 	ApplyBonuses();
 }
 

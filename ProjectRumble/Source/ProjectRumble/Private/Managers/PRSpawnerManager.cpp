@@ -14,7 +14,6 @@ APRSpawnerManager::APRSpawnerManager()
 
 }
 
-// Called when the game starts or when spawned
 void APRSpawnerManager::BeginPlay()
 {
 	Super::BeginPlay();

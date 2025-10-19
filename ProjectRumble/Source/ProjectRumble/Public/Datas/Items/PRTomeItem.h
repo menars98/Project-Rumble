@@ -16,7 +16,7 @@ class PROJECTRUMBLE_API UPRTomeItem : public UPRBaseItem
 	
 public:
 	// Override Initialize to apply its passive stat bonuses.
-	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor) override;
+	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects) override;
 
 	// Override LevelUp to apply the next level's bonuses.
 	virtual void LevelUp() override;

@@ -5,6 +5,7 @@
 #include "Characters/PRCharacterBase.h"
 #include "Player/PRPlayerState.h"
 #include "Components/PRStatsComponent.h"
+#include "AI/PRAIBase.h"
 #include "Datas/PRItemDefinition.h"
 #include "PRGameplayTags.h"
 #include "TimerManager.h" 
@@ -60,7 +61,7 @@ float UPRWeaponItem::GetCalculatedCooldown() const
 	float WeaponBaseCooldown = ItemDefinition->WeaponStats.BaseCooldown;
 
 	float AdditiveBonus = 0.0f;
-	float MultiplicativeBonus = 1.0f;
+	float MultiplicativeBonus = 0.0f;
 
 	float FinalCooldown = 0.0f;
 	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
@@ -68,7 +69,13 @@ float UPRWeaponItem::GetCalculatedCooldown() const
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
 			AdditiveBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Additive);
-			MultiplicativeBonus = 1.0f + StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
+			MultiplicativeBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
+
+			// Ensure the multiplier is not zero or negative to prevent division by zero
+			if (MultiplicativeBonus <= 0.f)
+			{
+				MultiplicativeBonus = 1.0f;
+			}
 
 			// FORMULA: (Base - Additive) / Multiplicative
 			// Attack speed increases, cooldown decreases. So we use division.
@@ -99,7 +106,7 @@ float UPRWeaponItem::GetCalculatedDamage() const
 			AdditiveBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Additive);
 
 			// Multiplicative bonuses are added together (e.g., 0.1 + 0.05 = 0.15 for +15%)
-			MultiplicativeBonus = 1.0f + StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Multiplicative);
+			MultiplicativeBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Multiplicative);
 		}
 	}
 
@@ -128,8 +135,31 @@ float UPRWeaponItem::GetCalculatedCritChance() const
 		}
 	}
 	
-	// FORMULA: Base + Additive
+	// FORMULA: Base + Additive, @TODO: Maybe we dont have to clamp? We can take surplus chance and increase crit damage?
 	return FMath::Clamp(WeaponBaseCritChance + AdditiveBonus, 0.f, 1.f); // Clamp to 0-1 range (0% to 100%)
+}
+
+float UPRWeaponItem::GetCalculatedCritDamage() const
+{
+	if (!ItemDefinition) return 1.5f; // Return a safe default if no definition
+
+	// 1. Get the base critical damage multiplier from the weapon's definition.
+	float BaseMultiplier = ItemDefinition->WeaponStats.BaseCritDamageMultiplier;
+
+	// 2. Get the additional critical damage bonus from the player's global stats.
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// The CritDamage stat is an additive bonus on top of the base multiplier.
+			// e.g., Base 2 + 0.5 from items = 2.5x total multiplier.
+			const float BonusMultiplier = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritDamage);
+			return BaseMultiplier + BonusMultiplier;
+		}
+	}
+
+	// If we can't find stats, return the weapon's base multiplier.
+	return BaseMultiplier;
 }
 
 float UPRWeaponItem::GetCalculatedSize() const
@@ -144,7 +174,7 @@ float UPRWeaponItem::GetCalculatedSize() const
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
 			// Assuming the tag is "Stat.Weapon.Size.Multiplicative"
-			MultiplicativeBonus += StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Size);
+			MultiplicativeBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Size);
 		}
 	}
 
@@ -164,7 +194,7 @@ float UPRWeaponItem::GetCalculatedKnockback() const
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
 			// Assuming the tag is "Stat.Weapon.Knockback.Multiplicative"
-			MultiplicativeBonus += StatsComp->GetStatValue(NativeGameplayTags::Stats::Physics::TAG_Stat_Physics_Knockback);
+			MultiplicativeBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Physics::TAG_Stat_Physics_Knockback);
 		}
 	}
 
@@ -184,7 +214,7 @@ float UPRWeaponItem::GetCalculatedDuration() const
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
 			// Assuming the tag is "Stat.Weapon.Duration.Multiplicative"
-			MultiplicativeBonus += StatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Duration);
+			MultiplicativeBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Duration);
 		}
 	}
 
@@ -192,6 +222,7 @@ float UPRWeaponItem::GetCalculatedDuration() const
 	return BaseDuration * MultiplicativeBonus;
 }
 
+// @TODO Change it to float because we keep count number float but cast to int32 when spawning projectiles
 int32 UPRWeaponItem::GetCalculatedProjectileBounce() const
 {
 	if (!ItemDefinition || !OwningActor) return 0;
@@ -212,6 +243,7 @@ int32 UPRWeaponItem::GetCalculatedProjectileBounce() const
 	return BaseBounces + BonusBounces;
 }
 
+// @TODO Change it to float because we keep count number float but cast to int32 when spawning projectiles
 int32 UPRWeaponItem::GetCalculatedProjectileCount() const
 {
 	if (!ItemDefinition || !OwningActor) return 1;
@@ -243,16 +275,49 @@ float UPRWeaponItem::GetCalculatedProjectileSpeed() const
 	// 1. Get the base projectile speed from the weapon's definition
 	float BaseSpeed = ItemDefinition->WeaponStats.BaseProjectileSpeed;
 
-	float ProjectileSpeedModifier = 0.0f;
+	float ProjectileSpeedModifier = 1.0f;
 
 	// 2. Get the multiplicative speed bonus from the player's global stats
 	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
 	{
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
-			 ProjectileSpeedModifier += StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileSpeed);
+			 ProjectileSpeedModifier = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileSpeed);
 		}
 	}
 
-	return BaseSpeed * (1.0f + ProjectileSpeedModifier);
+	return BaseSpeed * ProjectileSpeedModifier;
+}
+
+FDamageCalculationResult UPRWeaponItem::CalculateFinalDamage(const APRAIBase* Target)
+{
+	FDamageCalculationResult Result;
+	if (!OwningActor || !Target) return Result;
+
+	// Start with the weapon's calculated base damage
+	Result.FinalDamage = GetCalculatedDamage();
+
+	// --- CRIT CHANCE & CRIT DAMAGE LOGIC ---
+	const float CritChance = GetCalculatedCritChance();
+	if (FMath::FRand() < CritChance)
+	{
+		Result.bWasCriticalHit = true;
+		const float CritDamageMultiplier = GetCalculatedCritDamage(); // Needs a new GetCalculated... function
+		Result.FinalDamage *= CritDamageMultiplier;
+	}
+
+	// --- DAMAGE TO ELITES & BOSSES LOGIC ---
+	if (Target->GetAITags().HasTag(NativeGameplayTags::EnemyTypes::TAG_Enemy_Type_Elite) || Target->GetAITags().HasTag(NativeGameplayTags::EnemyTypes::TAG_Enemy_Type_Boss))
+	{
+		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+		{
+			if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+			{
+				const float EliteDamageBonus = 1.0f + StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Elites);
+				Result.FinalDamage *= EliteDamageBonus;
+			}
+		}
+	}
+
+	return Result;
 }

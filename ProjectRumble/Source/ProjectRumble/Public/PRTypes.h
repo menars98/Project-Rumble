@@ -142,13 +142,16 @@ struct FWeaponStats
     float BaseCritChance = 0.0f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseCritDamageMultiplier = 2.0f; // Default crit is 200% damage
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     float BaseProjectileSpeed = 1500.f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     float BaseSize = 1.0f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    float BaseKnockback = 5.0f;
+    float BaseKnockback = 500.0f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     float BaseDuration = 3.0f;
@@ -158,4 +161,16 @@ struct FWeaponStats
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     int32 BaseProjectileBounce = 1;
+};
+
+USTRUCT(BlueprintType)
+struct FDamageCalculationResult
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly)
+    float FinalDamage = 0.f;
+
+    UPROPERTY(BlueprintReadOnly)
+    bool bWasCriticalHit = false;
 };

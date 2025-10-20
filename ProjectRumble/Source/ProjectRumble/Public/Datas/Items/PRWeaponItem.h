@@ -6,8 +6,9 @@
 #include "Datas/PRBaseItem.h"
 #include "PRWeaponItem.generated.h"
 
-class APRCharacterBase;
 
+class APRCharacterBase;
+class APRAIBase;
 /**
  * Represents a Weapon item that can perform attacks on a timer.
  */
@@ -46,6 +47,10 @@ protected:
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedCritChance() const;
 
+	// A helper function to get the final, calculated critical hit damage for this weapon.
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedCritDamage() const;
+
 	// A helper function to get the final, calculated size for this weapon.
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedSize() const;
@@ -70,5 +75,10 @@ protected:
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedProjectileSpeed() const;
+
+	// This function will now be the central point for all damage calculations.
+	// It can be called from Blueprint.
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Calculations")
+	FDamageCalculationResult CalculateFinalDamage(const APRAIBase* Target);
 
 };

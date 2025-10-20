@@ -49,4 +49,43 @@ protected:
 	// This entity's faction. Should be set in the derived Blueprint classes.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
 	EFaction Faction;
+
+	// --- DAMAGE PROCESSING HELPER FUNCTIONS ---
+
+	/**
+	 * Checks if the incoming attack should be evaded based on the Evasion stat.
+	 * @param StatsComponent The stats component to read the Evasion stat from.
+	 * @return True if the attack was successfully evaded.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Combat|Defense")
+	bool CheckForEvasion(const UPRStatsComponent* StatsComponent) const;
+
+	/**
+	 * Calculates the final damage after applying Armor reduction.
+	 * @param InitialDamage The damage amount before armor is applied.
+	 * @param StatsComponent The stats component to read the Armor stat from.
+	 * @return The final damage amount to be applied.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Combat|Defense")
+	float CalculateArmorReduction(float InitialDamage, const UPRStatsComponent* StatsComponent) const;
+
+	/**
+	 * Applies Thorns damage back to the attacker.
+	 * @param StatsComponent The stats component to read the Thorns stat from.
+	 * @param DamageCauser The actor that caused the initial damage.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Combat|Defense")
+	void ApplyThornsDamage(const UPRStatsComponent* StatsComponent, AActor* DamageCauser);
+
+	/**
+	 * Processes incoming damage against the shield.
+	 * Absorbs damage with the shield and returns any remaining damage.
+	 * Also triggers the shield regeneration delay.
+	 * @param InitialDamage The damage amount before shield absorption.
+	 * @param StatsComponent The stats component to read/write shield values from.
+	 * @return The amount of damage that was NOT absorbed by the shield.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Combat|Defense")
+	float ProcessShieldDamage(float InitialDamage, UPRStatsComponent* StatsComponent);
+
 };

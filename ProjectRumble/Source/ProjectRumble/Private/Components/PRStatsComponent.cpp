@@ -18,6 +18,20 @@ void UPRStatsComponent::BeginPlay()
 	Super::BeginPlay();
 
 	InitializeStats();
+
+	// Start the health regeneration timer loop when the component begins play.
+	// The timer will call ProcessHealthRegen() every 'RegenInterval' seconds, and it will loop forever.
+	GetWorld()->GetTimerManager().SetTimer(
+		HealthRegenTimerHandle,
+		this,
+		&UPRStatsComponent::ProcessHealthRegen,
+		RegenInterval,
+		true 
+	);
+
+	// --- START THE SHIELD REGENERATION LOOP INITIALLY ---
+	// We assume the player starts with the ability to regen shield.
+	StartShieldRegen();
 }
 
 void UPRStatsComponent::InitializeStats()
@@ -47,6 +61,7 @@ void UPRStatsComponent::InitializeStats()
 	}
 	
 	BroadcastHealth();
+	BroadcastShield();
 }
 
 float UPRStatsComponent::GetStatValue(FGameplayTag StatTag) const
@@ -75,6 +90,11 @@ void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 
 		// Broadcast that a generic stat has changed
 		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
+		// If the stat that changed is relevant to the shield, broadcast the shield delegate.
+		if (StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield || StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield)
+		{
+			BroadcastShield();
+		}
 	}
 	else
 	{
@@ -158,6 +178,17 @@ void UPRStatsComponent::BroadcastHealth()
 	}
 }
 
+void UPRStatsComponent::BroadcastShield()
+{
+	// Ensure the delegate is bound by at least one object before broadcasting.
+	if (OnShieldChangedDelegate.IsBound())
+	{
+		const float CurrentShield = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield);
+		const float MaxShield = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield);
+		OnShieldChangedDelegate.Broadcast(CurrentShield, MaxShield);
+	}
+}
+
 void UPRStatsComponent::AddXP(float XPAmount)
 {
 	if (XPAmount <= 0.f)
@@ -198,4 +229,118 @@ void UPRStatsComponent::AddXP(float XPAmount)
 
 	// Broadcast the XP change
 	OnXPChangedDelegate.Broadcast(CurrentXP, MaxXP);
+}
+
+void UPRStatsComponent::Heal(float HealAmount)
+{
+	if (HealAmount <= 0.f) return;
+
+	const float CurrentHealth = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health);
+	const float MaxHealth = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxHP);
+
+	const float NewHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
+
+	if (NewHealth > CurrentHealth)
+	{
+		SetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health, NewHealth);
+		BroadcastHealth();
+	}
+}
+
+void UPRStatsComponent::ProcessHealthRegen()
+{
+	const float HealthRegenPerMinute = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_HealthRegen);
+
+	// If we have no regen stat, do nothing. This is a cheap check that runs every second.
+	if (HealthRegenPerMinute <= 0.f)
+	{
+		return;
+	}
+
+	// 2. Convert "per minute" value to a "per second" value.
+	const float HealthRegenPerSecond = HealthRegenPerMinute / 60.0f;
+
+	// Our timer runs every "RegenInterval" seconds (which is 1.0 by default).
+    // So the amount to heal in this tick is HealthRegenPerSecond * RegenInterval.
+    // Since RegenInterval is 1.0, this is just HealthRegenPerSecond.
+	const float HealthToRegenThisTick = HealthRegenPerSecond * RegenInterval;
+
+	const float CurrentHealth = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health);
+	const float MaxHealth = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxHP);
+
+	// If health is already full, do nothing.
+	if (CurrentHealth >= MaxHealth)
+	{
+		return;
+	}
+
+	// Calculate the new health, clamped to the max health.
+	// The regen amount is "per second", and our timer runs every second, so no need to multiply by DeltaTime.
+	const float NewHealth = FMath::Clamp(CurrentHealth + HealthToRegenThisTick, 0.f, MaxHealth);
+
+	if (NewHealth > CurrentHealth) // Only update if there was an actual change
+	{
+		SetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health, NewHealth);
+		BroadcastHealth(); // Notify the UI
+	}
+}
+
+void UPRStatsComponent::ResetShieldRegenDelay()
+{
+	// Stop any ongoing shield regeneration
+	GetWorld()->GetTimerManager().ClearTimer(ShieldRegenTickTimerHandle);
+
+	// Clear any pending "start regen" timers
+	GetWorld()->GetTimerManager().ClearTimer(ShieldRegenDelayTimerHandle);
+
+	// Start a new timer that will re-enable shield regeneration after the delay
+	GetWorld()->GetTimerManager().SetTimer(
+		ShieldRegenDelayTimerHandle,
+		this,
+		&UPRStatsComponent::StartShieldRegen,
+		ShieldRegenDelay,
+		false // Don't loop
+	);
+}
+
+void UPRStatsComponent::StartShieldRegen()
+{
+	// Now, start the continuous timer that will call ProcessShieldRegenTick every interval
+	GetWorld()->GetTimerManager().SetTimer(
+		ShieldRegenTickTimerHandle,
+		this,
+		&UPRStatsComponent::ProcessShieldRegenTick,
+		ShieldRegenTickInterval,
+		true // Loop this timer
+	);
+}
+
+void UPRStatsComponent::ProcessShieldRegenTick()
+{
+	// Get the stats needed for regeneration
+	const float ShieldRegenAmount = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_ShieldRegen); // Regen per second
+	if (ShieldRegenAmount <= 0.f)
+	{
+		// If the player has no shield regen stat, stop the timer to save performance.
+		GetWorld()->GetTimerManager().ClearTimer(ShieldRegenTickTimerHandle);
+		return;
+	}
+
+	const float CurrentShield = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield);
+	const float MaxShield = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield);
+
+	if (CurrentShield >= MaxShield)
+	{
+		// Shield is full, no need to do anything.
+		return;
+	}
+
+	// Calculate how much to regenerate in this tick
+	const float ShieldToRegen = ShieldRegenAmount * ShieldRegenTickInterval;
+	const float NewShield = FMath::Clamp(CurrentShield + ShieldToRegen, 0.f, MaxShield);
+
+	if (NewShield > CurrentShield)
+	{
+		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield, NewShield);
+	}
 }

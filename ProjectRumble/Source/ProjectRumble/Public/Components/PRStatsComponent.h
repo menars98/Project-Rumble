@@ -24,6 +24,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
 // This delegate will broadcast when the owner levels up, sending the new level.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLevelUpSignature, int32, NewLevel);
 
+// This delegate will broadcast when shield changes, sending the current and max shield.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnShieldChangedSignature, float, CurrentShield, float, MaxShield);
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROJECTRUMBLE_API UPRStatsComponent : public UActorComponent
 {
@@ -54,6 +57,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnStatChangedSignature OnStatChangedDelegate;
 
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnShieldChangedSignature OnShieldChangedDelegate;
+
 	// --- PUBLIC FUNCTIONS ---
 	/**
 	 * Gets the current value of a specified stat.
@@ -80,6 +86,18 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
 	void AddXP(float XPAmount);
+
+	// --- SHIELD REGEN ---
+	/**
+	 * Called from outside (e.g., TakeDamage) to signal that damage was taken.
+	 * This will stop the current shield regeneration and start the delay timer.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Stats|Shield")
+	void ResetShieldRegenDelay();
+
+	// Heals the owner by the specified amount, clamping to max health.
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void Heal(float HealAmount);
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -114,4 +132,48 @@ private:
 	 * A helper function to easily broadcast the OnHealthChangedDelegate with current values.
 	 */
 	void BroadcastHealth();
+
+	/**
+	 * A helper function to easily broadcast the OnShieldChangedDelegate with current values.
+	 */
+	void BroadcastShield();
+	// --- HEALTH REGEN ---
+
+	// Timer handle to manage the health regeneration loop.
+	FTimerHandle HealthRegenTimerHandle;
+
+	// The interval (in seconds) at which health regeneration is processed.
+	UPROPERTY(EditDefaultsOnly, Category = "Regeneration")
+	float RegenInterval = 1.0f;
+
+	// The function called by the timer to process regeneration.
+	UFUNCTION() // Must be a UFUNCTION to be used with a timer
+	void ProcessHealthRegen();
+
+	// --- SHIELD REGEN LOGIC ---
+
+	// Timer handle for the delay before shield regeneration begins after taking damage.
+	FTimerHandle ShieldRegenDelayTimerHandle;
+
+	// Timer handle for the continuous shield regeneration process.
+	FTimerHandle ShieldRegenTickTimerHandle;
+
+	// The delay (in seconds) after taking damage before shield starts regenerating.
+	UPROPERTY(EditDefaultsOnly, Category = "Stats|Shield")
+	float ShieldRegenDelay = 5.0f;
+
+	// The interval (in seconds) at which the shield regenerates.
+	UPROPERTY(EditDefaultsOnly, Category = "Stats|Shield")
+	float ShieldRegenTickInterval = 0.5f;
+
+	// Flag to check if we are currently allowed to regenerate shield.
+	bool bCanRegenShield = true;
+
+	/** Starts the continuous shield regeneration process. Called by the delay timer. */
+	UFUNCTION()
+	void StartShieldRegen();
+
+	/** The function called by the tick timer to regenerate a portion of the shield. */
+	UFUNCTION()
+	void ProcessShieldRegenTick();
 };

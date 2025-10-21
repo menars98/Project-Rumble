@@ -5,6 +5,7 @@
 #include "Components/PRStatsComponent.h"
 #include "AI/PRAIBase.h"
 #include "PRGameplayTags.h"
+#include "Characters/PRCharacterBase.h"
 #include "Kismet/GameplayStatics.h"
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
@@ -18,7 +19,7 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 
 	// --- 1. GET MODIFIERS FROM STATS COMPONENT ---
 	const float AdditiveDamage = AttackerStats->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Additive);
-	const float MultiplicativeDamage = AttackerStats->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
+	const float MultiplicativeDamage = AttackerStats->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Multiplicative);
 
 	const float CritChanceBonus = AttackerStats->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritChance);
 	const float CritDamageBonus = AttackerStats->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritDamage);
@@ -28,10 +29,10 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 
 	// --- 3. CRIT CHANCE & CRIT DAMAGE LOGIC ---
 	const float FinalCritChance = BaseCritChance + CritChanceBonus;
-	if (FMath::FRand() < FinalCritChance)
+	if (FMath::FRand()*100 < FinalCritChance)
 	{
 		Result.bWasCriticalHit = true;
-		const float FinalCritMultiplier = BaseCritMultiplier + CritDamageBonus;
+		const float FinalCritMultiplier = CritDamageBonus; // Was like this: const float FinalCritMultiplier = BaseCritMultiplier + CritDamageBonus;
 		Result.FinalDamage *= FinalCritMultiplier;
 	}
 
@@ -47,21 +48,60 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 
 float UPRGameplayStatics::ApplyRumbleDamage(AActor* DamagedActor, float BaseDamage, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude)
 {
-	// 1. Apply the standard damage
-	const float ActualDamage = UGameplayStatics::ApplyDamage(DamagedActor, BaseDamage, EventInstigator, DamageCauser, DamageTypeClass);
-
-	// 2. If damage was applied and there's a knockback, apply it
-	if (ActualDamage > 0.f && KnockbackMagnitude > 0.f)
+	// --- 1. APPLY KNOCKBACK FIRST (OR INDEPENDENTLY) ---
+	// Knockback should happen even if the damage is 0 or absorbed.
+	if (KnockbackMagnitude > 0.f)
 	{
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(DamagedActor))
 		{
-			// Calculate the final launch velocity vector
 			FVector LaunchVelocity = KnockbackDirection * KnockbackMagnitude;
+			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
+		}
+	}
 
-			// Launch the character!
-			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true); // The bools override XY and Z velocity
+	// --- 2. APPLY THE STANDARD DAMAGE ---
+	// This will trigger the target's TakeDamage function chain.
+	const float ActualDamage = UGameplayStatics::ApplyDamage(DamagedActor, BaseDamage, EventInstigator, DamageCauser, DamageTypeClass);
+
+	// --- 3. LIFESTEAL LOGIC (NEW) ---
+	if (ActualDamage > 0.f && DamageCauser)
+	{
+		// Is the one who dealt damage a player character?
+		if (APRCharacterBase* Attacker = Cast<APRCharacterBase>(DamageCauser))
+		{
+			// Does the attacker have a stats component?
+			if (UPRStatsComponent* AttackerStats = Attacker->GetStatsComponent())
+			{
+				const float LifestealPercent = AttackerStats->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_LifeSteal);
+				if (LifestealPercent > 0.f)
+				{
+					// Calculate and apply the healing
+					const float HealthToSteal = ActualDamage * LifestealPercent;
+					const int32 RoundedHealth = FMath::RoundToInt(HealthToSteal);
+					if (RoundedHealth > 0)
+					{
+						AttackerStats->Heal(RoundedHealth);
+						UE_LOG(LogTemp, Log, TEXT("%s lifesteals %d health."), *Attacker->GetName(), RoundedHealth);
+					}
+				}
+			}
 		}
 	}
 
 	return ActualDamage;
+}
+
+TArray<AActor*> UPRGameplayStatics::SortActorsByDistance(const FVector& TargetLocation, const TArray<AActor*>& ActorsToSort)
+{
+	TArray<AActor*> SortedActors = ActorsToSort;
+
+	// The Sort() function allows us to specify how to compare two elements
+	// using a “lambda” (anonymous function).
+	SortedActors.Sort([&](const AActor& A, const AActor& B) {
+		const float DistA = FVector::DistSquared(A.GetActorLocation(), TargetLocation);
+		const float DistB = FVector::DistSquared(B.GetActorLocation(), TargetLocation);
+		return DistA < DistB;
+		});
+
+	return SortedActors;
 }

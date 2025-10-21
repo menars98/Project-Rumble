@@ -44,6 +44,7 @@ float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	UPRStatsComponent* MyStatsComponent = GetStatsComponent();
 	if (!MyStatsComponent)
 	{
+		// No stats? Just take the damage directly.
 		return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	}
 
@@ -62,39 +63,31 @@ float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 		return 0.f; // Report that 0 damage was taken by health.
 	}
 
-	// --- 3. ARMOR ---
+	// --- 3. ARMOR REDUCTION ---
 	const float DamageToApply = CalculateArmorReduction(DamageAmount, MyStatsComponent);
 
-	// --- APPLY DAMAGE ---
-	const float ActualDamage = Super::TakeDamage(DamageToApply, DamageEvent, EventInstigator, DamageCauser);
+	// Round the damage to the nearest integer.
+	const int32 RoundedDamage = FMath::RoundToInt(DamageToApply);
 
+	// Ensure the rounded damage is at least 1 (We don't want 0 damage unless it was evaded).
+	const int32 FinalHealthDamage = FMath::Max(RoundedDamage, 1);
+
+	// --- APPLY DAMAGE TO HEALTH ---
+	// Call the engine's base function, which does nothing visually but is good practice.
+	const float ActualDamage = Super::TakeDamage(FinalHealthDamage, DamageEvent, EventInstigator, DamageCauser);
+
+	// If any damage got through to our health...
 	if (ActualDamage > 0.f)
 	{
-		MyStatsComponent->ApplyDamage(ActualDamage);
+		// ...tell the StatsComponent to update the Health stat.
+		MyStatsComponent->ApplyDamage(FinalHealthDamage);
 
 		// --- 4. THORNS ---
 		ApplyThornsDamage(MyStatsComponent, DamageCauser);
 	}
 
-	if (DamageCauser)
-	{
-		// Calculate the direction of the knockback: from the attacker to us.
-		FVector KnockbackDirection = GetActorLocation() - DamageCauser->GetActorLocation();
-		KnockbackDirection.Z = 0; // Don't launch upwards, just backwards
-		KnockbackDirection.Normalize();
 
-		// Get a generic knockback value for now.
-		// TODO: Get this value from the weapon that hit us.
-		const float KnockbackMagnitude = 500.0f;
-
-		// Launch the character!
-		if (ACharacter* Char = Cast<ACharacter>(this))
-		{
-			Char->LaunchCharacter(KnockbackDirection * KnockbackMagnitude, true, false);
-		}
-	}
-
-	return ActualDamage;
+	return (float)FinalHealthDamage;
 }
 
 void APREntityBase::OnHealthChanged(float CurrentHealth, float MaxHealth)
@@ -162,10 +155,16 @@ float APREntityBase::CalculateArmorReduction(float InitialDamage, const UPRStats
 
 void APREntityBase::ApplyThornsDamage(const UPRStatsComponent* StatsComponent, AActor* DamageCauser)
 {
-	const float ThornsDamage = StatsComponent->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Thorns);
-	if (ThornsDamage > 0.f && DamageCauser != this)
+	const float ThornsDamageFloat = StatsComponent->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Thorns);
+	if (ThornsDamageFloat > 0.f && DamageCauser != this)
 	{
-		UGameplayStatics::ApplyDamage(DamageCauser, ThornsDamage, GetController(), this, nullptr);
+		// Round the thorns damage to the nearest integer.
+		const int32 RoundedThornsDamage = FMath::RoundToInt(ThornsDamageFloat);
+
+		// 3. Apply the rounded damage back to the attacker.
+		// ApplyDamage expects a float, so the integer will be implicitly converted.
+		UGameplayStatics::ApplyDamage(DamageCauser, RoundedThornsDamage, GetController(), this, nullptr);
+		UE_LOG(LogTemp, Log, TEXT("%s reflected %d thorns damage to %s"), *GetName(), RoundedThornsDamage, *DamageCauser->GetName());
 	}
 }
 

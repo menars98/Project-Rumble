@@ -8,23 +8,23 @@
 #include "Player/PRPlayerState.h"
 
 
-void UPRTomeItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects)
+void UPRTomeItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects)
 {
 	Super::Initialize(InItemDefinition, InOwningActor, InitialEffects);
-	ApplyBonuses();
+	// Store and apply the INITIAL effects
+	AppliedEffects = InitialEffects;
+	ApplyBonuses(AppliedEffects);
 }
 
-void UPRTomeItem::LevelUp()
+void UPRTomeItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
 {
-	Super::LevelUp();
+	Super::LevelUp(UpgradeEffects);
 
-	// Note: A simple "re-apply" might not work if bonuses stack.
-	// A more robust system would remove old bonuses before applying new ones.
-	// For now, this is a simplification.
-	ApplyBonuses();
+	AppliedEffects.Append(UpgradeEffects);
+	ApplyBonuses(UpgradeEffects);
 }
 
-void UPRTomeItem::ApplyBonuses()
+void UPRTomeItem::ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply)
 {
 	if (!OwningActor || !ItemDefinition) return;
 
@@ -34,30 +34,16 @@ void UPRTomeItem::ApplyBonuses()
 	UPRStatsComponent* StatsComp = Player->GetStatsComponent();
 	if (!StatsComp) return;
 
-	// This is a simple implementation. A real system would get the effects for the CURRENT level.
-	// For now, let's assume the effects in the ItemDefinition are what we apply.
-	for (const FPotentialUpgradeEffect& Effect : ItemDefinition->PotentialUpgradeEffects)
+	for (const FPotentialUpgradeEffect& Effect : EffectsToApply)
 	{
-		// For a Tome, we can just take the average of the min/max magnitude as the bonus.
-		float ValueToAdd = (Effect.BaseMinMagnitude + Effect.BaseMaxMagnitude) / 2.0f;
-
-		// Get the correct stat tag to modify based on the effect's target.
-		// Example: TargetStat is "Stat.Offense.Damage", we need to modify "Stat.Offense.Damage.Multiplicative"
-		// THIS LOGIC IS COMPLEX. LET'S SIMPLIFY FOR THE PROTOTYPE.
-
-		// --- SIMPLIFIED PROTOTYPE LOGIC ---
-		// Let's assume the Tome's "PotentialUpgradeEffects" already has the CORRECT target stat
-		// (e.g., Stat.Offense.Damage.Multiplicative).
+		// The value to add is now in BaseMinMagnitude/BaseMaxMagnitude
+		// because the RewardManager already "cooked" it for us.
+		float ValueToAdd = Effect.BaseMinMagnitude;
 
 		float CurrentValue = StatsComp->GetStatValue(Effect.TargetStat);
 
-		// We are simply adding the bonus. Since our TargetStat is already specific
-		// (e.g., Additive or Multiplicative), we don't need to check the operation.
-		float NewValue = CurrentValue + ValueToAdd;
-
-		StatsComp->SetStatValue(Effect.TargetStat, NewValue);
-
-		UE_LOG(LogTemp, Log, TEXT("Tome '%s' applied bonus to stat %s. New value: %f"), *ItemDefinition->DisplayName.ToString(), *Effect.TargetStat.ToString(), NewValue);
+		StatsComp->SetStatValue(Effect.TargetStat, CurrentValue + ValueToAdd);
+		UE_LOG(LogTemp, Warning, TEXT("TOME/ITEM APPLIED: Stat '%s' is now %f"), *Effect.TargetStat.ToString(), CurrentValue + ValueToAdd);
 	}
 }
 

@@ -10,30 +10,36 @@
 #include "PRGameplayTags.h"
 #include "TimerManager.h" 
 
-void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects)
+void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects)
 {
 	Super::Initialize(InItemDefinition, InOwningActor, InitialEffects);
 
 	UE_LOG(LogTemp, Error, TEXT("WEAPON INITIALIZE CALLED for %s!"), *InItemDefinition->DisplayName.ToString());
-	// --- START THE ATTACK LOOP ---
-	// Check if we have a valid world to set a timer in.
-	if (UWorld* World = GetWorld())
+
+	// Store and apply the initial effects for this weapon
+	AppliedEffects = InitialEffects;
+	ApplyBonuses(AppliedEffects);
+
+	// Start the attack loop
+	if (GetWorld())
 	{
-		// Set a timer to call our Attack() function after an initial delay (optional, 0 for immediate)
-		// and then loop forever.
-		// For the first attack, we can call it directly.
 		Attack();
 	}
 }
 
-void UPRWeaponItem::LevelUp()
+void UPRWeaponItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
 {
-	Super::LevelUp();
+	Super::LevelUp(UpgradeEffects);
 
-	
+	// Add the new upgrade effects to our total list
+	AppliedEffects.Append(UpgradeEffects);
+
+	// Apply ONLY the new bonuses from this level up
+	ApplyBonuses(UpgradeEffects);
+
 	// When the weapon levels up, its stats (like cooldown) might change.
 	// We need to restart the timer with the new calculated cooldown.
-	if (OwningActor)
+	if (OwningActor && GetWorld())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
 		Attack(); // Restart the loop immediately
@@ -123,28 +129,30 @@ float UPRWeaponItem::GetCalculatedCritChance() const
 
 	float WeaponBaseCritChance = 0.0f;
 
-	float AdditiveBonus = 0.0f;
+	float AdditiveBonusPercent = 0.0f;
 
 	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
 		{
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
-			WeaponBaseCritChance = ItemDefinition->WeaponStats.BaseCritChance; 
+			WeaponBaseCritChance = ItemDefinition->WeaponStats.BaseCritChance;
 
-			AdditiveBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritChance);
+			AdditiveBonusPercent = WeaponBaseCritChance + StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritChance);
 		}
 	}
 	
+	float FinalCritChance = (WeaponBaseCritChance + AdditiveBonusPercent);
+
 	// FORMULA: Base + Additive, @TODO: Maybe we dont have to clamp? We can take surplus chance and increase crit damage?
-	return FMath::Clamp(WeaponBaseCritChance + AdditiveBonus, 0.f, 1.f); // Clamp to 0-1 range (0% to 100%)
+	return FMath::Clamp(FinalCritChance, 0.f, 1.f); // Clamp to 0-1 range (0% to 100%)
 }
 
 float UPRWeaponItem::GetCalculatedCritDamage() const
 {
-	if (!ItemDefinition) return 1.5f; // Return a safe default if no definition
+	if (!ItemDefinition) return 2.0f; // Return a safe default if no definition
 
-	// 1. Get the base critical damage multiplier from the weapon's definition.
-	float BaseMultiplier = ItemDefinition->WeaponStats.BaseCritDamageMultiplier;
+	// Base critical damage multiplier is always 2.0x (200%)
+	float BaseMultiplier = 2.0f;
 
 	// 2. Get the additional critical damage bonus from the player's global stats.
 	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
@@ -153,8 +161,8 @@ float UPRWeaponItem::GetCalculatedCritDamage() const
 		{
 			// The CritDamage stat is an additive bonus on top of the base multiplier.
 			// e.g., Base 2 + 0.5 from items = 2.5x total multiplier.
-			const float BonusMultiplier = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritDamage);
-			return BaseMultiplier + BonusMultiplier;
+			const float BonusMultiplier = BaseMultiplier + StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritDamage);
+			return BonusMultiplier;
 		}
 	}
 
@@ -320,4 +328,27 @@ FDamageCalculationResult UPRWeaponItem::CalculateFinalDamage(const APRAIBase* Ta
 	}
 
 	return Result;
+}
+
+void UPRWeaponItem::ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply)
+{
+	if (!OwningActor) return;
+
+	APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor);
+	if (!Player) return;
+
+	UPRStatsComponent* StatsComp = Player->GetStatsComponent();
+	if (!StatsComp) return;
+
+	// Loop through the FINAL, ROLLED effects passed into this function.
+	for (const FPotentialUpgradeEffect& Effect : EffectsToApply)
+	{
+		// The magnitude is already rolled, so we use it directly.
+		float ValueToAdd = Effect.BaseMinMagnitude;
+
+		float CurrentValue = StatsComp->GetStatValue(Effect.TargetStat);
+
+		StatsComp->SetStatValue(Effect.TargetStat, CurrentValue + ValueToAdd);
+		UE_LOG(LogTemp, Warning, TEXT("WEAPON APPLIED: Stat '%s' is now %f"), *Effect.TargetStat.ToString(), CurrentValue + ValueToAdd);
+	}
 }

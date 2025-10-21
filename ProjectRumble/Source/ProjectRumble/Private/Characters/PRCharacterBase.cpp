@@ -9,10 +9,11 @@
 #include "GameFramework/PlayerController.h"
 #include "PRTypes.h"
 #include "Components/PRStatsComponent.h"
-#include <Player/PRPlayerState.h>
+#include "Player/PRPlayerState.h"
 #include "Engine/DamageEvents.h" 
-#include <AI/PRAIBase.h>
-#include <Kismet/GameplayStatics.h>
+#include "AI/PRAIBase.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/PRInventoryComponent.h"
 
 APRCharacterBase::APRCharacterBase()
 {
@@ -106,6 +107,19 @@ void APRCharacterBase::InitializeFromDataAsset()
 			MyStatsComponent->InitializeWithDataTable(CharacterDefinition->StartingStatsTable);
 		}
 
+		if (CharacterDefinition->StartingItem)
+		{
+			// Get the inventory component from the PlayerState.
+			if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+			{
+				if (UPRInventoryComponent* InvComp = PS->InventoryComponent)
+				{
+					// We need a way to add an item from its definition.
+					// Let's add a new function to the InventoryComponent for this.
+					InvComp->AddStartingItem(CharacterDefinition->StartingItem);
+				}
+			}
+		}
 		// 3. (Future) Set Animation Blueprint
 		// if (GetMesh() && CharacterDefinition->AnimationBlueprintClass)
 		// {

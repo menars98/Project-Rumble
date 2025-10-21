@@ -47,10 +47,11 @@ protected:
 	 * Generates a single, fully-formed upgrade offer for a specific item.
 	 * This function handles rarity rolls, effect selection, and value rolls.
 	 * @param ItemDef The definition of the item to generate an upgrade for.
+	 * @param PlayerInventory A reference to the player's inventory to check current items.
 	 * @param bIsNewItem If true, this will be a "pick up new item" offer. Otherwise, it's a level-up offer.
 	 * @return A dynamically created UPRUpgradeData object.
 	 */
-	UPRUpgradeData* CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, bool bIsNewItem);
+	UPRUpgradeData* CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, const UPRInventoryComponent* PlayerInventory, bool bIsNewItem);
 
 	/** Determines the rarity for an upcoming upgrade offer. */
 	EUpgradeRarity RollForRarity();

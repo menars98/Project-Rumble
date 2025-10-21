@@ -53,7 +53,7 @@ public:
 	// This array holds the FINAL, "rolled" effects that will be applied if this upgrade is chosen.
 	// All magnitudes are now fixed numbers, not ranges.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Logic")
-	TArray<FUpgradeEffect> Effects;
+	TArray<FPotentialUpgradeEffect> Effects;
 	// A reference back to the "rulebook" this offer was generated from.
 	// The InventoryComponent will use this to know which item to add or upgrade.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Logic")

@@ -11,9 +11,37 @@ UPRInventoryComponent::UPRInventoryComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
+
 void UPRInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void UPRInventoryComponent::AddStartingItem(UPRItemDefinition* ItemDef)
+{
+	if (!ItemDef) return;
+
+	// Check if we don't already have this item.
+	if (FindItemByDefinition(ItemDef))
+	{
+		// Already have it, do nothing.
+		return;
+	}
+
+	// The item is new. We need to "roll" its initial effects.
+	// We can reuse the RewardManager's logic for this!
+	// This is a bit complex. Let's do a simpler version for now.
+
+	// --- SIMPLIFIED VERSION ---
+	// Let's assume the starting item always gets its base effects.
+	// We'll create a dummy FPotentialUpgradeEffect array.
+	// For a more robust system, the ItemDefinition could have a separate "InitialEffects" array.
+
+	TArray<FPotentialUpgradeEffect> InitialEffects;
+	// For weapons, they might not have an initial stat bonus, just their base stats.
+	// For now, let's pass an empty array. The weapon will use its base stats.
+
+	AddNewItem(ItemDef, InitialEffects);
 }
 
 void UPRInventoryComponent::AddOrUpgradeItem(UPRUpgradeData* ChosenUpgrade)
@@ -29,7 +57,7 @@ void UPRInventoryComponent::AddOrUpgradeItem(UPRUpgradeData* ChosenUpgrade)
     if (ExistingItem)
     {
 		// TODO: Pass chosen effects to the upgrade function too
-        UpgradeExistingItem(ItemDef);
+		UpgradeExistingItem(ExistingItem, ChosenUpgrade->Effects);
     }
     else
     {
@@ -75,7 +103,7 @@ UPRBaseItem* UPRInventoryComponent::FindItemByDefinition(const UPRItemDefinition
 	return nullptr;
 }
 
-void UPRInventoryComponent::AddNewItem(UPRItemDefinition* ItemDef, const TArray<FUpgradeEffect>& InitialEffects)
+void UPRInventoryComponent::AddNewItem(UPRItemDefinition* ItemDef, const TArray<FPotentialUpgradeEffect>& InitialEffects)
 {
 	if (!ItemDef || !ItemDef->ItemClass)
 	{
@@ -130,13 +158,11 @@ void UPRInventoryComponent::AddNewItem(UPRItemDefinition* ItemDef, const TArray<
 	}
 }
 
-void UPRInventoryComponent::UpgradeExistingItem(UPRItemDefinition* ItemDef)
+void UPRInventoryComponent::UpgradeExistingItem(UPRBaseItem* ItemToUpgrade, const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
 {
-	UPRBaseItem* ItemToUpgrade = FindItemByDefinition(ItemDef);
 	if (ItemToUpgrade)
 	{
-		ItemToUpgrade->LevelUp();
-
+		ItemToUpgrade->LevelUp(UpgradeEffects);
 		OnInventoryUpdated.Broadcast();
 	}
 }

@@ -77,25 +77,6 @@ public:
     EStatDisplayType DisplayType = EStatDisplayType::Flat;
 };
 
-//This Struct now useless @TODO Delete everything that uses it or refactor it. (We use FPotentialUpgradeEffect right now, so check PRItemDefinition.)
-// Represents a single effect that an upgrade can apply to a stat.
-USTRUCT(BlueprintType)
-struct FUpgradeEffect
-{
-    GENERATED_BODY()
-
-    // Which stat does this effect modify?
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    FGameplayTag TargetStat;
-    // The magnitude of the effect will be a random value between Min and Max.
-    // For a fixed value, set Min and Max to be the same.
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Value")
-    float MinMagnitude;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Value")
-    float MaxMagnitude;
-};
-
 USTRUCT(BlueprintType)
 struct FPotentialUpgradeEffect
 {
@@ -104,6 +85,9 @@ struct FPotentialUpgradeEffect
     /** Which stat can be upgraded? (e.g., Stat.Offense.Damage) */
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     FGameplayTag TargetStat;
+    /** How should this stat's value be formatted in the UI? */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    EStatDisplayType DisplayType = EStatDisplayType::Flat;
     /** The minimum possible value for this effect at its base level (e.g., Common rarity, Level 1). */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Value")
     float BaseMinMagnitude;

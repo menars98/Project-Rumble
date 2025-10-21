@@ -43,15 +43,17 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FOnInventoryUpdatedSignature OnInventoryUpdated;
 
+	void AddStartingItem(UPRItemDefinition* ItemDef);
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
 	/** Adds a new item to the inventory based on its definition. */
-	void AddNewItem(UPRItemDefinition* ItemDef, const TArray<FUpgradeEffect>& InitialEffects);
+	void AddNewItem(UPRItemDefinition* ItemDef, const TArray<FPotentialUpgradeEffect>& InitialEffects);
 
 	/** Finds an existing item in the inventory and calls its LevelUp function. */
-	void UpgradeExistingItem(UPRItemDefinition* ItemDef);
+	void UpgradeExistingItem(UPRBaseItem* ItemToUpgrade, const TArray<FPotentialUpgradeEffect>& UpgradeEffects);
 
 	// The list of all WEAPONS the player currently owns.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")

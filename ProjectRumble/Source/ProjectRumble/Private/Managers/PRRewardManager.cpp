@@ -2,6 +2,7 @@
 
 
 #include "Managers/PRRewardManager.h"
+#include "Datas/PRBaseItem.h"
 #include "Components/PRInventoryComponent.h"
 
 void UPRRewardManager::Initialize(UDataTable* InStatsInfoTable)
@@ -28,26 +29,34 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateRewards(const UPRInventoryComp
 	{
 		if (TempItemPool.Num() == 0) break;
 
-		// Pick a random item definition from the pool
 		int32 RandomIndex = FMath::RandRange(0, TempItemPool.Num() - 1);
 		UPRItemDefinition* ChosenItemDef = TempItemPool[RandomIndex];
+		
+		// Check the inventory to see if this is a new item or an upgrade.
+		bool bIsNewItemOffer = true;
+		if (PlayerInventory)
+		{
+			if (PlayerInventory->FindItemByDefinition(ChosenItemDef))
+			{
+				// We already own this item, so it's an upgrade offer.
+				bIsNewItemOffer = false;
+			}
+		}
 
-		// For now, we assume all offers are level-ups (bIsNewItem = false).
-		// TODO: Add logic to check if the player owns the item.
-		UPRUpgradeData* NewOffer = CreateUpgradeOfferForItem(ChosenItemDef, false);
+		// Now, create the offer with the correct context (new or upgrade).
+		UPRUpgradeData* NewOffer = CreateUpgradeOfferForItem(ChosenItemDef, PlayerInventory, bIsNewItemOffer);
 		if (NewOffer)
 		{
 			OfferedRewards.Add(NewOffer);
 		}
 
-		// Remove from temp pool to avoid offering the same item twice
 		TempItemPool.RemoveAt(RandomIndex);
 	}
 
 	return OfferedRewards;
 }
 
-UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, bool bIsNewItem)
+UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, const UPRInventoryComponent* PlayerInventory, bool bIsNewItem)
 {
 	if (!ItemDef) return nullptr;
 
@@ -67,7 +76,7 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 
 	// --- 3. PICK RANDOM EFFECTS FROM THE ITEM'S POTENTIAL LIST ---
 	TArray<FPotentialUpgradeEffect> PotentialEffects = ItemDef->PotentialUpgradeEffects;
-	TArray<FUpgradeEffect> FinalEffects;
+	TArray<FPotentialUpgradeEffect> FinalEffects;
 	FString FinalDescription = "";
 
 	for (int32 i = 0; i < NumEffectsToPick; ++i)
@@ -81,16 +90,16 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 
 		// --- Find the DisplayName for the stat ---
 		FString StatDisplayName = "Unknown Stat";
-		// We now use the member variable 'StatsInfoTable'
+		EStatDisplayType DisplayType = EStatDisplayType::Flat; // Default
 		if (StatsInfoTable)
 		{
-			// The rest of this logic is the same as before
 			for (const FName& RowName : StatsInfoTable->GetRowNames())
 			{
 				FStatDefinition* StatDef = StatsInfoTable->FindRow<FStatDefinition>(RowName, "");
 				if (StatDef && StatDef->StatID == ChosenPotentialEffect.TargetStat)
 				{
 					StatDisplayName = StatDef->DisplayName.ToString();
+					DisplayType = StatDef->DisplayType; 
 					break;
 				}
 			}
@@ -104,23 +113,31 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 		);
 
 		// Create the final, resolved effect
-		FUpgradeEffect FinalEffect;
+		FPotentialUpgradeEffect FinalEffect;
 		FinalEffect.TargetStat = ChosenPotentialEffect.TargetStat;
-		FinalEffect.MinMagnitude = RolledMagnitude; // We store the rolled value in both Min and Max
-		FinalEffect.MaxMagnitude = RolledMagnitude; // to make it a fixed value.
+		// Store the FINAL rolled value in BOTH Min and Max to make it a fixed value.
+		FinalEffect.BaseMinMagnitude = RolledMagnitude;
+		FinalEffect.BaseMaxMagnitude = RolledMagnitude;
 
 		FinalEffects.Add(FinalEffect);
 
-		// --- Build the description string based on the operation type ---
-		FString TagName = ChosenPotentialEffect.TargetStat.ToString();
-		if (TagName.EndsWith(TEXT(".Multiplicative")))
+		// --- Build the description string using the correct DisplayType ---
+		switch (DisplayType)
 		{
+		case EStatDisplayType::Percentage:
 			FinalDescription += FString::Printf(TEXT("%s: +%.1f%%\n"), *StatDisplayName, RolledMagnitude * 100);
-		}
-		else // Diðer her þey (Additive veya son eki olmayanlar)
-		{
-			// Additive formatlama
+			break;
+
+		case EStatDisplayType::Multiplier:
+			// For multipliers, we show the bonus amount, not the final value
+			FinalDescription += FString::Printf(TEXT("%s: +%.1f%%\n"), *StatDisplayName, RolledMagnitude * 100);
+			// Note: Or show as "+0.15x"? That's a design choice. Let's stick to percentage for clarity.
+			break;
+
+		case EStatDisplayType::Flat:
+		default:
 			FinalDescription += FString::Printf(TEXT("%s: +%.0f\n"), *StatDisplayName, RolledMagnitude);
+			break;
 		}
 
 		PotentialEffects.RemoveAt(RandomIndex); // Don't pick the same effect twice
@@ -128,32 +145,51 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 
 	// --- 5. CREATE THE FINAL UPGRADE DATA OBJECT ---
 	UPRUpgradeData* FinalOffer = NewObject<UPRUpgradeData>();
-	FinalOffer->DisplayName = ItemDef->DisplayName;
 	FinalOffer->SourceItemDefinition = ItemDef;
+	FinalOffer->DisplayName = ItemDef->DisplayName;
 	FinalOffer->Icon = ItemDef->Icon;
 	FinalOffer->Description = FText::FromString(FinalDescription);
 	FinalOffer->Rarity = RolledRarity;
 	FinalOffer->Effects = FinalEffects;
-
-	// For now, if it's a new item, it's Level 1. If it's an upgrade, we can't know the level yet.
-	// Let's default to 1 for now until we have an inventory.
-	// TODO: Get the real current level from the InventoryComponent.
+	 
 	if (bIsNewItem)
 	{
+		// If it's a new item, the level is always 1.
 		FinalOffer->UpgradeLevel = 1;
 	}
-	else
+	else // It's an upgrade for an existing item
 	{
-		// We don't know the "from -> to" level yet. Let's just put the player's level for now as a placeholder.
-		// A proper implementation needs the InventoryComponent.
-		FinalOffer->UpgradeLevel = 1; // Placeholder
+		if (PlayerInventory)
+		{
+			// Find the existing item in the inventory to get its current level.
+			if (const UPRBaseItem* ExistingItem = PlayerInventory->FindItemByDefinition(ItemDef))
+			{
+				// The upgrade will take it to the NEXT level.
+				FinalOffer->UpgradeLevel = ExistingItem->GetCurrentLevel() + 1;
+
+				// We can also make the description more informative here!
+				// Example:
+				// FString LevelText = FString::Printf(TEXT("LVL %d -> LVL %d\n"), ExistingItem->GetCurrentLevel(), FinalOffer->UpgradeLevel);
+				// FinalOffer->Description = FText::FromString(LevelText + FinalOffer->Description.ToString());
+			}
+			else
+			{
+				// This case shouldn't happen if our logic is correct, but as a fallback:
+				FinalOffer->UpgradeLevel = 1;
+			}
+		}
+		else
+		{
+			// Fallback if inventory is not valid for some reason.
+			FinalOffer->UpgradeLevel = 1;
+		}
 	}
 	return FinalOffer;
 }
 
 EUpgradeRarity UPRRewardManager::RollForRarity()
 {
-	// Simple rarity roll. A real system would use weighted probabilities and effected by luck.
+	// @TODO: Simple rarity roll. A real system would use weighted probabilities and effected by luck.
 	float Roll = FMath::FRand(); // 0.0 to 1.0
 	if (Roll < 0.60f) return EUpgradeRarity::Common;     // 60% chance
 	if (Roll < 0.85f) return EUpgradeRarity::Uncommon;   // 25% chance

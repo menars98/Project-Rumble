@@ -58,4 +58,13 @@ public:
 		const FVector& KnockbackDirection,
 		float KnockbackMagnitude
 	);
+
+	/**
+	 * Sorts an array of actors by their distance to a target location.
+	 * @param TargetLocation The origin point to measure distance from.
+	 * @param ActorsToSort The array of actors to be sorted.
+	 * @return A new array of actors, sorted from nearest to farthest.
+	 */
+	UFUNCTION(BlueprintPure, Category = "ProjectRumble|Utilities")
+	static TArray<AActor*> SortActorsByDistance(const FVector& TargetLocation, const TArray<AActor*>& ActorsToSort);
 };

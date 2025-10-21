@@ -13,7 +13,7 @@ UPRBaseItem::UPRBaseItem()
 }
 
 
-void UPRBaseItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects)
+void UPRBaseItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects)
 {
 	ItemDefinition = InItemDefinition;
 	OwningActor = InOwningActor;
@@ -22,7 +22,7 @@ void UPRBaseItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwni
 	UE_LOG(LogTemp, Log, TEXT("Item '%s' initialized at Level %d."), *ItemDefinition->DisplayName.ToString(), CurrentLevel);
 }
 
-void UPRBaseItem::LevelUp()
+void UPRBaseItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
 {
 	CurrentLevel++;
 	UE_LOG(LogTemp, Log, TEXT("Item '%s' leveled up to Level %d."), *ItemDefinition->DisplayName.ToString(), CurrentLevel);

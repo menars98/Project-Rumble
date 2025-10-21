@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "Engine/DataAsset.h"
+#include "Datas/PRItemDefinition.h"
 #include "PRCharacterDefinition.generated.h"
 
 // Forward declarations for asset types to reduce compile times
@@ -14,11 +15,6 @@ class UAnimInstance; // We will use UAnimInstance for the AnimBlueprintClass pro
 class UTexture2D;
 //class UPRBaseWeapon; // Assuming we'll have a base weapon class
 //class UPRBasePassiveItem; // Assuming we'll have a base passive item class
-
-/**
- * Data Asset that defines the properties for a playable character.
- * This holds all static, unchanging data for a character like its mesh, stats, and abilities.
- */
 
 UCLASS()
 class PROJECTRUMBLE_API UPRCharacterDefinition : public UDataAsset
@@ -52,6 +48,10 @@ public:
 	/** The Data Table containing the initial stat values for this character. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats")
 	TObjectPtr<UDataTable> StartingStatsTable;
+
+	/** The item this character starts the game with. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Loadout")
+	TObjectPtr<UPRItemDefinition> StartingItem;
 
 	/** The primary active ability class for this character (e.g., Ground Slam, Dash). */
 	//UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")

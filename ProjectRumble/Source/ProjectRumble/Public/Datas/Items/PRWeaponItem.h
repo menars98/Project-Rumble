@@ -6,6 +6,7 @@
 #include "Datas/PRBaseItem.h"
 #include "PRWeaponItem.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageDealtSignature, float, DamageDealt, AActor*, DamagedActor);
 
 class APRCharacterBase;
 class APRAIBase;
@@ -19,10 +20,13 @@ class PROJECTRUMBLE_API UPRWeaponItem : public UPRBaseItem
 	
 public:
 	// Override the Initialize function to start the attack timer.
-	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects) override;
+	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects) override;
 
 	// Override the LevelUp function to potentially update the timer.
-	virtual void LevelUp() override;
+	virtual void LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects);
+
+	UPROPERTY(BlueprintAssignable)
+	FOnDamageDealtSignature OnDamageDealt;
 
 protected:
 	// The function that performs the actual attack logic (spawning projectiles, etc.).
@@ -80,5 +84,12 @@ protected:
 	// It can be called from Blueprint.
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Calculations")
 	FDamageCalculationResult CalculateFinalDamage(const APRAIBase* Target);
+
+	/** The list of all effects this weapon instance has applied to the player. */
+	UPROPERTY(VisibleAnywhere, Category = "Weapon")
+	TArray<FPotentialUpgradeEffect> AppliedEffects;
+
+	/** Helper function to apply a list of effects to the owner's StatsComponent. */
+	void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
 
 };

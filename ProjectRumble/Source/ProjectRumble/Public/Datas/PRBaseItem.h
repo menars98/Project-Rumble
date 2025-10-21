@@ -31,14 +31,15 @@ public:
 	 * @param InOwningActor The actor (usually the player character) that owns this item.
 	 * @param InitialEffects The initial upgrade effects to apply to this item.
 	 */
-	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FUpgradeEffect>& InitialEffects);
+	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects);
 
 
 	/**
 	 * Levels up the item. This function can be overridden by child classes
 	 * to apply specific level-up logic.
+	 * @param UpgradeEffects The upgrade effects to apply on level up.
 	 */
-	virtual void LevelUp();
+	virtual void LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects);
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	virtual UWorld* GetWorld() const override;

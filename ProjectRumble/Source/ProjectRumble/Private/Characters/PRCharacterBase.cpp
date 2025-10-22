@@ -8,12 +8,14 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "PRTypes.h"
+#include "PRGameplayTags.h"
 #include "Components/PRStatsComponent.h"
 #include "Player/PRPlayerState.h"
 #include "Engine/DamageEvents.h" 
 #include "AI/PRAIBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PRInventoryComponent.h"
+#include"Components/PRInteractionComponent.h"
 
 APRCharacterBase::APRCharacterBase()
 {
@@ -31,6 +33,8 @@ APRCharacterBase::APRCharacterBase()
 	// Configure character movement
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...
 	bUseControllerRotationYaw = false; // ...and doesn't directly follow the camera's yaw. This gives a nice third-person feel.
+
+	InteractionComp = CreateDefaultSubobject<UPRInteractionComponent>(TEXT("InteractionComp"));
 
 	// Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
@@ -76,6 +80,9 @@ void APRCharacterBase::BeginPlay()
 		// Bind to the virtual functions inherited from EntityBase.
 		MyStatsComponent->OnHealthChangedDelegate.AddDynamic(this, &APRCharacterBase::OnHealthChanged);
 		MyStatsComponent->OnDeathDelegate.AddDynamic(this, &APRCharacterBase::OnDeath);
+		MyStatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
+		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight));
+		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump));
 	}
 	else
 	{
@@ -162,7 +169,10 @@ void APRCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 		EnhancedInputComponent->BindAction(DebugDamageAction, ETriggerEvent::Started, this, &APRCharacterBase::TakeDebugDamage);
-
+		if (InteractAction)
+		{
+			EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &APRCharacterBase::Interact);
+		}
 	}
 
 	// We will add Action bindings for Jump, Dash, Ability etc. here later.
@@ -230,6 +240,14 @@ void APRCharacterBase::TakeDebugDamage()
 	}
 }
 
+// A simple wrapper function to call the component's function.
+void APRCharacterBase::Interact()
+{
+	if (InteractionComp)
+	{
+		InteractionComp->PrimaryInteract();
+	}
+}
 
 void APRCharacterBase::OnHealthChanged(float CurrentHealth, float MaxHealth)
 {
@@ -237,6 +255,33 @@ void APRCharacterBase::OnHealthChanged(float CurrentHealth, float MaxHealth)
 
 	// Player-specific logic here:
 	UE_LOG(LogTemp, Log, TEXT("Player Health Changed: %.1f / %.1f"), CurrentHealth, MaxHealth);
+}
+
+void APRCharacterBase::OnStatChanged(FGameplayTag StatTag, float NewValue)
+{
+	// --- EXTRA JUMP LOGIC ---
+	if (StatTag == NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump)
+	{
+		// ACharacter's JumpMaxCount is 1 for a single jump.
+		// Our ExtraJump stat means "jumps AFTER the first one".
+		// So, Total Jumps = 1 (base) + Extra Jumps.
+		JumpMaxCount = 1 + static_cast<int32>(NewValue);
+		UE_LOG(LogTemp, Log, TEXT("JumpMaxCount updated to: %d"), JumpMaxCount);
+	}
+
+	// --- JUMP HEIGHT LOGIC  ---
+	else if (StatTag == NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight)
+	{
+		if (GetCharacterMovement())
+		{
+			// This assumes JumpHeight is a flat value.
+			// If it's a percentage modifier, the formula would be:
+			//float BaseJumpZ = 700.f;
+			//GetCharacterMovement()->JumpZVelocity = BaseJumpZ * (1.0f + NewValue);
+			GetCharacterMovement()->JumpZVelocity = BaseJumpZVelocity * (NewValue);
+			UE_LOG(LogTemp, Log, TEXT("JumpZVelocity updated to: %f"), GetCharacterMovement()->JumpZVelocity);
+		}
+	}
 }
 
 void APRCharacterBase::OnDeath()

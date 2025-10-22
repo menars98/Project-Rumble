@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Datas/PRBaseItem.h"
-#include "PRTomeItem.generated.h"
+#include "PRPassiveItem.generated.h"
 
 /**
  * Represents a Tome (or any passive item) that grants permanent stat bonuses.
  */
 UCLASS()
-class PROJECTRUMBLE_API UPRTomeItem : public UPRBaseItem
+class PROJECTRUMBLE_API UPRPassiveItem : public UPRBaseItem
 {
 	GENERATED_BODY()
 	

@@ -161,3 +161,73 @@ void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 	SetInputMode(InputMode);
 	bShowMouseCursor = false;
 }
+
+void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer, bool bGrantDirectly)
+{
+	// --- 1. VALIDATION ---
+	// Make sure we have a valid LootPool to draw from and a valid number of offers.
+	if (!LootPool || NumToOffer <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RequestRewards called with invalid parameters."));
+		return;
+	}
+
+	// --- 2. PREPARE THE MANAGER AND DATA ---
+	// Create a transient Reward Manager to handle the logic.
+	UPRRewardManager* RewardManager = NewObject<UPRRewardManager>();
+	if (!RewardManager)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to create RewardManager."));
+		return;
+	}
+
+	// The manager needs the Stats Info Table to generate proper descriptions for rewards.
+	RewardManager->Initialize(StatsInfoDataTable);
+
+	// The manager needs the inventory to check if an item is new or an upgrade.
+	UPRInventoryComponent* PlayerInventory = nullptr;
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		PlayerInventory = PS->InventoryComponent;
+	}
+	if (!PlayerInventory)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Cannot grant rewards, PlayerInventory is not valid."));
+		return;
+	}
+
+	// --- 3. GENERATE REWARDS USING THE CORRECT FUNCTION ---
+	// Call the new function that is specifically designed to work with Loot Data Tables.
+	TArray<UPRUpgradeData*> GeneratedRewards = RewardManager->GenerateLootRewards(PlayerInventory, LootPool, NumToOffer);
+
+	// --- 4. GRANT THE REWARDS ---
+	if (GeneratedRewards.Num() > 0)
+	{
+		if (bGrantDirectly)
+		{
+			// Loop through all generated rewards and grant them directly to the inventory.
+			// This is typical for chests.
+			for (UPRUpgradeData* RewardToGrant : GeneratedRewards)
+			{
+				if (RewardToGrant)
+				{
+					PlayerInventory->AddOrUpgradeItem(RewardToGrant);
+
+					// TODO: Show a "You Found: [Item Name]!" popup UI for each item.
+					UE_LOG(LogTemp, Log, TEXT("Chest granted item: %s"), *RewardToGrant->DisplayName.ToString());
+				}
+			}
+		}
+		else
+		{
+			// This branch is for showing a choice screen (like level up).
+			// We would store the rewards and create the UI.
+			OfferedRewards = GeneratedRewards;
+			// ShowLevelUpScreen(...); // Or a similar function
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Loot pool '%s' generated no rewards."), *LootPool->GetName());
+	}
+}

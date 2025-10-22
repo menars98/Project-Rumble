@@ -80,6 +80,13 @@ protected:
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedProjectileSpeed() const;
 
+	// Stun chance and duration calculations
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedStunChance() const;
+
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedStunDuration() const;
+
 	// This function will now be the central point for all damage calculations.
 	// It can be called from Blueprint.
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Calculations")

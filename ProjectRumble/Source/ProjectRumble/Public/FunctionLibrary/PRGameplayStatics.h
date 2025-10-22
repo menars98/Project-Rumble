@@ -46,6 +46,7 @@ public:
 	 * @param DamageTypeClass The type of damage being applied.
 	 * @param KnockbackDirection The direction vector for knockback.
 	 * @param KnockbackMagnitude The strength of the knockback effect.
+	 * @param StunDuration The duration of stun to apply (if any).
 	 * @return The actual damage applied after all calculations.
 	 */ 
 	UFUNCTION(BlueprintCallable, Category = "ProjectRumble|Damage")
@@ -56,7 +57,9 @@ public:
 		AActor* DamageCauser,
 		TSubclassOf<class UDamageType> DamageTypeClass,
 		const FVector& KnockbackDirection,
-		float KnockbackMagnitude
+		float KnockbackMagnitude,
+		float StunChance,
+		float StunDuration
 	);
 
 	/**

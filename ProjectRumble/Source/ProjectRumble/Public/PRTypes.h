@@ -30,7 +30,8 @@ enum class EItemType : uint8
 {
     Weapon,
     Tome,
-    Relic,
+    Item,
+    Relic
     // Can add more types in the future
 };
 
@@ -145,6 +146,12 @@ struct FWeaponStats
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     int32 BaseProjectileBounce = 1;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseStunChance = 0.0f; // 0.0 to 1.0
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseStunDuration = 0.5f;
 };
 
 USTRUCT(BlueprintType)
@@ -157,4 +164,21 @@ struct FDamageCalculationResult
 
     UPROPERTY(BlueprintReadOnly)
     bool bWasCriticalHit = false;
+};
+
+USTRUCT(BlueprintType)
+struct FLootTableRow : public FTableRowBase
+{
+    GENERATED_BODY()
+
+public:
+    // The item that can drop from this chest.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    TObjectPtr<class UPRItemDefinition> ItemDefinition;
+
+    // How likely is this item to drop relative to others? Higher = more likely.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    float Weight = 1.0f;
+
+    // (Optional) Minimum/Maximum quantity if we want stacks of items later.
 };

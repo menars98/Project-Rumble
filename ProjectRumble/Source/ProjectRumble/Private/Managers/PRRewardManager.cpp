@@ -5,6 +5,7 @@
 #include "Datas/PRBaseItem.h"
 #include "Components/PRInventoryComponent.h"
 
+
 void UPRRewardManager::Initialize(UDataTable* InStatsInfoTable)
 {
 	StatsInfoTable = InStatsInfoTable;
@@ -54,6 +55,68 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateRewards(const UPRInventoryComp
 	}
 
 	return OfferedRewards;
+}
+
+TArray<UPRUpgradeData*> UPRRewardManager::GenerateLootRewards(const UPRInventoryComponent* PlayerInventory, UDataTable* LootTable, int32 NumToAward)
+{
+	TArray<UPRUpgradeData*> LootRewards;
+	if (!LootTable) return LootRewards;
+
+	// 1. Get all valid rows from the Loot Table
+	TArray<FLootTableRow*> PossibleLoot;
+	float TotalWeight = 0.f;
+	FString ContextString;
+	for (FName RowName : LootTable->GetRowNames())
+	{
+		if (FLootTableRow* Row = LootTable->FindRow<FLootTableRow>(RowName, ContextString))
+		{
+			if (Row->ItemDefinition)
+			{
+				PossibleLoot.Add(Row);
+				TotalWeight += Row->Weight;
+			}
+		}
+	}
+
+	// 2. Draft items based on weight
+	for (int32 i = 0; i < NumToAward; ++i)
+	{
+		if (PossibleLoot.Num() == 0 || TotalWeight <= 0.f) break;
+
+		float RandomValue = FMath::FRandRange(0.f, TotalWeight);
+		float CurrentWeight = 0.f;
+
+		for (int32 j = 0; j < PossibleLoot.Num(); ++j)
+		{
+			CurrentWeight += PossibleLoot[j]->Weight;
+			if (RandomValue <= CurrentWeight)
+			{
+				// FOUND THE WINNER!
+				FLootTableRow* SelectedRow = PossibleLoot[j];
+
+				// Check if it's a new item or an upgrade for the player
+				bool bIsNewItem = true;
+				if (PlayerInventory && PlayerInventory->FindItemByDefinition(SelectedRow->ItemDefinition))
+				{
+					bIsNewItem = false;
+				}
+
+				// Create the upgrade data offer
+				UPRUpgradeData* LootOffer = CreateUpgradeOfferForItem(SelectedRow->ItemDefinition, PlayerInventory, bIsNewItem);
+				if (LootOffer)
+				{
+					LootRewards.Add(LootOffer);
+				}
+
+				// Optional: Don't drop the same item twice in one chest?
+				// If so, remove from PossibleLoot and subtract weight.
+				// For now, let's allow duplicates (e.g. getting 2x Gold Coins).
+				break;
+			}
+		}
+	}
+
+	return LootRewards;
 }
 
 UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, const UPRInventoryComponent* PlayerInventory, bool bIsNewItem)

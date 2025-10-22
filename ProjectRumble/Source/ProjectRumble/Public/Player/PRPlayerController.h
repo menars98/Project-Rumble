@@ -33,9 +33,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rewards")
 	TArray<TObjectPtr<UPRUpgradeData>> OfferedRewards;
 
+	// -- DATA TABLES --
 	// This is our main STAT definition table.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
 	TObjectPtr<UDataTable> StatsInfoDataTable;
+
+	/**
+	 * An array of Data Assets that holds all possible ITEMS (Weapons, Tomes, etc.) available in the level up pool.
+	 * Assigned in the BP_PlayerController.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
+	TArray<TObjectPtr<UPRItemDefinition>> AllPossibleLevelUpItems;
 
 	// -- UI --
 	// The Level Up screen widget class. Assigned in the BP_PlayerController Blueprint.
@@ -86,4 +94,14 @@ public:
 	// Called by the UI Widget when a player clicks on a reward button.
 	UFUNCTION(BlueprintCallable, Category = "Rewards")
 	void ApplyReward(UPRUpgradeData* ChosenUpgrade);
+
+	/**
+	 * A generic function to request and grant rewards from a specific loot pool.
+	 * Can be called by chests, bosses, or any other reward-granting source.
+	 * @param LootPool A Data Table containing UUpgradePoolEntry structs that define what can be dropped.
+	 * @param NumToOffer The number of rewards to generate and offer.
+	 * @param bGrantDirectly If true, grants the first reward immediately. If false, shows the Level Up screen. (For future flexibility)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rewards")
+	void RequestRewards(UDataTable* LootPool, int32 NumToOffer, bool bGrantDirectly = true);
 };

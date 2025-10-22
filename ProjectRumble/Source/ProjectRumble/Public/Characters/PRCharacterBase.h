@@ -6,7 +6,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
-#include <Datas/PRCharacterDefinition.h>
+#include "Datas/PRCharacterDefinition.h"
 #include "PRCharacterBase.generated.h"
 
 
@@ -15,6 +15,7 @@ class UCameraComponent;
 class UInputAction; 
 class UInputMappingContext; 
 class UPRStatsComponent;
+class UPRInteractionComponent;
 
 UCLASS()
 class PROJECTRUMBLE_API APRCharacterBase : public APREntityBase
@@ -50,6 +51,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> DebugDamageAction;
 
+	// Input Action for Interacting with objects.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> InteractAction;
+
 	// -- CORE FUNCTIONS --
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -67,6 +72,9 @@ protected:
 	/** A simple function to apply debug damage to this character. */
 	void TakeDebugDamage();
 
+	/** Handles interaction input. */
+	void Interact();
+
 	// -- INITIALIZATION FUNCTIONS --
 	/** Initializes the character's properties from its assigned CharacterDefinition Data Asset. */
 	void InitializeFromDataAsset();
@@ -76,6 +84,9 @@ protected:
 
 	// -- HANDLING FUNCTIONS --
 	virtual void OnHealthChanged(float CurrentHealth, float MaxHealth) override;
+
+	UFUNCTION()
+	void OnStatChanged(FGameplayTag StatTag, float NewValue);
 
 	virtual void OnDeath() override;
 
@@ -87,6 +98,9 @@ protected:
 	// The camera that follows the character.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UCameraComponent> CameraComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UPRInteractionComponent> InteractionComp;
 
 	// --- CAMERA SETTINGS ---
 	// These values will be exposed to our Blueprint class, so we can tweak them without recompiling.
@@ -103,6 +117,9 @@ protected:
 	// This holds the data asset that defines this character's identity (mesh, stats, etc.)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
 	TObjectPtr<UPRCharacterDefinition> CharacterDefinition;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float BaseJumpZVelocity = 700.0f;
 
 private:
 	// The cached pointer for performance now lives here, where it's needed.

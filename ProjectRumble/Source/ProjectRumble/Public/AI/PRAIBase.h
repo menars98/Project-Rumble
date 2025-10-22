@@ -37,11 +37,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
 	float ContactDamage = 5.0f; 
 
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
+	float ContactStunDuration = 0.0f; 
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
+	float ContactStunChance = 0.0f;
+
 	// How often (in seconds) to apply contact damage while overlapping.
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
 	float DamageInterval = 2.0f; 
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Loot")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Combat")
 	float KnockbackStrengthToPlayer = 500.0f;
 
 	// The player we are currently in contact with.
@@ -51,6 +57,11 @@ protected:
 	// A pointer to the dynamic material instance for hit flash effects.
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterial;
+
+	// An array to hold all dynamic material instances for this entity.
+	UPROPERTY()
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> DynamicMaterials;
+
 
 	// The timer handle to manage the duration of the flash effect.
 	FTimerHandle FlashTimerHandle;

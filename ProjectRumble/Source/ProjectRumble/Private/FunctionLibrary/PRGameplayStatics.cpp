@@ -4,6 +4,8 @@
 #include "FunctionLibrary/PRGameplayStatics.h"
 #include "Components/PRStatsComponent.h"
 #include "AI/PRAIBase.h"
+#include "AI/PRAIController.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "PRGameplayTags.h"
 #include "Characters/PRCharacterBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -46,8 +48,10 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 	return Result;
 }
 
-float UPRGameplayStatics::ApplyRumbleDamage(AActor* DamagedActor, float BaseDamage, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude)
+float UPRGameplayStatics::ApplyRumbleDamage(AActor* DamagedActor, float BaseDamage, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration)
 {
+	
+
 	// --- 1. APPLY KNOCKBACK FIRST (OR INDEPENDENTLY) ---
 	// Knockback should happen even if the damage is 0 or absorbed.
 	if (KnockbackMagnitude > 0.f)
@@ -56,14 +60,55 @@ float UPRGameplayStatics::ApplyRumbleDamage(AActor* DamagedActor, float BaseDama
 		{
 			FVector LaunchVelocity = KnockbackDirection * KnockbackMagnitude;
 			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
+			
+		}
+	}
+	// --- 2. APPLY STUN  ---
+	if (StunDuration > 0.f && FMath::FRand() < StunChance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("STUN APPLIED! Chance was %.2f"), StunChance);
+		// Get the Pawn from the damaged actor.
+		if (APawn* DamagedPawn = Cast<APawn>(DamagedActor))
+		{
+			// Get the AI Controller of that Pawn.
+			if (AAIController* AIController = Cast<AAIController>(DamagedPawn->GetController()))
+			{
+				// Get the Blackboard Component from the AI Controller.
+				if (UBlackboardComponent* BlackboardComp = AIController->GetBlackboardComponent())
+				{
+					// Set the "IsStunned" key to true.
+					BlackboardComp->SetValueAsBool(NativeGameplayTags::State::TAG_State_IsStunned.GetModuleName(), true);
+
+					// --- Set a timer to clear the stun ---
+					// We need a UObject to set a timer on. A static class can't do it directly.
+					// The simplest way is to use the DamagedActor's world.
+
+					// Create a lambda function to be called by the timer.
+					FTimerDelegate TimerDelegate;
+					TimerDelegate.BindLambda([=]()
+						{
+							if (BlackboardComp)
+							{
+								BlackboardComp->SetValueAsBool(NativeGameplayTags::State::TAG_State_IsStunned.GetModuleName(), false);
+							}
+						});
+
+					// Get the world from the damaged actor and set the timer.
+					if (UWorld* World = DamagedActor->GetWorld())
+					{
+						FTimerHandle StunTimerHandle;
+						World->GetTimerManager().SetTimer(StunTimerHandle, TimerDelegate, StunDuration, false);
+					}
+				}
+			}
 		}
 	}
 
-	// --- 2. APPLY THE STANDARD DAMAGE ---
+	// --- 3. APPLY THE STANDARD DAMAGE ---
 	// This will trigger the target's TakeDamage function chain.
 	const float ActualDamage = UGameplayStatics::ApplyDamage(DamagedActor, BaseDamage, EventInstigator, DamageCauser, DamageTypeClass);
 
-	// --- 3. LIFESTEAL LOGIC (NEW) ---
+	// --- 4. LIFESTEAL LOGIC  ---
 	if (ActualDamage > 0.f && DamageCauser)
 	{
 		// Is the one who dealt damage a player character?

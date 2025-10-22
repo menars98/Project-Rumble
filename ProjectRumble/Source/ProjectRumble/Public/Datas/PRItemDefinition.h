@@ -48,7 +48,7 @@ public:
     TArray<FPotentialUpgradeEffect> PotentialUpgradeEffects;
     /**
     * The C++ class that holds the logic for this item.
-    * e.g., UPRWeaponItem for weapons, UPRTomeItem for tomes.
+    * e.g., UPRWeaponItem for weapons, UPRPassiveItem for tomes.
     */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Logic")
     TSubclassOf<UPRBaseItem> ItemClass;

@@ -73,4 +73,16 @@ namespace NativeGameplayTags
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Enemy_Type_Elite, "Enemy.Type.Elite");
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Enemy_Type_Boss, "Enemy.Type.Boss");
 	}
+
+	namespace State
+	{
+		UE_DEFINE_GAMEPLAY_TAG(TAG_State_IsStunned, "State.IsStunned");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_State_IsDead, "State.IsDead");
+	}
+
+	namespace StatusEffect
+	{
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Effect_StunChance, "Stat.Effect.StunChance");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Effect_StunDuration, "Stat.Effect.StunDuration");
+	}
 }

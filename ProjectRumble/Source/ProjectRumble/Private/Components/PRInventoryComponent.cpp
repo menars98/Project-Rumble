@@ -147,8 +147,14 @@ void UPRInventoryComponent::AddNewItem(UPRItemDefinition* ItemDef, const TArray<
 				OwnedTomes.Add(NewItem);
 			}
 			break;
+		case EItemType::Item:
+			OwnedItems.Add(NewItem);
+			break;
 		case EItemType::Relic:
-			// OwnedRelics.Add(NewItem);
+			if( OwnedRelics.Num() < MaxRelics)
+			{
+				OwnedRelics.Add(NewItem);
+			}
 			break;
 		}
 

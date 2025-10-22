@@ -1,14 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Datas/Items/PRTomeItem.h"
+#include "Datas/Items/PRPassiveItem.h"
 #include "Characters/PRCharacterBase.h"
 #include "Components/PRStatsComponent.h"
 #include "Datas/PRItemDefinition.h"
 #include "Player/PRPlayerState.h"
 
 
-void UPRTomeItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects)
+void UPRPassiveItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects)
 {
 	Super::Initialize(InItemDefinition, InOwningActor, InitialEffects);
 	// Store and apply the INITIAL effects
@@ -16,7 +16,7 @@ void UPRTomeItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwni
 	ApplyBonuses(AppliedEffects);
 }
 
-void UPRTomeItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
+void UPRPassiveItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
 {
 	Super::LevelUp(UpgradeEffects);
 
@@ -24,7 +24,7 @@ void UPRTomeItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
 	ApplyBonuses(UpgradeEffects);
 }
 
-void UPRTomeItem::ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply)
+void UPRPassiveItem::ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply)
 {
 	if (!OwningActor || !ItemDefinition) return;
 
@@ -47,7 +47,7 @@ void UPRTomeItem::ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToA
 	}
 }
 
-void UPRTomeItem::Uninitialize()
+void UPRPassiveItem::Uninitialize()
 {
 	// TODO: Implement logic to REMOVE the bonuses this tome granted.
 	// This requires storing the applied bonuses or having a more advanced stat modification system.

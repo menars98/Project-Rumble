@@ -67,12 +67,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TArray<TObjectPtr<UPRBaseItem>> OwnedRelics;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TArray<TObjectPtr<UPRBaseItem>> OwnedItems;
+
 	// Maximum number of items of each type the player can hold.
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory|Limits")
-	int32 MaxWeapons = 6;
+	int32 MaxWeapons = 4;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory|Limits")
-	int32 MaxTomes = 6;
+	int32 MaxTomes = 4;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory|Limits")
+	int32 MaxRelics = 4;
 		
 };

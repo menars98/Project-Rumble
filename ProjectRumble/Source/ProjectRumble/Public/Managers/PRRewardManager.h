@@ -13,6 +13,8 @@
 
 class UPRItemDefinition; 
 class UPRInventoryComponent;
+class UDataTable;
+class UPRUpgradeData;
 
 /**
  *  Manages the logic for generating and drafting level-up rewards.
@@ -41,6 +43,14 @@ public:
 	 */
 	TArray<UPRUpgradeData*> GenerateRewards(const UPRInventoryComponent* PlayerInventory, const TArray<UPRItemDefinition*>& AllPossibleItems, int32 NumOfChoices);
 
+	/**
+	* Generates rewards from a specific Loot Data Table (e.g., for Chests).
+	* @param PlayerInventory A reference to the player's inventory to check current items.
+	* @param LootTable The Data Table defining possible loot drops.
+	* @param NumToAward The number of items to award from the loot table.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Rewards")
+	TArray<UPRUpgradeData*> GenerateLootRewards(const UPRInventoryComponent* PlayerInventory, UDataTable* LootTable, int32 NumToAward);
 
 protected:
 	/**
@@ -55,6 +65,7 @@ protected:
 
 	/** Determines the rarity for an upcoming upgrade offer. */
 	EUpgradeRarity RollForRarity();
+
 
 private:
 	// A pointer to the data table that holds stat definitions (display names, etc.).

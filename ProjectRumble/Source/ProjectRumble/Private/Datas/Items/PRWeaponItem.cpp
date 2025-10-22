@@ -297,6 +297,53 @@ float UPRWeaponItem::GetCalculatedProjectileSpeed() const
 	return BaseSpeed * ProjectileSpeedModifier;
 }
 
+float UPRWeaponItem::GetCalculatedStunChance() const
+{
+	if (!ItemDefinition) return 0.0f;
+
+	// 1. Get the weapon's base stun chance (e.g., a heavy mace might have a high base chance).
+	// This value should be in the 0-1 range.
+	float BaseChance = ItemDefinition->WeaponStats.BaseStunChance;
+
+	// 2. Get the additive bonus from the player's global stats.
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// Player's bonus is also additive (e.g., 0.1 for +10% chance).
+			const float BonusChance = StatsComp->GetStatValue(NativeGameplayTags::StatusEffect::TAG_Stat_Effect_StunChance);
+			BaseChance += BonusChance;
+		}
+	}
+
+	// Clamp the final chance between 0% and 100%.
+	return FMath::Clamp(BaseChance, 0.f, 1.f);
+}
+
+float UPRWeaponItem::GetCalculatedStunDuration() const
+{
+	if (!ItemDefinition) return 0.0f;
+
+	// 1. Get the weapon's base stun duration.
+	float BaseDuration = ItemDefinition->WeaponStats.BaseStunDuration;
+
+	// 2. Get the multiplicative bonus from the player's global stats.
+	// Duration is often multiplicative.
+	float Multiplier = 1.0f;
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// Assuming you have a "Stat.Effect.StunDuration.Multiplicative" tag.
+			// Let's use a single tag for simplicity for now.
+			const float BonusMultiplier = StatsComp->GetStatValue(NativeGameplayTags::StatusEffect::TAG_Stat_Effect_StunDuration);
+			Multiplier += BonusMultiplier; // e.g., 1.0 + 0.2 = 1.2x duration
+		}
+	}
+
+	return BaseDuration * Multiplier;
+}
+
 FDamageCalculationResult UPRWeaponItem::CalculateFinalDamage(const APRAIBase* Target)
 {
 	FDamageCalculationResult Result;

@@ -75,4 +75,15 @@ namespace NativeGameplayTags
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemy_Type_Elite);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemy_Type_Boss);
 	}
+
+	namespace State
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_IsStunned);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_IsDead);
+	}
+	namespace StatusEffect
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Effect_StunChance);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Effect_StunDuration);
+	}
 }

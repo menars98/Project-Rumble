@@ -31,14 +31,42 @@ void APRAIBase::BeginPlay()
 		StatsComponent_AI->OnHealthChangedDelegate.AddDynamic(this, &APRAIBase::OnHealthChanged);
 	}
 	// Create a dynamic material instance when the AI spawns.
-	if (GetMesh())
+	if (USkeletalMeshComponent* MyMesh = GetMesh())
 	{
-		UMaterialInterface* OriginalMaterial = GetMesh()->GetMaterial(0);
+		const int32 NumMaterials = MyMesh->GetNumMaterials();
+
+		// Clear any old dynamic materials, just in case
+		DynamicMaterials.Empty();
+
+		// Loop through all material slots
+		for (int32 i = 0; i < NumMaterials; ++i)
+		{
+			// Get the original material from the slot
+			UMaterialInterface* OriginalMaterial = MyMesh->GetMaterial(i);
+			if (OriginalMaterial)
+			{
+				// Create a dynamic instance of that material
+				UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(OriginalMaterial, this);
+
+				// Set the new dynamic instance back onto the mesh slot
+				MyMesh->SetMaterial(i, MID);
+
+				// Add the new MID to our array for later use
+				DynamicMaterials.Add(MID);
+			}
+		}
+
+		if (DynamicMaterials.Num() == 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("EntityBase on %s has no materials to create dynamic instances from!"), *GetName());
+		}
+		
+		/*UMaterialInterface* OriginalMaterial = GetMesh()->GetMaterial(0);
 		if (OriginalMaterial)
 		{
 			DynamicMaterial = UMaterialInstanceDynamic::Create(OriginalMaterial, this);
 			GetMesh()->SetMaterial(0, DynamicMaterial);
-		}
+		}*/
 	}
 
 }
@@ -58,22 +86,42 @@ float APRAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 
 void APRAIBase::PlayHitFlash()
 {
-	if (DynamicMaterial)
+	// Loop through all our dynamic materials and set the parameter on each one.
+	for (UMaterialInstanceDynamic* MID : DynamicMaterials)
 	{
-		DynamicMaterial->SetVectorParameterValue(FName("FlashColor"), FLinearColor::White);
-
-		// Set a timer to stop the flash after a short duration.
-		GetWorld()->GetTimerManager().SetTimer(FlashTimerHandle, this, &APRAIBase::StopHitFlash, 0.1f, false);
+		if (MID)
+		{
+			MID->SetVectorParameterValue(FName("FlashColor"), FLinearColor::White);
+		}
 	}
+
+	GetWorld()->GetTimerManager().SetTimer(FlashTimerHandle, this, &APRAIBase::StopHitFlash, 0.1f, false);
+
+	//if (DynamicMaterial)
+	//{
+	//	DynamicMaterial->SetVectorParameterValue(FName("FlashColor"), FLinearColor::White);
+
+	//	// Set a timer to stop the flash after a short duration.
+	//	GetWorld()->GetTimerManager().SetTimer(FlashTimerHandle, this, &APRAIBase::StopHitFlash, 0.1f, false);
+	//}
 }
 
 void APRAIBase::StopHitFlash()
 {
-	if (DynamicMaterial)
+	// Loop through all our dynamic materials and reset the color on each one.
+	for (UMaterialInstanceDynamic* MID : DynamicMaterials)
 	{
-		// Reset the color back to black.
-		DynamicMaterial->SetVectorParameterValue(FName("FlashColor"), FLinearColor::Black);
+		if (MID)
+		{
+			MID->SetVectorParameterValue(FName("FlashColor"), FLinearColor::Black);
+		}
 	}
+
+	//if (DynamicMaterial)
+	//{
+	//	// Reset the color back to black.
+	//	DynamicMaterial->SetVectorParameterValue(FName("FlashColor"), FLinearColor::Black);
+	//}
 }
 
 // Override to return the AI's own component.
@@ -176,7 +224,7 @@ void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 	FVector DirectionFromAI = TargetPlayer->GetActorLocation() - GetActorLocation();
 	DirectionFromAI.Normalize();
 	
-	UPRGameplayStatics::ApplyRumbleDamage(TargetPlayer, ContactDamage, GetController(), this, nullptr, DirectionFromAI, KnockbackStrengthToPlayer);
+	UPRGameplayStatics::ApplyRumbleDamage(TargetPlayer, ContactDamage, GetController(), this, nullptr, DirectionFromAI, KnockbackStrengthToPlayer, ContactStunChance, ContactStunDuration);
 
 	// --- 2. START THE COOLDOWN ---
 	// Disable our ability to deal damage immediately.

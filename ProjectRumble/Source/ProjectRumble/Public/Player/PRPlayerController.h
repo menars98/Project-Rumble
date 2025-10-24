@@ -11,6 +11,7 @@ class UUserWidget;
 class UPRUpgradeData;
 class UPRItemDefinition;
 class UInputAction;
+class UPRWorldUserWidget;
 
 UCLASS()
 class PROJECTRUMBLE_API APRPlayerController : public APlayerController
@@ -28,6 +29,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
 	TArray<TObjectPtr<UPRItemDefinition>> AllPossibleItems;
 
+	/**
+	 * An array of Data Assets that holds all possible ITEMS (Weapons, Tomes, etc.) available in the level up pool.
+	 * Assigned in the BP_PlayerController.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
+	TArray<TObjectPtr<UPRItemDefinition>> AllPossibleLevelUpItems;
+
 	// Array to hold the rewards that are currently being offered to the player.
 	// We make it BlueprintReadOnly so the UI can read it.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rewards")
@@ -37,13 +45,6 @@ protected:
 	// This is our main STAT definition table.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
 	TObjectPtr<UDataTable> StatsInfoDataTable;
-
-	/**
-	 * An array of Data Assets that holds all possible ITEMS (Weapons, Tomes, etc.) available in the level up pool.
-	 * Assigned in the BP_PlayerController.
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
-	TArray<TObjectPtr<UPRItemDefinition>> AllPossibleLevelUpItems;
 
 	// -- UI --
 	// The Level Up screen widget class. Assigned in the BP_PlayerController Blueprint.
@@ -64,7 +65,7 @@ protected:
 
 	// The Stat screen widget class.
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UUserWidget> StatScreenWidgetClass;
+	TSubclassOf<UUserWidget> ItemFoundPopupWidgetClass;
 
 	// The instance of the inventory screen, so we can check if it's open.
 	UPROPERTY()
@@ -104,4 +105,8 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Rewards")
 	void RequestRewards(UDataTable* LootPool, int32 NumToOffer, bool bGrantDirectly = true);
+
+	// Called by UI widgets when they are closed to resume the game.
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void ResumeGameFromUI();
 };

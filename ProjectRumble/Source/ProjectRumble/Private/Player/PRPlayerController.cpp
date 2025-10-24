@@ -11,6 +11,7 @@
 #include "Blueprint/UserWidget.h"
 #include "UI/PRHUD.h"
 #include "Interfaces/PRBPIPlayerHUD.h"
+#include "Interfaces/PRBPIRewardScreen.h"
 
 void APRPlayerController::BeginPlay()
 {
@@ -48,32 +49,39 @@ void APRPlayerController::SetupInputComponent()
 
 void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 {
-	// Create an instance of our Reward Manager
-	UPRRewardManager* RewardManager = NewObject<UPRRewardManager>();
-	// --- SETUP THE REWARD MANAGER ---
-	// Initialize the manager with the stat info data table.
-	RewardManager->Initialize(StatsInfoDataTable);
-
-	if (!RewardManager || AllPossibleItems.Num() == 0 || !LevelUpWidgetClass) return;
-
-	// Get the player's inventory from the PlayerState
-	UPRInventoryComponent* PlayerInventory = nullptr;
-	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	// --- 1. VALIDATION ---
+	// Check if we have items to offer and a widget to show them with.
+	if (AllPossibleLevelUpItems.Num() == 0 || !LevelUpWidgetClass)
 	{
-		PlayerInventory = PS->InventoryComponent;
+		UE_LOG(LogTemp, Warning, TEXT("ShowLevelUpScreen: No Level Up items or widget class assigned in PlayerController."));
+		return;
 	}
 
-	
+	// --- 2. PREPARE THE MANAGER AND DATA ---
+	UPRRewardManager* RewardManager = NewObject<UPRRewardManager>();
+	if (!RewardManager) return;
 
-	// Call the manager with the new parameters to get our rewards
-	OfferedRewards = RewardManager->GenerateRewards(PlayerInventory, AllPossibleItems, 3);
+	RewardManager->Initialize(StatsInfoDataTable);
 
-	// --- Show UI ---
+	UPRInventoryComponent* PlayerInventory = GetPlayerState<APRPlayerState>() ? GetPlayerState<APRPlayerState>()->InventoryComponent : nullptr;
+
+	// --- 3. GENERATE REWARDS ---
+	// Call the manager to get our LEVEL UP rewards from our specific level-up pool.
+	OfferedRewards = RewardManager->GenerateRewards(PlayerInventory, AllPossibleLevelUpItems, 3);
+
+	// --- 4. SHOW THE LEVEL UP UI ---
 	SetPause(true);
 
 	LevelUpWidgetInstance = CreateWidget(this, LevelUpWidgetClass);
 	if (LevelUpWidgetInstance)
 	{
+		// Check if the widget implements our reward screen interface
+		if (LevelUpWidgetInstance->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+		{
+			// Pass the generated rewards to the UI to display
+			IPRBPIRewardScreen::Execute_InitializeScreen(LevelUpWidgetInstance, OfferedRewards);
+		}
+
 		LevelUpWidgetInstance->AddToViewport();
 	}
 
@@ -185,11 +193,8 @@ void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer,
 	RewardManager->Initialize(StatsInfoDataTable);
 
 	// The manager needs the inventory to check if an item is new or an upgrade.
-	UPRInventoryComponent* PlayerInventory = nullptr;
-	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
-	{
-		PlayerInventory = PS->InventoryComponent;
-	}
+	UPRInventoryComponent* PlayerInventory = GetPlayerState<APRPlayerState>() ? GetPlayerState<APRPlayerState>()->InventoryComponent : nullptr;
+
 	if (!PlayerInventory)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Cannot grant rewards, PlayerInventory is not valid."));
@@ -203,31 +208,48 @@ void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer,
 	// --- 4. GRANT THE REWARDS ---
 	if (GeneratedRewards.Num() > 0)
 	{
-		if (bGrantDirectly)
+		if (bGrantDirectly && ItemFoundPopupWidgetClass)
 		{
-			// Loop through all generated rewards and grant them directly to the inventory.
-			// This is typical for chests.
-			for (UPRUpgradeData* RewardToGrant : GeneratedRewards)
-			{
-				if (RewardToGrant)
-				{
-					PlayerInventory->AddOrUpgradeItem(RewardToGrant);
+			// We don't grant it directly to the inventory anymore.
+			// We show a popup UI instead.
+			UPRUpgradeData* RewardToShow = GeneratedRewards[0];
 
-					// TODO: Show a "You Found: [Item Name]!" popup UI for each item.
-					UE_LOG(LogTemp, Log, TEXT("Chest granted item: %s"), *RewardToGrant->DisplayName.ToString());
-				}
+			// Pause the game or at least ignore player input
+		   // SetPause(true); // Pausing might be too disruptive. Let's just change input mode.
+			SetPause(true);
+			FInputModeUIOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = true;
+
+			// Create the popup widget
+			UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
+
+			// Now, we need to pass the data to it. We need an interface or a cast.
+			// Let's use an interface for this, it's cleaner.
+			// Assuming WBP_ItemFoundPopup implements BPI_ItemPopup
+			if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+			{
+				// Call the interface function to initialize the widget with the reward data.
+				IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, GeneratedRewards);
+				PopupWidget->AddToViewport();
 			}
 		}
 		else
 		{
-			// This branch is for showing a choice screen (like level up).
-			// We would store the rewards and create the UI.
-			OfferedRewards = GeneratedRewards;
-			// ShowLevelUpScreen(...); // Or a similar function
+			// This branch is for showing the level up screen with multiple choices
+			// ...
 		}
 	}
 	else
 	{
 		UE_LOG(LogTemp, Log, TEXT("Loot pool '%s' generated no rewards."), *LootPool->GetName());
 	}
+}
+
+void APRPlayerController::ResumeGameFromUI()
+{
+	SetPause(false); // If the game was paused
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
 }

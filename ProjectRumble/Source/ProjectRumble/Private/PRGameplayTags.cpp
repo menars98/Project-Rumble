@@ -7,8 +7,6 @@ namespace NativeGameplayTags
 	{
 		namespace Primary
 		{
-			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Primary_Health, "Stat.Primary.Health");
-			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Primary_MaxHP, "Stat.Primary.MaxHP");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Primary_XP, "Stat.Primary.XP");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Primary_MaxXP, "Stat.Primary.MaxXP");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Primary_Level, "Stat.Primary.Level");
@@ -31,6 +29,8 @@ namespace NativeGameplayTags
 		}
 		namespace Defense
 		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Defense_Health, "Stat.Defense.Health");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Defense_MaxHP, "Stat.Defense.MaxHP");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Defense_Armor, "Stat.Defense.Armor");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Defense_HealthRegen, "Stat.Defense.HealthRegen");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Defense_LifeSteal, "Stat.Defense.LifeSteal");

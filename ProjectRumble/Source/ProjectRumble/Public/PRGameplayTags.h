@@ -9,8 +9,6 @@ namespace NativeGameplayTags
 	{
 		namespace Primary
 		{
-			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Primary_Health); //Flat
-			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Primary_MaxHP); //Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Primary_XP); //Percentage
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Primary_MaxXP); //Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Primary_Level); //Flat
@@ -32,6 +30,8 @@ namespace NativeGameplayTags
 		}
 		namespace Defense
 		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Defense_Health); //Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Defense_MaxHP); //Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Defense_Armor); //Flat, damage reduction
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Defense_HealthRegen); // Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Defense_LifeSteal); // Percentage

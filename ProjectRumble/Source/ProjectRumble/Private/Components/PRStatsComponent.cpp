@@ -110,8 +110,8 @@ void UPRStatsComponent::ApplyDamage(float DamageAmount)
 		return;
 	}
 
-	const FGameplayTag HealthTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health.GetTag();
-	const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxHP.GetTag();
+	const FGameplayTag HealthTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health.GetTag();
+	const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP.GetTag();
 
 	const float CurrentHealth = GetStatValue(HealthTag);
 	const float NewHealth = FMath::Clamp(CurrentHealth - DamageAmount, 0.f, GetStatValue(MaxHPTag));
@@ -169,8 +169,8 @@ void UPRStatsComponent::BroadcastHealth()
 	if (OnHealthChangedDelegate.IsBound())
 	{
 		// Request the tags once for clarity. In a real project, you might store these in a central header.
-		const FGameplayTag HealthTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health.GetTag();
-		const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxHP.GetTag();
+		const FGameplayTag HealthTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health.GetTag();
+		const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP.GetTag();
 
 		const float CurrentHealth = GetStatValue(HealthTag);
 		const float MaxHealth = GetStatValue(MaxHPTag);
@@ -235,14 +235,14 @@ void UPRStatsComponent::Heal(float HealAmount)
 {
 	if (HealAmount <= 0.f) return;
 
-	const float CurrentHealth = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health);
-	const float MaxHealth = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxHP);
+	const float CurrentHealth = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+	const float MaxHealth = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP);
 
 	const float NewHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
 
 	if (NewHealth > CurrentHealth)
 	{
-		SetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health, NewHealth);
+		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health, NewHealth);
 		BroadcastHealth();
 	}
 }
@@ -265,8 +265,8 @@ void UPRStatsComponent::ProcessHealthRegen()
     // Since RegenInterval is 1.0, this is just HealthRegenPerSecond.
 	const float HealthToRegenThisTick = HealthRegenPerSecond * RegenInterval;
 
-	const float CurrentHealth = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health);
-	const float MaxHealth = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxHP);
+	const float CurrentHealth = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+	const float MaxHealth = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP);
 
 	// If health is already full, do nothing.
 	if (CurrentHealth >= MaxHealth)
@@ -280,7 +280,7 @@ void UPRStatsComponent::ProcessHealthRegen()
 
 	if (NewHealth > CurrentHealth) // Only update if there was an actual change
 	{
-		SetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_Health, NewHealth);
+		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health, NewHealth);
 		BroadcastHealth(); // Notify the UI
 	}
 }

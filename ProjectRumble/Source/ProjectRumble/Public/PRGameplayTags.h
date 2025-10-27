@@ -67,6 +67,11 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Utiliy_PowerDropChance); // Multiplicative
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Utiliy_EliteSpawnChance); // Multiplicative
 		}
+		namespace Resource
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Resource_Gold); // Flat
+			//UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Resource_Silver); // Flat
+		}
 	}
 
 	namespace EnemyTypes
@@ -85,5 +90,20 @@ namespace NativeGameplayTags
 	{
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Effect_StunChance);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Effect_StunDuration);
+	}
+	namespace Enemies
+	{
+		namespace Type
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Goblin);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Skeleton);
+		}
+	}
+	namespace Destructible
+	{
+		namespace Type
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Destructible_Type_Vase);
+		}
 	}
 }

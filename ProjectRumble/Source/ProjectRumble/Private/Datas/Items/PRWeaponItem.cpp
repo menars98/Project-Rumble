@@ -161,7 +161,7 @@ float UPRWeaponItem::GetCalculatedCritDamage() const
 		{
 			// The CritDamage stat is an additive bonus on top of the base multiplier.
 			// e.g., Base 2 + 0.5 from items = 2.5x total multiplier.
-			const float BonusMultiplier = BaseMultiplier + StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritDamage);
+			const float BonusMultiplier = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritDamage);
 			return BonusMultiplier;
 		}
 	}

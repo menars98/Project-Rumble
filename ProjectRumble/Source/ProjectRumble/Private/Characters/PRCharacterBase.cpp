@@ -316,9 +316,10 @@ void APRCharacterBase::OnStatChanged(FGameplayTag StatTag, float NewValue)
 void APRCharacterBase::OnPickupSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// Check if the overlapped actor is an XP Shard
-	if (APRXpShard* Shard = Cast<APRXpShard>(OtherActor))
+	if (APRPickupBase* Shard = Cast<APRPickupBase>(OtherActor))
 	{
-		// Tell the shard to start moving towards us
+		// Tell the shard to start moving towards us.
+		// The shard's internal logic will prevent this from being called repeatedly.
 		Shard->StartHoming(this);
 	}
 	// else if (/* Cast to GoldCoin, HealthOrb etc.*/)

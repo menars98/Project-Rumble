@@ -21,6 +21,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedSignature, float, C
 // This delegate will broadcast when the owner's health reaches zero.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
 
+// This delegate will broadcast when a resource changes, sending the ResourceTag and its new amount.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnResourceChangedSignature, FGameplayTag, ResourceTag, int32, NewAmount);
+
 // This delegate will broadcast when the owner levels up, sending the new level.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLevelUpSignature, int32, NewLevel);
 
@@ -59,6 +62,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnShieldChangedSignature OnShieldChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnResourceChangedSignature OnResourceChangedDelegate;
 
 	// --- PUBLIC FUNCTIONS ---
 	/**

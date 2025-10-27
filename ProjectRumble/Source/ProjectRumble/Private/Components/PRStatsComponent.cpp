@@ -90,6 +90,15 @@ void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 
 		// Broadcast that a generic stat has changed
 		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
+
+		// Check if the changed stat is a "Resource" and broadcast the specific event.
+		if (StatTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Stat.Resource"))))
+		{
+			// Convert the float value to an integer for the delegate.
+			const int32 NewAmount = FMath::RoundToInt(NewValue);
+			OnResourceChangedDelegate.Broadcast(StatTag, NewAmount);
+		}
+
 		// If the stat that changed is relevant to the shield, broadcast the shield delegate.
 		if (StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield || StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield)
 		{

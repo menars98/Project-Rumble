@@ -9,6 +9,7 @@
 class UPRStatsComponent;
 class APRCharacterBase;
 class APRXpShard;
+class UPRLootComponent; 
 
 UCLASS()
 class PROJECTRUMBLE_API APRAIBase : public APREntityBase
@@ -29,13 +30,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rumble | Components")
 	TObjectPtr<UPRStatsComponent> StatsComponent_AI; // Renamed to avoid confusion with the inherited pointer name.
 
-	// The amount of XP this AI drops when it dies.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Loot")
-	float XPToAward = 25.0f;
-
-	// The XP Shard Blueprint to spawn on death.
-	UPROPERTY(EditDefaultsOnly, Category = "Loot")
-	TSubclassOf<APRXpShard> XPShardClass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UPRLootComponent> LootComponent;
 
 	// -- COMBAT --
 	// The damage this AI deals on contact.
@@ -114,5 +110,6 @@ protected:
 	// Function called by the timer to re-enable contact damage.
 	UFUNCTION()
 	void ResetContactDamage();
+
 };
 

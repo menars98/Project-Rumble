@@ -7,13 +7,16 @@
 #include "Kismet/GameplayStatics.h" 
 #include "AI/PRAIController.h"
 #include "Components/CapsuleComponent.h"
-#include <FunctionLibrary/PRGameplayStatics.h>
+#include "FunctionLibrary/PRGameplayStatics.h"
 #include "Actors/PRXpShard.h"
+#include "PRGameplayTags.h"
+#include <Components/PRLootComponent.h>
 
 APRAIBase::APRAIBase()
 {
 	// AI creates its own StatsComponent.
 	StatsComponent_AI = CreateDefaultSubobject<UPRStatsComponent>(TEXT("StatsComponent"));
+	LootComponent = CreateDefaultSubobject<UPRLootComponent>(TEXT("LootComponent"));
 
 	// Set the default AI Controller class for ALL pawns that inherit from APRAIBase.
 	AIControllerClass = APRAIController::StaticClass();
@@ -153,23 +156,10 @@ void APRAIBase::OnDeath()
 		// The "true" parameter tells it to wake the physics body immediately.
 		MyMesh->SetSimulatePhysics(true);
 	}
-
-	// --- SPAWN XP SHARD ---
-	if (XPShardClass && XPToAward > 0.f)
+	// Find our loot component and tell it to do its job.
+	if (LootComponent)
 	{
-		FVector SpawnLocation = GetActorLocation();
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-		// Spawn the shard
-		APRXpShard* SpawnedShard = GetWorld()->SpawnActor<APRXpShard>(XPShardClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
-
-		// Now we need to tell the shard how much XP it's worth.
-		// This requires casting or an interface. Let's use a simple cast for now.
-		if (APRXpShard* Shard = Cast<APRXpShard>(SpawnedShard))
-		{
-			SpawnedShard->XPValue = XPToAward;
-		}
+		LootComponent->DropLoot();
 	}
 
 	// Make the AI's body disappear after 5 seconds.
@@ -180,19 +170,6 @@ void APRAIBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// --- VERY SIMPLE "CHASE PLAYER" LOGIC ---
-	// This is a "dumb" AI. It doesn't use navigation or behavior trees.
-	// It just moves in a straight line towards the player. Good for a prototype.
-	ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-	if (PlayerCharacter)
-	{
-		// Get the direction from the AI to the player.
-		FVector DirectionToPlayer = PlayerCharacter->GetActorLocation() - GetActorLocation();
-		DirectionToPlayer.Normalize(); // Make it a unit vector (length of 1).
-
-		// Move the AI in that direction.
-		AddMovementInput(DirectionToPlayer);
-	}
 }
 
 void APRAIBase::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -263,3 +240,4 @@ void APRAIBase::ResetContactDamage()
 		}
 	}
 }
+

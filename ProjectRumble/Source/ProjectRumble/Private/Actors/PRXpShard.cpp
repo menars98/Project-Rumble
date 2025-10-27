@@ -6,6 +6,7 @@
 #include "Characters/PRCharacterBase.h"
 #include "Components/PRStatsComponent.h"
 #include "Player/PRPlayerState.h"
+#include "PRGameplayTags.h"
 
 
 APRXpShard::APRXpShard()
@@ -19,13 +20,8 @@ APRXpShard::APRXpShard()
 
 }
 
-void APRXpShard::StartHoming(APRCharacterBase* Target)
+void APRPickupBase::OnCollected_Implementation()
 {
-	// If we are already homing towards something, don't change target.
-	if (!HomingTarget)
-	{
-		HomingTarget = Target;
-	}
 }
 
 void APRXpShard::BeginPlay()
@@ -38,31 +34,25 @@ void APRXpShard::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// If we have a target, move towards it.
-	if (HomingTarget)
+	
+}
+
+void APRXpShard::OnCollected_Implementation()
+{
+	// Call the parent's function first (good practice)
+	Super::OnCollected_Implementation();
+
+	if (!HomingTarget) return; // HomingTarget is inherited from APRPickupBase
+
+	// --- XP GAIN LOGIC ---
+	if (APRPlayerState* PS = HomingTarget->GetPlayerState<APRPlayerState>())
 	{
-		// Calculate the new location by interpolating towards the target
-		FVector CurrentLocation = GetActorLocation();
-		FVector TargetLocation = HomingTarget->GetActorLocation();
-		FVector NewLocation = UKismetMathLibrary::VInterpTo(CurrentLocation, TargetLocation, DeltaTime, HomingSpeed / 1000.f); // InterpSpeed is a factor, not absolute speed
-
-		SetActorLocation(NewLocation);
-
-		// Check if we have reached the target
-		const float DistanceToTarget = FVector::Dist(CurrentLocation, TargetLocation);
-		if (DistanceToTarget < 100.f) // If we are close enough
+		if (UPRStatsComponent* StatsComp = PS->StatsComponent)
 		{
-			// Grant XP
-			if (APRPlayerState* PS = HomingTarget->GetPlayerState<APRPlayerState>())
-			{
-				if (UPRStatsComponent* StatsComp = PS->StatsComponent)
-				{
-					StatsComp->AddXP(XPValue);
-				}
-			}
+			const float XPGainModifier = StatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_XP_Gain);
+			const float FinalXPAward = Value * (XPGainModifier); // "Value" is inherited
 
-			// Destroy self
-			Destroy();
+			StatsComp->AddXP(FinalXPAward);
 		}
 	}
 }

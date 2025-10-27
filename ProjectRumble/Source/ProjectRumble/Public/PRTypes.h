@@ -182,3 +182,38 @@ public:
 
     // (Optional) Minimum/Maximum quantity if we want stacks of items later.
 };
+
+// Defines a single type of loot that can be dropped (e.g., 15 XP).
+USTRUCT(BlueprintType)
+struct FLootDrop
+{
+    GENERATED_BODY()
+
+    // The class of the pickup to spawn (e.g., BP_XPShard, BP_GoldCoin).
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TSubclassOf<AActor> PickupClass;
+
+    // The base value of this drop (e.g., 15 for XP, 5 for Gold).
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    float Value = 0.f;
+
+    // Chance for this specific drop to happen (0.0 to 1.0).
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float DropChance = 1.0f; // 100% chance by default
+};
+
+// Defines a collection of possible drops (e.g., a Goblin's loot profile).
+USTRUCT(BlueprintType)
+struct FLootProfile : public FTableRowBase
+{
+    GENERATED_BODY()
+
+public:
+    // The tag that identifies this loot profile (e.g., "Enemy.Type.Goblin").
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    FGameplayTag ProfileTag;
+
+    // A list of all possible items that can be dropped from this profile.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TArray<FLootDrop> PossibleDrops;
+};

@@ -3,25 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
 #include "Actors/PRPickupBase.h"
-#include "PRXpShard.generated.h"
+#include "PRGoldPickup.generated.h"
 
-
-
+/**
+ * 
+ */
 UCLASS()
-class PROJECTRUMBLE_API APRXpShard : public APRPickupBase
+class PROJECTRUMBLE_API APRGoldPickup : public APRPickupBase
 {
 	GENERATED_BODY()
 	
-public:	
-	// Sets default values for this actor's properties
-	APRXpShard();
-
 protected:
+	virtual void OnCollected_Implementation() override;
+
 	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaTime) override;
-
-	virtual void OnCollected_Implementation() override;
 };

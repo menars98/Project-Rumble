@@ -65,6 +65,11 @@ namespace NativeGameplayTags
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Utiliy_PowerDropChance, "Stat.Utility.PowerDropChance");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Utiliy_EliteSpawnChance, "Stat.Utility.EliteSpawnChance");
 		}
+		namespace Resource
+		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Resource_Gold, "Stat.Resource.Gold");
+			//UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Resource_Silver, "Stat.Resource.Silver");
+		}
 	}
 
 	namespace EnemyTypes
@@ -84,5 +89,22 @@ namespace NativeGameplayTags
 	{
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Effect_StunChance, "Stat.Effect.StunChance");
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Effect_StunDuration, "Stat.Effect.StunDuration");
+	}
+
+	namespace Enemy
+	{
+		namespace Type
+		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Goblin, "Enemies.Type.Goblin");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Skeleton, "Enemies.Type.Skeleton");
+		}
+	}
+
+	namespace Destructible
+	{
+		namespace Type
+		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Destructible_Type_Vase, "Destructible.Type.Vase");
+		}
 	}
 }

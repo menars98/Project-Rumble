@@ -16,6 +16,7 @@ class UInputAction;
 class UInputMappingContext; 
 class UPRStatsComponent;
 class UPRInteractionComponent;
+class USphereComponent;
 
 UCLASS()
 class PROJECTRUMBLE_API APRCharacterBase : public APREntityBase
@@ -88,6 +89,9 @@ protected:
 	UFUNCTION()
 	void OnStatChanged(FGameplayTag StatTag, float NewValue);
 
+	UFUNCTION()
+	void OnPickupSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
 	virtual void OnDeath() override;
 
 	// -- COMPONENTS --
@@ -102,6 +106,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UPRInteractionComponent> InteractionComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USphereComponent* PickupSphere;
 	// --- CAMERA SETTINGS ---
 	// These values will be exposed to our Blueprint class, so we can tweak them without recompiling.
 

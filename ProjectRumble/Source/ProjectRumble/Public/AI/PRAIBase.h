@@ -8,6 +8,7 @@
 
 class UPRStatsComponent;
 class APRCharacterBase;
+class APRXpShard;
 
 UCLASS()
 class PROJECTRUMBLE_API APRAIBase : public APREntityBase
@@ -31,6 +32,10 @@ protected:
 	// The amount of XP this AI drops when it dies.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Loot")
 	float XPToAward = 25.0f;
+
+	// The XP Shard Blueprint to spawn on death.
+	UPROPERTY(EditDefaultsOnly, Category = "Loot")
+	TSubclassOf<APRXpShard> XPShardClass;
 
 	// -- COMBAT --
 	// The damage this AI deals on contact.

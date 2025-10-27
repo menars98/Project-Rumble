@@ -8,6 +8,7 @@
 #include "AI/PRAIController.h"
 #include "Components/CapsuleComponent.h"
 #include <FunctionLibrary/PRGameplayStatics.h>
+#include "Actors/PRXpShard.h"
 
 APRAIBase::APRAIBase()
 {
@@ -153,21 +154,26 @@ void APRAIBase::OnDeath()
 		MyMesh->SetSimulatePhysics(true);
 	}
 
-	// --- AWARD XP TO THE PLAYER ---
-	// Get a reference to the player character. This is a simple way for single-player.
-	ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-	if (APRCharacterBase* Player = Cast<APRCharacterBase>(PlayerCharacter))
+	// --- SPAWN XP SHARD ---
+	if (XPShardClass && XPToAward > 0.f)
 	{
-		// Get the player's stats component (this will correctly get it from the PlayerState).
-		if (UPRStatsComponent* PlayerStats = Player->GetStatsComponent())
+		FVector SpawnLocation = GetActorLocation();
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		// Spawn the shard
+		APRXpShard* SpawnedShard = GetWorld()->SpawnActor<APRXpShard>(XPShardClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+
+		// Now we need to tell the shard how much XP it's worth.
+		// This requires casting or an interface. Let's use a simple cast for now.
+		if (APRXpShard* Shard = Cast<APRXpShard>(SpawnedShard))
 		{
-			PlayerStats->AddXP(XPToAward);
-			UE_LOG(LogTemp, Log, TEXT("Awarded %f XP to player."), XPToAward);
+			SpawnedShard->XPValue = XPToAward;
 		}
 	}
 
 	// Make the AI's body disappear after 5 seconds.
-	SetLifeSpan(5.0f);
+	SetLifeSpan(3.0f);
 }
 
 void APRAIBase::Tick(float DeltaTime)

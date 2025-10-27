@@ -16,6 +16,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Components/PRInventoryComponent.h"
 #include"Components/PRInteractionComponent.h"
+#include "Components/SphereComponent.h"
+#include "Actors/PRXpShard.h"
 
 APRCharacterBase::APRCharacterBase()
 {
@@ -35,6 +37,12 @@ APRCharacterBase::APRCharacterBase()
 	bUseControllerRotationYaw = false; // ...and doesn't directly follow the camera's yaw. This gives a nice third-person feel.
 
 	InteractionComp = CreateDefaultSubobject<UPRInteractionComponent>(TEXT("InteractionComp"));
+	// Create Pickup Sphere
+	PickupSphere = CreateDefaultSubobject<USphereComponent>(TEXT("PickupSphere"));
+	PickupSphere->SetupAttachment(RootComponent);
+	PickupSphere->SetSphereRadius(100.f); 
+	PickupSphere->SetCollisionProfileName(FName("PlayerPickupSphere"));
+
 
 	// Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
@@ -77,12 +85,23 @@ void APRCharacterBase::BeginPlay()
 
 	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
 	{
+		OnStatChanged(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange));
+	}
+
+	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
+	{
 		// Bind to the virtual functions inherited from EntityBase.
 		MyStatsComponent->OnHealthChangedDelegate.AddDynamic(this, &APRCharacterBase::OnHealthChanged);
 		MyStatsComponent->OnDeathDelegate.AddDynamic(this, &APRCharacterBase::OnDeath);
 		MyStatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
 		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight));
 		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump));
+		
+	}
+	if (PickupSphere)
+	{
+		PickupSphere->OnComponentBeginOverlap.AddDynamic(this, &APRCharacterBase::OnPickupSphereOverlap);
+		UE_LOG(LogTemp, Error, TEXT("OnPickupSphereOverlap Binded!"), *GetName());
 	}
 	else
 	{
@@ -282,6 +301,30 @@ void APRCharacterBase::OnStatChanged(FGameplayTag StatTag, float NewValue)
 			UE_LOG(LogTemp, Log, TEXT("JumpZVelocity updated to: %f"), GetCharacterMovement()->JumpZVelocity);
 		}
 	}
+
+	// --- PICKUP RANGE LOGIC ---
+	else if (StatTag == NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange)
+	{
+		if (PickupSphere)
+		{
+			PickupSphere->SetSphereRadius(NewValue);
+			UE_LOG(LogTemp, Log, TEXT("PickupSphere radius updated to: %f"), NewValue);
+		}
+	}
+}
+
+void APRCharacterBase::OnPickupSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// Check if the overlapped actor is an XP Shard
+	if (APRXpShard* Shard = Cast<APRXpShard>(OtherActor))
+	{
+		// Tell the shard to start moving towards us
+		Shard->StartHoming(this);
+	}
+	// else if (/* Cast to GoldCoin, HealthOrb etc.*/)
+	// {
+	//	
+	// }
 }
 
 void APRCharacterBase::OnDeath()

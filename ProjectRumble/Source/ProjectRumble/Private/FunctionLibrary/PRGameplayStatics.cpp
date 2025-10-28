@@ -9,6 +9,9 @@
 #include "PRGameplayTags.h"
 #include "Characters/PRCharacterBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "UI/Widgets/PRWorldUserWidget.h"
+#include "Game/PRGameInstance.h"
+#include "Interfaces/PRBPIDamageNumber.h"
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -48,7 +51,7 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 	return Result;
 }
 
-float UPRGameplayStatics::ApplyRumbleDamage(AActor* DamagedActor, float BaseDamage, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration)
+float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor* DamagedActor, float BaseDamage, const FDamageCalculationResult& DamageResult, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration)
 {
 	
 
@@ -132,7 +135,14 @@ float UPRGameplayStatics::ApplyRumbleDamage(AActor* DamagedActor, float BaseDama
 			}
 		}
 	}
-
+	// --- SPAWN DAMAGE NUMBER ---
+	// We need to determine if it was a crit. This requires more data.
+	// Let's pass the FDamageCalculationResult to this function.
+	// For now, let's just spawn a non-crit number.
+	if (ActualDamage > 0.f && WorldContextObject)
+	{
+		SpawnDamageNumber(WorldContextObject, ActualDamage, DamageResult.bWasCriticalHit, DamagedActor);
+	}
 	return ActualDamage;
 }
 
@@ -149,4 +159,45 @@ TArray<AActor*> UPRGameplayStatics::SortActorsByDistance(const FVector& TargetLo
 		});
 
 	return SortedActors;
+}
+
+void UPRGameplayStatics::SpawnDamageNumber(UObject* WorldContextObject, float Damage, bool bIsCrit, AActor* TargetActor)
+{
+
+	if (!WorldContextObject || !TargetActor) return;
+
+	// 1. Get our custom GameInstance to find the widget class
+	UPRGameInstance* GameInstance = WorldContextObject->GetWorld()->GetGameInstance<UPRGameInstance>();
+	if (!GameInstance || !GameInstance->DamageNumberWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DamageNumberWidgetClass is not set in BP_GameInstance!"));
+		return;
+	}
+
+	// 2. Get the local PlayerController to create the widget for
+	APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0);
+	if (!PC) return;
+
+	// 3. Create the widget instance
+	UPRWorldUserWidget* DamageWidget = CreateWidget<UPRWorldUserWidget>(PC, GameInstance->DamageNumberWidgetClass);
+	if (DamageWidget)
+	{
+		// 4. Set the actor for the widget to follow
+		DamageWidget->AttachedActor = TargetActor;
+
+		// --- 5. INITIALIZE THE WIDGET WITH DATA (THE FIX) ---
+		// Check if the newly created widget actually implements our interface
+		if (DamageWidget->GetClass()->ImplementsInterface(UPRBPIDamageNumber::StaticClass()))
+		{
+			// If it does, we can safely call the interface function to pass the damage data.
+			IPRBPIDamageNumber::Execute_InitializeNumber(DamageWidget, Damage, bIsCrit);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Widget '%s' does not implement BPI_DamageNumber interface! Cannot initialize."), *DamageWidget->GetName());
+		}
+
+		// 6. Add the initialized widget to the screen
+		DamageWidget->AddToViewport();
+	}
 }

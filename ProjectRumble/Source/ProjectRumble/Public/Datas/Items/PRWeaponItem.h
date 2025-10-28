@@ -10,6 +10,20 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageDealtSignature, float, Dam
 
 class APRCharacterBase;
 class APRAIBase;
+
+//Defines the special tags to be earned at a certain level.
+USTRUCT(BlueprintType)
+struct FLevelMilestone
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	int32 LevelRequired;
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTag TagToGrant;
+};
+
 /**
  * Represents a Weapon item that can perform attacks on a timer.
  */
@@ -23,10 +37,15 @@ public:
 	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects) override;
 
 	// Override the LevelUp function to potentially update the timer.
-	virtual void LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects);
+	virtual void LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects) override;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnDamageDealtSignature OnDamageDealt;
+
+	// -- PROPERTIES --
+	// A list of special abilities granted at specific levels.
+	UPROPERTY(EditDefaultsOnly, Category = "Upgrades|Milestones")
+	TArray<FLevelMilestone> Milestones;
 
 protected:
 	// The function that performs the actual attack logic (spawning projectiles, etc.).

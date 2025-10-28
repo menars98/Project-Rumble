@@ -39,6 +39,7 @@ public:
 	/**
 	 * Applies damage to a damaged actor, considering knockback effects.
 	 * This function wraps around the standard ApplyDamage to include knockback logic.
+	 * @param WorldContextObject The context object for world access.
 	 * @param DamagedActor The actor receiving damage.
 	 * @param BaseDamage The amount of damage to apply.
 	 * @param EventInstigator The controller responsible for the damage.
@@ -49,10 +50,12 @@ public:
 	 * @param StunDuration The duration of stun to apply (if any).
 	 * @return The actual damage applied after all calculations.
 	 */ 
-	UFUNCTION(BlueprintCallable, Category = "ProjectRumble|Damage")
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "ProjectRumble|Damage")
 	static float ApplyRumbleDamage(
+		UObject* WorldContextObject,
 		AActor* DamagedActor,
 		float BaseDamage,
+		const FDamageCalculationResult& DamageResult,
 		AController* EventInstigator,
 		AActor* DamageCauser,
 		TSubclassOf<class UDamageType> DamageTypeClass,
@@ -70,4 +73,14 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "ProjectRumble|Utilities")
 	static TArray<AActor*> SortActorsByDistance(const FVector& TargetLocation, const TArray<AActor*>& ActorsToSort);
+
+	/**
+	 * Spawns floating damage numbers above a target actor.
+	 * @param Damage The amount of damage to display.
+	 * @param bIsCrit Whether the damage was a critical hit.
+	 * @param TargetActor The actor above which to spawn the damage number.
+	 * @param PlayerController The player controller for UI context.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	static void SpawnDamageNumber(UObject* WorldContextObject, float Damage, bool bIsCrit, AActor* TargetActor);
 };

@@ -25,6 +25,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TObjectPtr<AActor> AttachedActor;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	FName AttachSocketName;
+
 protected:
 	// Called every frame. We need Tick to update the widget's position.
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;

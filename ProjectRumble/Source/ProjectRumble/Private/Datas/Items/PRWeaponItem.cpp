@@ -31,6 +31,8 @@ void UPRWeaponItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffect
 {
 	Super::LevelUp(UpgradeEffects);
 
+	if (!ItemDefinition) return;
+
 	// Add the new upgrade effects to our total list
 	AppliedEffects.Append(UpgradeEffects);
 
@@ -44,6 +46,19 @@ void UPRWeaponItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffect
 		GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
 		Attack(); // Restart the loop immediately
 	}
+
+	// Check if we reached a milestone level.
+	for (const FLevelMilestone& Milestone : this->Milestones)
+	{
+		if (Milestone.LevelRequired == CurrentLevel)
+		{
+			// We reached a milestone! Grant the tag.
+			AcquiredAbilityTags.AddTag(Milestone.TagToGrant);
+			UE_LOG(LogTemp, Warning, TEXT("Item %s reached Level %d and gained ability tag: %s"),
+				*ItemDefinition->DisplayName.ToString(), CurrentLevel, *Milestone.TagToGrant.ToString());
+		}
+	}
+
 }
 
 void UPRWeaponItem::Attack()

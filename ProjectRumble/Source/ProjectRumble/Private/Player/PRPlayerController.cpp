@@ -49,6 +49,7 @@ void APRPlayerController::SetupInputComponent()
 
 void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 {
+
 	// --- 1. VALIDATION ---
 	// Check if we have items to offer and a widget to show them with.
 	if (AllPossibleLevelUpItems.Num() == 0 || !LevelUpWidgetClass)

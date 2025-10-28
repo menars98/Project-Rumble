@@ -201,13 +201,18 @@ void APRAIBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPr
 
 void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 {
-	if (!TargetPlayer) return;
+	// --- 1. PREPARE THE DAMAGE DATA ---
+	// Create an instance of the struct that ApplyRumbleDamage expects.
+	FDamageCalculationResult DamageResult;
 
-	// --- 1. APPLY DAMAGE AND KNOCKBACK ---
+	DamageResult.FinalDamage = ContactDamage; // The simple float damage value from our AI.
+	DamageResult.bWasCriticalHit = false;   // Contact damage can't crit (design decision).
+
+	// --- 2. APPLY DAMAGE AND KNOCKBACK ---
 	FVector DirectionFromAI = TargetPlayer->GetActorLocation() - GetActorLocation();
 	DirectionFromAI.Normalize();
 	
-	UPRGameplayStatics::ApplyRumbleDamage(TargetPlayer, ContactDamage, GetController(), this, nullptr, DirectionFromAI, KnockbackStrengthToPlayer, ContactStunChance, ContactStunDuration);
+	UPRGameplayStatics::ApplyRumbleDamage(this,TargetPlayer, ContactDamage,DamageResult , GetController(), this, nullptr, DirectionFromAI, KnockbackStrengthToPlayer, ContactStunChance, ContactStunDuration);
 
 	// --- 2. START THE COOLDOWN ---
 	// Disable our ability to deal damage immediately.

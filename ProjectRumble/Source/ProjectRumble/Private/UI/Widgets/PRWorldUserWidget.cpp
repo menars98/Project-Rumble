@@ -4,6 +4,7 @@
 #include "UI/Widgets/PRWorldUserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "GameFramework/Character.h" 
 
 void UPRWorldUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
@@ -21,6 +22,29 @@ void UPRWorldUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 
 	// Get the 3D world location to track.
 	FVector WorldLocation = AttachedActor->GetActorLocation() + WorldOffset;
+
+	if (ACharacter* AttachedCharacter = Cast<ACharacter>(AttachedActor))
+    {
+        // If an AttachSocketName is provided, use it. Otherwise, use the mesh's location.
+        if (!AttachSocketName.IsNone() && AttachedCharacter->GetMesh())
+        {
+            WorldLocation = AttachedCharacter->GetMesh()->GetSocketLocation(AttachSocketName);
+        }
+        else if (AttachedCharacter->GetMesh())
+        {
+            WorldLocation = AttachedCharacter->GetMesh()->GetComponentLocation();
+        }
+        else
+        {
+            WorldLocation = AttachedActor->GetActorLocation(); // Fallback
+        }
+    }
+    else
+    {
+        WorldLocation = AttachedActor->GetActorLocation(); // Fallback for non-character actors
+    }
+
+    WorldLocation += WorldOffset; // Apply the offset
 
 	// Project the 3D world location to a 2D screen position.
 	bool bIsOnScreen = UGameplayStatics::ProjectWorldToScreen(GetOwningPlayer(), WorldLocation, ScreenPosition);

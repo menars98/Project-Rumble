@@ -15,6 +15,11 @@ class PROJECTRUMBLE_API UPRGameInstance : public UGameInstance
 	
 public:
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
-	TObjectPtr<UDataTable> LootProfileTable;
+	/** The widget class to use for displaying floating damage numbers. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<class UPRWorldUserWidget> DamageNumberWidgetClass;
+
+    /** The Data Table containing definitions for all loot profiles in the game. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
+    TObjectPtr<class UDataTable> LootProfileTable;
 };

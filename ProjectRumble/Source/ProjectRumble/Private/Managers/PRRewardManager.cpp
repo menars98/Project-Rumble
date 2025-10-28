@@ -162,7 +162,7 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 				if (StatDef && StatDef->StatID == ChosenPotentialEffect.TargetStat)
 				{
 					StatDisplayName = StatDef->DisplayName.ToString();
-					DisplayType = StatDef->DisplayType; 
+					DisplayType = StatDef->DisplayType;
 					break;
 				}
 			}
@@ -214,7 +214,7 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 	FinalOffer->Description = FText::FromString(FinalDescription);
 	FinalOffer->Rarity = RolledRarity;
 	FinalOffer->Effects = FinalEffects;
-	 
+
 	if (bIsNewItem)
 	{
 		// If it's a new item, the level is always 1.
@@ -229,22 +229,11 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 			{
 				// The upgrade will take it to the NEXT level.
 				FinalOffer->UpgradeLevel = ExistingItem->GetCurrentLevel() + 1;
-
 				// We can also make the description more informative here!
 				// Example:
 				// FString LevelText = FString::Printf(TEXT("LVL %d -> LVL %d\n"), ExistingItem->GetCurrentLevel(), FinalOffer->UpgradeLevel);
 				// FinalOffer->Description = FText::FromString(LevelText + FinalOffer->Description.ToString());
 			}
-			else
-			{
-				// This case shouldn't happen if our logic is correct, but as a fallback:
-				FinalOffer->UpgradeLevel = 1;
-			}
-		}
-		else
-		{
-			// Fallback if inventory is not valid for some reason.
-			FinalOffer->UpgradeLevel = 1;
 		}
 	}
 	return FinalOffer;

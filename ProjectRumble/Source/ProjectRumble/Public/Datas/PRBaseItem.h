@@ -10,6 +10,8 @@
 class UPRItemDefinition;
 class AActor;
 
+
+
 /**
  * The base class for all acquirable items in the game (Weapons, Tomes, Relics).
  * This is a UObject, meaning it does not exist in the world physically by itself.
@@ -33,7 +35,6 @@ public:
 	 */
 	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects);
 
-
 	/**
 	 * Levels up the item. This function can be overridden by child classes
 	 * to apply specific level-up logic.
@@ -53,6 +54,10 @@ public:
 	UPRItemDefinition* GetItemDefinition() const { return ItemDefinition; }
 
 protected:
+	// The tags this specific item instance has acquired.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	FGameplayTagContainer AcquiredAbilityTags;
+
 	// The static data that defines what this item is.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<UPRItemDefinition> ItemDefinition;

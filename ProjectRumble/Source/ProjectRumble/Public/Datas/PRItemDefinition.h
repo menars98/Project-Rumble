@@ -7,6 +7,7 @@
 #include "PRTypes.h"
 #include "PRItemDefinition.generated.h"
 
+
 class UPRBaseItem;
 
 UCLASS()
@@ -25,8 +26,7 @@ public:
     // What type of item is this?
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Identity")
     EItemType ItemType;
-    // ... in the future, things like TSubclassOf<AActor> WeaponActorClass will be added for weapons ...
-
+   
     // -- UPGRADE LOGIC --
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrades|Effect Count")
     int32 NumEffects_Common = 1;

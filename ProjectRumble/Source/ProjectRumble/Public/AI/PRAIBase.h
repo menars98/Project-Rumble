@@ -63,6 +63,8 @@ protected:
 	UPROPERTY()
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> DynamicMaterials;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Rumble | Combat")
+	bool bCanApplyDamage = true;
 
 	// The timer handle to manage the duration of the flash effect.
 	FTimerHandle FlashTimerHandle;
@@ -110,6 +112,10 @@ protected:
 	// Function called by the timer to re-enable contact damage.
 	UFUNCTION()
 	void ResetContactDamage();
+
+	UFUNCTION(BlueprintImplementableEvent)
+
+	void BP_ResetDamage();
 
 };
 

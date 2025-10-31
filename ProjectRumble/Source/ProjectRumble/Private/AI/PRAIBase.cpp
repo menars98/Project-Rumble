@@ -212,7 +212,7 @@ void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 	FVector DirectionFromAI = TargetPlayer->GetActorLocation() - GetActorLocation();
 	DirectionFromAI.Normalize();
 	
-	UPRGameplayStatics::ApplyRumbleDamage(this,TargetPlayer, ContactDamage,DamageResult , GetController(), this, nullptr, DirectionFromAI, KnockbackStrengthToPlayer, ContactStunChance, ContactStunDuration);
+	UPRGameplayStatics::ApplyRumbleDamage(this,TargetPlayer, ContactDamage,DamageResult , GetController(), this, nullptr, DirectionFromAI, 0, ContactStunChance, ContactStunDuration);
 
 	// --- 2. START THE COOLDOWN ---
 	// Disable our ability to deal damage immediately.

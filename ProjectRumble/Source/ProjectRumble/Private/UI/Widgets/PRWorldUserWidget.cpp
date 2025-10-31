@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "GameFramework/Character.h" 
+#include "Components/SizeBox.h"
 
 void UPRWorldUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
@@ -13,67 +14,71 @@ void UPRWorldUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	// If we don't have an actor to follow, or we are not in a valid world, hide the widget.
 	if (!IsValid(AttachedActor))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("WorldWidget: AttachedActor is NOT valid. Hiding."));
+		// UE_LOG(LogTemp, Warning, TEXT("WorldWidget: AttachedActor is NOT valid. Hiding.")); // Better to avoid spamming logs on removal
 		RemoveFromParent();
 		return;
 	}
 
-	FVector2D ScreenPosition;
+	FVector WorldPositionToFollow;
 
-	// Get the 3D world location to track.
-	FVector WorldLocation = AttachedActor->GetActorLocation() + WorldOffset;
-
-	if (ACharacter* AttachedCharacter = Cast<ACharacter>(AttachedActor))
-    {
-        // If an AttachSocketName is provided, use it. Otherwise, use the mesh's location.
-        if (!AttachSocketName.IsNone() && AttachedCharacter->GetMesh())
-        {
-            WorldLocation = AttachedCharacter->GetMesh()->GetSocketLocation(AttachSocketName);
-        }
-        else if (AttachedCharacter->GetMesh())
-        {
-            WorldLocation = AttachedCharacter->GetMesh()->GetComponentLocation();
-        }
-        else
-        {
-            WorldLocation = AttachedActor->GetActorLocation(); // Fallback
-        }
-    }
-    else
-    {
-        WorldLocation = AttachedActor->GetActorLocation(); // Fallback for non-character actors
-    }
-
-    WorldLocation += WorldOffset; // Apply the offset
-
-	// Project the 3D world location to a 2D screen position.
-	bool bIsOnScreen = UGameplayStatics::ProjectWorldToScreen(GetOwningPlayer(), WorldLocation, ScreenPosition);
-
-	UE_LOG(LogTemp, Log, TEXT("WorldWidget: Tracking %s. OnScreen: %s. ScreenPos: %s"),
-		*AttachedActor->GetName(),
-		bIsOnScreen ? TEXT("True") : TEXT("False"),
-		*ScreenPosition.ToString());
-
-	if (bIsOnScreen)
+	// 1. Try to use an Attached Component if set.
+	if (IsValid(AttachedComponent))
 	{
-		// If the location is on screen, set the widget's position.
-		float ViewportScale = UWidgetLayoutLibrary::GetViewportScale(this);
-		ScreenPosition /= ViewportScale; // Adjust for DPI scaling
-
-		// Ensure the widget is visible
-		if (GetVisibility() != ESlateVisibility::SelfHitTestInvisible)
-		{
-			SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-		}
-
-		SetPositionInViewport(ScreenPosition);
+		// Use the component's location as the base.
+		WorldPositionToFollow = AttachedComponent->GetComponentLocation();
 	}
+	// 2. Otherwise, try to find a socket on the AttachedActor's root component.
+	else if (!AttachSocketName.IsNone())
+	{
+		// Get the root component of the actor.
+		USceneComponent* Root = AttachedActor->GetRootComponent();
+		if (Root && Root->DoesSocketExist(AttachSocketName))
+		{
+			WorldPositionToFollow = Root->GetSocketLocation(AttachSocketName);
+		}
+		else
+		{
+			// Fallback to Actor Location if the socket is not found.
+			WorldPositionToFollow = AttachedActor->GetActorLocation();
+		}
+	}
+	// 3. Fallback to Actor Location.
 	else
 	{
-		// If the location is off screen, hide the widget.
-		if (GetVisibility() != ESlateVisibility::Collapsed)
+		WorldPositionToFollow = AttachedActor->GetActorLocation();
+	}
+	UE_LOG(LogTemp, Log, TEXT("WorldWidget: SocketName %s"), *AttachSocketName.ToString());
+
+	// Apply the user-defined offset.
+
+	FVector2D ScreenPosition;
+	// Project the calculated world position to the screen.
+	bool bIsOnScreen = UGameplayStatics::ProjectWorldToScreen(GetOwningPlayer(), WorldPositionToFollow, ScreenPosition);
+
+
+	// UE_LOG for tracking purposes (can be removed later).
+	 UE_LOG(LogTemp, Log, TEXT("WorldWidget: Tracking %s. OnScreen: %s. ScreenPos: %s"),
+	 	*AttachedActor->GetName(),
+	 	bIsOnScreen ? TEXT("True") : TEXT("False"),
+	 	*ScreenPosition.ToString());
+
+	// ... (The rest of your logic for scaling and setting render translation remains the same)
+	if (bIsOnScreen)
+	{
+
+		float Scale = UWidgetLayoutLibrary::GetViewportScale(this);
+
+		ScreenPosition /= Scale;
+
+		if (ParentSizeBox)
 		{
-			SetVisibility(ESlateVisibility::Collapsed);
+			ParentSizeBox->SetRenderTranslation(ScreenPosition);
 		}
+	}
+
+	if (ParentSizeBox)
+	{
+		// Hide the widget if it's not on screen.
+		ParentSizeBox->SetVisibility(bIsOnScreen ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
 }

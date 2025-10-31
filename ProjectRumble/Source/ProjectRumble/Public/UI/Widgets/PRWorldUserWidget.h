@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PRWorldUserWidget.generated.h"
 
+class USizeBox;
 class USceneComponent;
 
 /**
@@ -40,5 +41,8 @@ protected:
 	// For example, an "OverheadWidget" socket on a character's head bone.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TObjectPtr<const USceneComponent> AttachedComponent;
+
+	UPROPERTY(meta = (BindWidget))
+	USizeBox* ParentSizeBox;
 
 };

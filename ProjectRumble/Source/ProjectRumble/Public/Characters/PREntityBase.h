@@ -20,11 +20,11 @@ public:
 	APREntityBase();
 
 	// A public getter to allow other classes to easily access the Stats Component.
-	UFUNCTION(BlueprintPure, Category = "PR | Components")
+	UFUNCTION(BlueprintPure, Category = "Rumble | Components")
 	virtual UPRStatsComponent* GetStatsComponent() const;
 
 	// A public getter for the entity's faction.
-	UFUNCTION(BlueprintPure, Category = "PR | Combat")
+	UFUNCTION(BlueprintPure, Category = "Rumble | Combat")
 	EFaction GetFaction() const { return Faction; }
 
 protected:
@@ -47,7 +47,7 @@ protected:
 
 	// -- COMBAT --
 	// This entity's faction. Should be set in the derived Blueprint classes.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Combat")
 	EFaction Faction;
 
 	// --- DAMAGE PROCESSING HELPER FUNCTIONS ---
@@ -57,7 +57,7 @@ protected:
 	 * @param StatsComponent The stats component to read the Evasion stat from.
 	 * @return True if the attack was successfully evaded.
 	 */
-	UFUNCTION(BlueprintPure, Category = "Combat|Defense")
+	UFUNCTION(BlueprintPure, Category = "Rumble | Combat|Defense")
 	bool CheckForEvasion(const UPRStatsComponent* StatsComponent) const;
 
 	/**
@@ -66,7 +66,7 @@ protected:
 	 * @param StatsComponent The stats component to read the Armor stat from.
 	 * @return The final damage amount to be applied.
 	 */
-	UFUNCTION(BlueprintPure, Category = "Combat|Defense")
+	UFUNCTION(BlueprintPure, Category = "Rumble | Combat|Defense")
 	float CalculateArmorReduction(float InitialDamage, const UPRStatsComponent* StatsComponent) const;
 
 	/**
@@ -74,7 +74,7 @@ protected:
 	 * @param StatsComponent The stats component to read the Thorns stat from.
 	 * @param DamageCauser The actor that caused the initial damage.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Combat|Defense")
+	UFUNCTION(BlueprintCallable, Category = "Rumble | Combat|Defense")
 	void ApplyThornsDamage(const UPRStatsComponent* StatsComponent, AActor* DamageCauser);
 
 	/**
@@ -85,7 +85,7 @@ protected:
 	 * @param StatsComponent The stats component to read/write shield values from.
 	 * @return The amount of damage that was NOT absorbed by the shield.
 	 */
-	UFUNCTION(BlueprintPure, Category = "Combat|Defense")
+	UFUNCTION(BlueprintPure, Category = "Rumble | Combat|Defense")
 	float ProcessShieldDamage(float InitialDamage, UPRStatsComponent* StatsComponent);
 
 };

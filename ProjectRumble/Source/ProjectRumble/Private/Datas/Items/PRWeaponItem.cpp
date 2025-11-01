@@ -414,3 +414,26 @@ void UPRWeaponItem::ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsT
 		UE_LOG(LogTemp, Warning, TEXT("WEAPON APPLIED: Stat '%s' is now %f"), *Effect.TargetStat.ToString(), CurrentValue + ValueToAdd);
 	}
 }
+
+FPRWeaponAttackStats UPRWeaponItem::GetCalculatedAttackStats() const
+{
+	FPRWeaponAttackStats FinalStats;
+
+	FinalStats.Damage = GetCalculatedDamage();
+	FinalStats.AttackSpeed = GetCalculatedCooldown();
+	FinalStats.CritChance = GetCalculatedCritChance();
+	FinalStats.CritMultiplier = GetCalculatedCritDamage();
+	FinalStats.SizeMultiplier = GetCalculatedSize();
+	FinalStats.KnockbackMagnitude = GetCalculatedKnockback();
+	FinalStats.StunChance = GetCalculatedStunChance();
+	FinalStats.StunDuration = GetCalculatedStunDuration();
+	FinalStats.LifeDuration = GetCalculatedDuration();
+	FinalStats.ProjectileCount = GetCalculatedProjectileCount();
+	FinalStats.ProjectileSpeed = GetCalculatedProjectileSpeed();
+	FinalStats.ProjectileBounce = GetCalculatedProjectileBounce();
+
+	// Note: TickRate (for DOT) must come from ItemDefinition.
+	//For example, FinalStats.TickRate = ItemDefinition->WeaponStats.BaseTickRate;
+
+	return FinalStats;
+}

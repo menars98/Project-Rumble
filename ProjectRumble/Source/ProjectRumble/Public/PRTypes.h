@@ -217,3 +217,63 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TArray<FLootDrop> PossibleDrops;
 };
+
+USTRUCT(BlueprintType)
+struct PROJECTRUMBLE_API FPRWeaponAttackStats
+{
+    GENERATED_BODY()
+
+    // Constructor with defaults to ensure valid values
+    FPRWeaponAttackStats()
+        : Damage(0.0f), CritChance(0.0f), CritMultiplier(1.0f), SizeMultiplier(1.0f), KnockbackMagnitude(0.0f),
+        StunChance(0.0f), StunDuration(0.0f), LifeDuration(0.0f), ProjectileCount(1),
+        ProjectileSpeed(0.0f), ProjectileBounce(0), TickRate(0.0f) {
+    }
+
+    // 1. Core Combat Properties (Used by most/all attacks)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")
+    float Damage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")
+    float CritChance;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")
+    float CritMultiplier;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")
+    float KnockbackMagnitude;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")
+    float StunChance;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")
+    float StunDuration;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")
+    float AttackSpeed;
+    // 2. Projectile/Area Properties (Used only by relevant attack types)
+
+    // Multiplier for the projectile/area size.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Movement")
+    float SizeMultiplier;
+
+    // How long the attack actor (projectile/aura) will last.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|LifeCycle")
+    float LifeDuration;
+
+    // Projectile count (Used by weapons like Arrow, Axe multi-throw).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Projectile")
+    float ProjectileCount;
+
+    // The speed at which the projectile travels.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Projectile")
+    float ProjectileSpeed;
+
+    // How many times a projectile can bounce off a wall/enemy.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Projectile")
+    float ProjectileBounce;
+
+    // For DOT/Aura attacks, the frequency of damage application (in seconds).
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|AuraDOT")
+    float TickRate;
+};

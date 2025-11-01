@@ -44,7 +44,7 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 	// --- 4. DAMAGE TO ELITES & BOSSES LOGIC ---
 	if (Target && (Target->GetAITags().HasTag(NativeGameplayTags::EnemyTypes::TAG_Enemy_Type_Elite) || Target->GetAITags().HasTag(NativeGameplayTags::EnemyTypes::TAG_Enemy_Type_Boss)))
 	{
-		const float EliteDamageBonus = 1.0f + AttackerStats->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Elites);
+		const float EliteDamageBonus = AttackerStats->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Elites);
 		Result.FinalDamage *= EliteDamageBonus;
 	}
 

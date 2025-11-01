@@ -118,4 +118,6 @@ protected:
 	/** Helper function to apply a list of effects to the owner's StatsComponent. */
 	void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
 
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	FPRWeaponAttackStats GetCalculatedAttackStats() const;
 };

@@ -33,27 +33,27 @@ protected:
 	// -- INPUT --
 	// This is the main Input Mapping Context that will be loaded for gameplay.
 	// It's assigned in the Blueprint derived from this class.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
 	// Input Action for Movement (WASD). This is an asset reference.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Input")
 	TObjectPtr<UInputAction> MoveAction;
 
 	// Input Action for Looking around (Mouse). This is an asset reference.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Input")
 	TObjectPtr<UInputAction> LookAction;
 
 	// Input Action for Jumping.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Input")
 	TObjectPtr<UInputAction> JumpAction;
 
 	// Input Action for Debug Damage (for testing purposes).
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Input")
 	TObjectPtr<UInputAction> DebugDamageAction;
 
 	// Input Action for Interacting with objects.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Input")
 	TObjectPtr<UInputAction> InteractAction;
 
 	// -- CORE FUNCTIONS --
@@ -96,35 +96,35 @@ protected:
 
 	// -- COMPONENTS --
 	// The Spring Arm (or camera boom) positions the camera behind the character.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rumble | Components")
 	TObjectPtr<USpringArmComponent> SpringArmComp;
 
 	// The camera that follows the character.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rumble | Components")
 	TObjectPtr<UCameraComponent> CameraComp;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rumble | Components")
 	TObjectPtr<UPRInteractionComponent> InteractionComp;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rumble | Components")
 	USphereComponent* PickupSphere;
 	// --- CAMERA SETTINGS ---
 	// These values will be exposed to our Blueprint class, so we can tweak them without recompiling.
 
 	/** The lowest angle the camera can look down to, in degrees. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Camera")
 	float CameraPitchMin = -70.0f;
 
 	/** The highest angle the camera can look up to, in degrees. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Camera")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Camera")
 	float CameraPitchMax = 45.0f;
 
 	// -- CHARACTER DATA --
 	// This holds the data asset that defines this character's identity (mesh, stats, etc.)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Character")
 	TObjectPtr<UPRCharacterDefinition> CharacterDefinition;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Movement")
 	float BaseJumpZVelocity = 700.0f;
 
 private:

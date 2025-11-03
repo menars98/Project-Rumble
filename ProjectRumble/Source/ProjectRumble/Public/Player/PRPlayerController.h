@@ -22,14 +22,6 @@ class PROJECTRUMBLE_API APRPlayerController : public APlayerController
 
 
 protected:
-	// -- REWARD SYSTEM --
-	// 	//@TODO Change AllPossibleItems & AllPossibleLevelUpItems to use Data Tables instead of arrays of Data Assets.
-	// An array of Data Assets that holds all possible items (weapons, tomes) in the game.
-	// We will assign this in the BP_PlayerController Blueprint.
-	// This replaces the old RewardDataTable.
-	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
-	TArray<TObjectPtr<UPRItemDefinition>> AllPossibleItems;
-
 	/**
 	 * An array of Data Assets that holds all possible ITEMS (Weapons, Tomes, etc.) available in the level up pool.
 	 * Assigned in the BP_PlayerController.

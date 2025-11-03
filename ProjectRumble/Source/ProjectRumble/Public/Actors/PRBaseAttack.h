@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "PRTypes.h"
-#include "Components/SphereComponent.h"
 #include "PRBaseAttack.generated.h"
 
+class UAudioComponent;
+class USoundBase;
+class USphereComponent;
 
 UCLASS()
 class PROJECTRUMBLE_API APRBaseAttack : public AActor
@@ -25,6 +27,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USphereComponent> RootCollision;
 
+	/** Component used to play looping or persistent sounds (like Aura buzz or projectile travel sound). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UAudioComponent> AudioComp;
+
 	// --- PROPERTIES ---
 
 	/**
@@ -33,6 +39,16 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack|Stats", meta = (ExposeOnSpawn = "true"))
 	FPRWeaponAttackStats AttackStats;
+
+	// --- AUDIO PROPERTIES ---
+
+	/** Sound to play when the attack is spawned (e.g., Axe Throw, Arrow release). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack|Audio")
+	TObjectPtr<USoundBase> SpawnSound;
+
+	/** Sound to play when the attack impacts a target (e.g., Hit sound). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack|Audio")
+	TObjectPtr<USoundBase> ImpactSound;
 
 protected:
 	// Called when the game starts or when spawned

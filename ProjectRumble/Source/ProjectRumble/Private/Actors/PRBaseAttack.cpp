@@ -5,6 +5,8 @@
 #include "FunctionLibrary/PRGameplayStatics.h"
 #include "Characters/PRCharacterBase.h"
 #include "AI/PRAIBase.h"
+#include "Components/AudioComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 APRBaseAttack::APRBaseAttack()
 {
@@ -12,6 +14,10 @@ APRBaseAttack::APRBaseAttack()
 
 	// Setup the default lifespan
 	InitialLifeSpan = AttackStats.LifeDuration; 
+
+    AudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComponent"));
+    AudioComp->SetupAttachment(RootCollision);
+    AudioComp->bAutoActivate = false;
 }
 
 void APRBaseAttack::BeginPlay()
@@ -24,6 +30,11 @@ void APRBaseAttack::BeginPlay()
 
 void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 {
+    if (ImpactSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
+    }
+
     // Ensure all necessary actors are valid.
     if (!IsValid(TargetActor) || !IsValid(GetOwner()))
     {
@@ -69,7 +80,7 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
     UPRGameplayStatics::ApplyRumbleDamage(
         this, // WorldContextObject (The Projectile Actor itself)
         TargetActor,
-        DamageResult.FinalDamage, 
+        AttackStats.Damage, 
         DamageResult,             
         InstigatorController,
         DamageCauser,

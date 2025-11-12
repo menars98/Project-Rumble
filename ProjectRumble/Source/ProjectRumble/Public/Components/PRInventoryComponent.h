@@ -45,6 +45,18 @@ public:
 
 	void AddStartingItem(UPRItemDefinition* ItemDef);
 
+	// -- GETTERS FOR ITEM COUNTS AND LIMITS --
+	UFUNCTION()
+	int GetWeaponCount() const {return OwnedWeapons.Num();}
+
+	UFUNCTION()
+	int GetTomeCount() const { return OwnedTomes.Num();}
+
+	UFUNCTION()
+	int GetMaxWeaponCount() const { return MaxWeapons;}
+
+	UFUNCTION()
+	int GetMaxTomeCount() const { return MaxTomes;}
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

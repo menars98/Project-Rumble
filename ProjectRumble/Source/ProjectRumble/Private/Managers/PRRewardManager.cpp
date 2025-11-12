@@ -19,13 +19,46 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateRewards(const UPRInventoryComp
 	TArray<UPRUpgradeData*> OfferedRewards;
 
 	// --- BUILD A POOL OF POSSIBLE UPGRADE ACTIONS ---
-	// This logic is simplified for now. A real system would be more complex.
-	// For now, let's just pick random items from the "all items" list and generate an upgrade for them.
-	// TODO: Prioritize items the player already has (for level-ups).
-	// TODO: Add new, unowned items to the pool.
+	TArray<UPRItemDefinition*> TempItemPool;
 
-	TArray<UPRItemDefinition*> TempItemPool = AllPossibleItems;
+	// Get current counts by directly accessing the array size.
+	int32 CurrentWeaponCount = PlayerInventory->GetWeaponCount();
+	int32 CurrentTomeCount = PlayerInventory->GetTomeCount();
 
+	// Get limits by directly accessing the variables.
+	const int32 MaxWeapons = PlayerInventory->GetMaxWeaponCount();
+	const int32 MaxTomes = PlayerInventory->GetMaxTomeCount();
+
+	// --- 1. BUILD A POOL OF RELEVANT ITEMS ---
+	for (UPRItemDefinition* ItemDef : AllPossibleItems)
+	{
+		if (!ItemDef) continue;
+
+		// Check if the item is already owned (using the existing helper function)
+		bool bIsOwned = PlayerInventory->FindItemByDefinition(ItemDef) != nullptr;
+
+		// Rule A: Always offer UPGRADES for OWNED items.
+		if (bIsOwned)
+		{
+			TempItemPool.Add(ItemDef);
+			continue; 
+		}
+
+		// Rule B: Offer NEW items only if there is space (Weapon/Tome limit check).
+		EItemType ItemType = ItemDef->ItemType;
+
+		if (ItemType == EItemType::Weapon && CurrentWeaponCount < MaxWeapons)
+		{
+			TempItemPool.Add(ItemDef);
+		}
+		else if (ItemType == EItemType::Tome && CurrentTomeCount < MaxTomes)
+		{
+			TempItemPool.Add(ItemDef);
+		}
+		// Note: Relics and other types will be ignored if their limits aren't checked here.
+	}
+
+	// --- 2. GENERATE REWARDS FROM THE FILTERED POOL ---
 	for (int32 i = 0; i < NumOfChoices; ++i)
 	{
 		if (TempItemPool.Num() == 0) break;
@@ -33,30 +66,24 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateRewards(const UPRInventoryComp
 		int32 RandomIndex = FMath::RandRange(0, TempItemPool.Num() - 1);
 		UPRItemDefinition* ChosenItemDef = TempItemPool[RandomIndex];
 		
-		// Check the inventory to see if this is a new item or an upgrade.
-		bool bIsNewItemOffer = true;
-		if (PlayerInventory)
-		{
-			if (PlayerInventory->FindItemByDefinition(ChosenItemDef))
-			{
-				// We already own this item, so it's an upgrade offer.
-				bIsNewItemOffer = false;
-			}
-		}
+		// Determine if it's a new item (Check the inventory here, NOT the filter logic!)
+		bool bIsNewItemOffer = PlayerInventory->FindItemByDefinition(ChosenItemDef) == nullptr;
 
-		// Now, create the offer with the correct context (new or upgrade).
+		// Create the offer and add to rewards.
 		UPRUpgradeData* NewOffer = CreateUpgradeOfferForItem(ChosenItemDef, PlayerInventory, bIsNewItemOffer);
 		if (NewOffer)
 		{
 			OfferedRewards.Add(NewOffer);
 		}
 
+		// Remove the item from the pool so it cannot be chosen again in this same screen instance.
 		TempItemPool.RemoveAt(RandomIndex);
 	}
 
 	return OfferedRewards;
 }
 
+// Generate loot rewards from a Loot Table its for item not tomes or weapons
 TArray<UPRUpgradeData*> UPRRewardManager::GenerateLootRewards(const UPRInventoryComponent* PlayerInventory, UDataTable* LootTable, int32 NumToAward)
 {
 	TArray<UPRUpgradeData*> LootRewards;
@@ -124,7 +151,7 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 	if (!ItemDef) return nullptr;
 
 	// --- 1. ROLL FOR RARITY ---
-	EUpgradeRarity RolledRarity = RollForRarity();
+	EUpgradeRarity RolledRarity = RollForRarity(50);
 
 	// --- 2. DETERMINE NUMBER OF EFFECTS ---
 	int32 NumEffectsToPick = 0;
@@ -239,13 +266,93 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 	return FinalOffer;
 }
 
-EUpgradeRarity UPRRewardManager::RollForRarity()
+EUpgradeRarity UPRRewardManager::RollForRarity(float PlayerLuck) const
 {
-	// @TODO: Simple rarity roll. A real system would use weighted probabilities and effected by luck.
-	float Roll = FMath::FRand(); // 0.0 to 1.0
-	if (Roll < 0.60f) return EUpgradeRarity::Common;     // 60% chance
-	if (Roll < 0.85f) return EUpgradeRarity::Uncommon;   // 25% chance
-	if (Roll < 0.95f) return EUpgradeRarity::Rare;       // 10% chance
-	if (Roll < 0.99f) return EUpgradeRarity::Epic;       // 4% chance
-	else return EUpgradeRarity::Legendary;               // 1% chance
+	// --- 1. BASE WEIGHTS (Sum to 100.0f) ---
+	// Static weights for 0 Luck.
+	const float W_L_BASE = 1.0f;
+	const float W_E_BASE = 4.0f;
+	const float W_R_BASE = 10.0f;
+	const float W_UC_BASE = 15.0f;
+	const float W_C_BASE = 70.0f;
+	const float RARE_POOL_BASE_TOTAL = W_L_BASE + W_E_BASE + W_R_BASE; // 15.0f
+
+	// Scale PlayerLuck: 100% Luck = 1.0f. 4000% Luck = 40.0f.
+	const float ScaledLuck = PlayerLuck / 100.0f;
+
+	// --- 2. EXPONENTIAL DECAY (Shrinking the Lower Tiers) ---
+	// The core of the dynamic system: Agreesive drop that slows down (e^-kx curve).
+
+	// Common Decay Rate (k_c = 0.06f): Still low but a little faster decay.
+	const float K_COMMON = 0.06f;
+	// Uncommon Decay Rate (k_uc = 0.04f): A much slower decay for the second tier.
+	const float K_UNCOMMON = 0.04f;
+
+	// Current Common Weight: W_C_BASE * e^(-k_c * ScaledLuck)
+	float CurrentW_C = W_C_BASE * FMath::Exp(-K_COMMON * ScaledLuck);
+
+	// Current Uncommon Weight: W_UC_BASE * e^(-k_uc * ScaledLuck)
+	float CurrentW_UC = W_UC_BASE * FMath::Exp(-K_UNCOMMON * ScaledLuck);
+
+	// Total weight SHIFTED from the lower tiers.
+	float TotalShiftAmount = (W_C_BASE - CurrentW_C) + (W_UC_BASE - CurrentW_UC);
+
+
+	// --- 3. GAIN CALCULATION (Growing the Upper Tiers) ---
+
+	// The shifted weight is initially distributed across RARE, EPIC, and LEGENDARY proportionally.
+	// The total gain pool base is 15.0f (RarePoolTotal).
+	float W_L_GAIN = TotalShiftAmount * (W_L_BASE / RARE_POOL_BASE_TOTAL);
+	float W_E_GAIN = TotalShiftAmount * (W_E_BASE / RARE_POOL_BASE_TOTAL);
+	float W_R_GAIN = TotalShiftAmount * (W_R_BASE / RARE_POOL_BASE_TOTAL);
+
+	// --- 4. CONDITIONAL LEGENDARY BOOST (The Late-Game Power) ---
+	const float LEGENDARY_BOOST_THRESHOLD = 10.0f; // 1000% Luck threshold.
+
+	if (ScaledLuck >= LEGENDARY_BOOST_THRESHOLD)
+	{
+		// Calculate the excess luck above the threshold.
+		float OverThresholdLuck = ScaledLuck - LEGENDARY_BOOST_THRESHOLD;
+
+		// Add an extra proportional bonus to Legendary based on excess luck.
+		// This is a powerful late-game linear boost. (e.g., 5% extra Legendary chance per point of excess luck)
+		float Bonus_L = OverThresholdLuck * 0.50f; // 0.5f = 50% increase per point of ScaledLuck.
+
+		W_L_GAIN += Bonus_L;
+	}
+
+	// --- 5. FINAL WEIGHTS AND TOTAL ---
+
+	float FinalW_L = W_L_BASE + W_L_GAIN;
+	float FinalW_E = W_E_BASE + W_E_GAIN;
+	float FinalW_R = W_R_BASE + W_R_GAIN;
+	float FinalW_UC = CurrentW_UC;
+	float FinalW_C = CurrentW_C;
+
+	float TotalWeight = FinalW_L + FinalW_E + FinalW_R + FinalW_UC + FinalW_C;
+
+	// --- 6.(ROLL) ---
+
+	float Roll = FMath::FRandRange(0.0f, TotalWeight);
+	float CurrentThreshold = 0.0f;
+
+	// 1. Common Check
+	CurrentThreshold += FinalW_C;
+	if (Roll <= CurrentThreshold) return EUpgradeRarity::Common;
+
+	// 2. Uncommon Check
+	CurrentThreshold += FinalW_UC;
+	if (Roll <= CurrentThreshold) return EUpgradeRarity::Uncommon;
+
+	// 3. Rare Check
+	CurrentThreshold += FinalW_R;
+	if (Roll <= CurrentThreshold) return EUpgradeRarity::Rare;
+
+	// 4. Epic Check
+	CurrentThreshold += FinalW_E;
+	if (Roll <= CurrentThreshold) return EUpgradeRarity::Epic;
+
+	// 5. Legendary Check (Everything remaining)
+	return EUpgradeRarity::Legendary;
 }
+

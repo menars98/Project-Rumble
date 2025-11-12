@@ -7,6 +7,7 @@
 #include "GameplayTagContainer.h"
 #include "Engine/DataTable.h" 
 #include "PRTypes.h"
+#include "PRGameplayTags.h"
 #include "PRStatsComponent.generated.h"
 
 // This delegate will broadcast when any stat changes, sending the StatTag and its new value.
@@ -29,6 +30,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLevelUpSignature, int32, NewLevel
 
 // This delegate will broadcast when shield changes, sending the current and max shield.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnShieldChangedSignature, float, CurrentShield, float, MaxShield);
+
+// This delegate will broadcast when the Difficulty stat changes, sending the new difficulty value.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDifficultyChangedSignature, float, NewDifficultyValue);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROJECTRUMBLE_API UPRStatsComponent : public UActorComponent
@@ -66,6 +70,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnResourceChangedSignature OnResourceChangedDelegate;
 
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnDifficultyChangedSignature OnDifficultyChangedDelegate;
+
 	// --- PUBLIC FUNCTIONS ---
 	/**
 	 * Gets the current value of a specified stat.
@@ -74,6 +81,17 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "PR | Stats")
 	float GetStatValue(FGameplayTag  StatTag) const;
+
+	/**
+	 * Returns the player's current Difficulty stat value.
+	 * This is the value that multiplies enemy/game difficulty factors.
+	 */
+	UFUNCTION(BlueprintPure, Category = "PR | Stats")
+	float GetDifficultyStat() const
+	{
+		return GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty); 
+	}
+
 	/**
 	 * Internal function to set the value of a stat directly.
 	* @param StatID The ID of the stat to change.

@@ -104,6 +104,10 @@ void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 		{
 			BroadcastShield();
 		}
+		if (StatTag == NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty)
+		{
+			OnDifficultyChangedDelegate.Broadcast(NewValue);
+		}
 	}
 	else
 	{

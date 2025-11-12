@@ -63,8 +63,12 @@ protected:
 	 */
 	UPRUpgradeData* CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, const UPRInventoryComponent* PlayerInventory, bool bIsNewItem);
 
-	/** Determines the rarity for an upcoming upgrade offer. */
-	EUpgradeRarity RollForRarity();
+	/**
+	 * Rolls for an upgrade rarity based on weighted chances, which are dynamically
+	 * adjusted (shifted) by the Player's Luck stat (exponential decay for Common tiers).
+	 * @param PlayerLuck The player's final calculated Luck stat (e.g., 4000% = 40.0f).
+	 */
+	EUpgradeRarity RollForRarity(float PlayerLuck) const;
 
 
 private:

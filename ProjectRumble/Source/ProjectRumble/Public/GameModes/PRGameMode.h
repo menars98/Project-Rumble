@@ -6,12 +6,51 @@
 #include "GameFramework/GameMode.h"
 #include "PRGameMode.generated.h"
 
-/**
- * 
- */
+class UPRStatsComponent;
+
 UCLASS()
 class PROJECTRUMBLE_API APRGameMode : public AGameMode
 {
 	GENERATED_BODY()
 	
+public:
+
+	APRGameMode();
+
+	/**
+	 * Returns the current active Difficulty Multiplier for all enemies and systems.
+	 * This value is the maximum Difficulty Stat found among all active players.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Game|Difficulty")
+	float GetActiveDifficultyMultiplier() const { return ActiveDifficultyMultiplier; }
+
+protected:
+	// --- DIFFICULTY MANAGEMENT ---
+
+	/** The maximum Difficulty stat found across all active players in the game. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Difficulty")
+	float ActiveDifficultyMultiplier = 1.0f; // Default is 1.0 (100%)
+
+	/**
+	 * Recalculates the highest Difficulty Stat value among all players and updates ActiveDifficultyMultiplier.
+	 * Called only when a player's Difficulty stat changes.
+	 */
+	void RecalculateActiveDifficulty();
+
+	// Function to bind to a player's stats component delegate.
+	void BindToPlayerDifficulty(UPRStatsComponent* PlayerStatsComp);
+
+	/**
+	 * Callback function executed when any bound player's Difficulty stat changes.
+	 * Because the Difficulty stat changed, we must recalculate the highest active multiplier.
+	 */
+	UFUNCTION()
+	void OnPlayerDifficultyChanged(float NewDifficultyValue);
+
+	// --- LIFECYCLE ---
+	virtual void BeginPlay() override;
+
+	// Override the PlayerState spawn to ensure we bind to new players immediately.
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+
 };

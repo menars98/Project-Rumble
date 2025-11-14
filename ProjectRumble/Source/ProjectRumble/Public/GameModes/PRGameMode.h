@@ -17,20 +17,8 @@ public:
 
 	APRGameMode();
 
-	/**
-	 * Returns the current active Difficulty Multiplier for all enemies and systems.
-	 * This value is the maximum Difficulty Stat found among all active players.
-	 */
-	UFUNCTION(BlueprintPure, Category = "Game|Difficulty")
-	float GetActiveDifficultyMultiplier() const { return ActiveDifficultyMultiplier; }
-
 protected:
 	// --- DIFFICULTY MANAGEMENT ---
-
-	/** The maximum Difficulty stat found across all active players in the game. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Difficulty")
-	float ActiveDifficultyMultiplier = 1.0f; // Default is 1.0 (100%)
-
 	/**
 	 * Recalculates the highest Difficulty Stat value among all players and updates ActiveDifficultyMultiplier.
 	 * Called only when a player's Difficulty stat changes.

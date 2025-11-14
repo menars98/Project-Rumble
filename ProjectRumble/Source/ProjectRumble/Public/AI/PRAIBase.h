@@ -51,6 +51,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Combat")
 	float KnockbackStrengthToPlayer = 500.0f;
 
+	// The Data Table that defines all possible stats and their default values.
+	// This should be assigned in the Blueprint derived from this component.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Config")
+	TObjectPtr<UDataTable> AllEnemyStatsTable;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Config")
+	FName DataTableID;
 	// The player we are currently in contact with.
 	UPROPERTY()
 	TObjectPtr<APRCharacterBase> ContactTarget;
@@ -85,6 +92,9 @@ protected:
 	// Function to end the flash effect.
 	void StopHitFlash();
 
+	UFUNCTION()
+	void InitializeStats();
+
 	// -- OVERRIDDEN FUNCTIONS --
 	// We override GetStatsComponent to return our own component.
 	virtual UPRStatsComponent* GetStatsComponent() const override;
@@ -116,6 +126,14 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 
 	void BP_ResetDamage();
+
+	/**
+	 * Blueprint-implementable event called after stats have been initialized with difficulty.
+	 * Allows the AI's Blueprint to react to the new stats (e.g., updating movement speed on the Blackboard).
+	 * @param DifficultyMultiplier The multiplier that was just applied, for convenience.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "AI|Difficulty")
+	void BP_SetDifficultyStats(float DifficultyMultiplier);
 
 };
 

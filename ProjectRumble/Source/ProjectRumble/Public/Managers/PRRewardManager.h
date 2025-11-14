@@ -61,7 +61,7 @@ protected:
 	 * @param bIsNewItem If true, this will be a "pick up new item" offer. Otherwise, it's a level-up offer.
 	 * @return A dynamically created UPRUpgradeData object.
 	 */
-	UPRUpgradeData* CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, const UPRInventoryComponent* PlayerInventory, bool bIsNewItem);
+	UPRUpgradeData* CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, const UPRInventoryComponent* PlayerInventory, bool bIsNewItem, float PlayerLuck);
 
 	/**
 	 * Rolls for an upgrade rarity based on weighted chances, which are dynamically

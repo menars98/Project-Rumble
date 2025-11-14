@@ -122,6 +122,12 @@ public:
 	// Heals the owner by the specified amount, clamping to max health.
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void Heal(float HealAmount);
+ 
+	/**
+	 * Initializes the Stats Component for an AI using its specific array of stat definitions.
+	 * @param BaseStatsArray The array of FStatDefinition structs from the AI's data table row.
+	 */
+	void InitializeForAI(const TArray<FStatDefinition>& BaseStatsArray, float DifficultyMultiplier);
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -132,6 +138,8 @@ protected:
 	 */
 	void InitializeStats();
 
+	
+
 	/**
 	 * Handles the death of the owner. Broadcasts the OnDeathDelegate.
 	 */
@@ -140,8 +148,7 @@ protected:
 
 private:
 	// --- PRIVATE PROPERTIES ---
-	// The Data Table that defines all possible stats and their default values.
-	// This should be assigned in the Blueprint derived from this component.
+	/** The Data Table that defines all possible stats and their default values (For Player). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Config", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UDataTable> StatsDataTable;
 

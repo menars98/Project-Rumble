@@ -5,6 +5,7 @@
 #include "Player/PRPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PRStatsComponent.h"
+#include <Game/PRGameState.h>
 
 APRGameMode::APRGameMode()
 {
@@ -50,7 +51,7 @@ void APRGameMode::OnPlayerDifficultyChanged(float NewDifficultyValue)
 
 void APRGameMode::RecalculateActiveDifficulty()
 {
-	float HighestDifficulty = 1.0f; // Minimum multiplier is 1.0 (100%)
+	float HighestDifficulty = 1.0f;
 	TArray<AActor*> PlayerStates;
 
 	// 1. Find all active player states in the world (handles co-op).
@@ -62,20 +63,19 @@ void APRGameMode::RecalculateActiveDifficulty()
 		{
 			if (UPRStatsComponent* StatsComp = PR_PlayerState->StatsComponent)
 			{
-				// Get the Difficulty Stat value.
 				float PlayerDifficulty = StatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty);
-
-				// 2. Find the highest value across all players.
 				HighestDifficulty = FMath::Max(HighestDifficulty, PlayerDifficulty);
 			}
 		}
 	}
 
-	// 3. Update the global multiplier only if it has actually changed (for consistency).
-	if (!FMath::IsNearlyEqual(ActiveDifficultyMultiplier, HighestDifficulty))
+	// --- 2. UPDATE THE GAME STATE ---
+
+	// Get a reference to our custom GameState.
+	if (APRGameState* PR_GameState = GetGameState<APRGameState>())
 	{
-		ActiveDifficultyMultiplier = HighestDifficulty;
-		// @TODO: Add an Event Dispatcher here if other systems need to react immediately (e.g., UI updates).
+		// Set the value on the GameState. The GameState will handle replicating this to clients.
+		PR_GameState->SetActiveDifficultyMultiplier(HighestDifficulty);
 	}
 }
 

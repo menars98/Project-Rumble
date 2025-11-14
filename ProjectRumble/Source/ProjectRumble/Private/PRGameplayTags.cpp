@@ -42,6 +42,7 @@ namespace NativeGameplayTags
 		}
 		namespace Mobility
 		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Mobility_MovementSpeed_Base, "Stat.Mobility.MovementSpeed.Base");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Mobility_MovementSpeed_Additive, "Stat.Mobility.MovementSpeed.Additive");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Mobility_MovementSpeed_Multiplicative, "Stat.Mobility.MovementSpeed.Multiplicative");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Mobility_ExtraJump, "Stat.Mobility.ExtraJump");
@@ -69,6 +70,16 @@ namespace NativeGameplayTags
 		{
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Resource_Gold, "Stat.Resource.Gold");
 			//UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Resource_Silver, "Stat.Resource.Silver");
+		}
+		namespace AI
+		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_ContactDamage, "Stat.AI.ContactDamage");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_XP_Reward, "Stat.AI.XPReward");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_Gold_Reward, "Stat.AI.GoldReward");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_Silver_Reward, "Stat.AI.SilverReward");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_BaseKnockback, "Stat.AI.BaseKnockback");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_DetectionRange, "Stat.AI.DetectionRange");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_AttackRange, "Stat.AI.AttackRange");
 		}
 	}
 

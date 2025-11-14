@@ -277,3 +277,34 @@ struct PROJECTRUMBLE_API FPRWeaponAttackStats
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|AuraDOT")
     float TickRate;
 };
+
+// --- FOR AI ---
+USTRUCT(BlueprintType)
+struct PROJECTRUMBLE_API FAIStats : public FTableRowBase
+{
+    GENERATED_BODY()
+
+public:
+    // --- UI  ---
+	// The unique identifier (ID) for this enemy type.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Metadata")
+    FGameplayTag EnemyID;
+
+	// The name to be displayed to the player in the UI.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Metadata")
+    FText DisplayName;
+	// A brief description of the enemy, shown in tooltips or info panels.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Metadata")
+    FText Description;
+	// An icon representing the enemy in the UI.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Metadata")
+    TObjectPtr<UTexture2D> Icon;
+
+    /**
+     * Array of all base stats for this AI. Each element holds a FGameplayTag and its starting value.
+     * e.g., Element 0: [Tag: Stat.Defense.MaxHP, Value: 30.0]
+     */
+        UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Stats")
+    TArray<FStatDefinition> BaseStats;
+
+};

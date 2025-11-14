@@ -4,6 +4,8 @@
 #include "Managers/PRRewardManager.h"
 #include "Datas/PRBaseItem.h"
 #include "Components/PRInventoryComponent.h"
+#include "Characters/PRCharacterBase.h"
+#include "Components/PRStatsComponent.h"
 
 
 void UPRRewardManager::Initialize(UDataTable* InStatsInfoTable)
@@ -20,6 +22,17 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateRewards(const UPRInventoryComp
 
 	// --- BUILD A POOL OF POSSIBLE UPGRADE ACTIONS ---
 	TArray<UPRItemDefinition*> TempItemPool;
+
+	// Get luck stat
+	float CurrentPlayerLuck = 0.0f;
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(PlayerInventory->GetOwner())) 
+	{
+		if (UPRStatsComponent* PlayerStats = Player->GetStatsComponent())
+		{
+			CurrentPlayerLuck = PlayerStats->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Luck); 
+		}
+	}
+	CurrentPlayerLuck = FMath::Max(1.0f, CurrentPlayerLuck);
 
 	// Get current counts by directly accessing the array size.
 	int32 CurrentWeaponCount = PlayerInventory->GetWeaponCount();
@@ -70,7 +83,7 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateRewards(const UPRInventoryComp
 		bool bIsNewItemOffer = PlayerInventory->FindItemByDefinition(ChosenItemDef) == nullptr;
 
 		// Create the offer and add to rewards.
-		UPRUpgradeData* NewOffer = CreateUpgradeOfferForItem(ChosenItemDef, PlayerInventory, bIsNewItemOffer);
+		UPRUpgradeData* NewOffer = CreateUpgradeOfferForItem(ChosenItemDef, PlayerInventory, bIsNewItemOffer, CurrentPlayerLuck);
 		if (NewOffer)
 		{
 			OfferedRewards.Add(NewOffer);
@@ -88,6 +101,17 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateLootRewards(const UPRInventory
 {
 	TArray<UPRUpgradeData*> LootRewards;
 	if (!LootTable) return LootRewards;
+
+	//Get the player's current Luck stat to influence loot quality.
+	float CurrentPlayerLuck = 0.0f;
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(PlayerInventory->GetOwner()))
+	{
+		if (UPRStatsComponent* PlayerStats = Player->GetStatsComponent())
+		{
+			CurrentPlayerLuck = PlayerStats->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Luck);
+		}
+	}
+	CurrentPlayerLuck = FMath::Max(1.0f, CurrentPlayerLuck);
 
 	// 1. Get all valid rows from the Loot Table
 	TArray<FLootTableRow*> PossibleLoot;
@@ -129,7 +153,7 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateLootRewards(const UPRInventory
 				}
 
 				// Create the upgrade data offer
-				UPRUpgradeData* LootOffer = CreateUpgradeOfferForItem(SelectedRow->ItemDefinition, PlayerInventory, bIsNewItem);
+				UPRUpgradeData* LootOffer = CreateUpgradeOfferForItem(SelectedRow->ItemDefinition, PlayerInventory, bIsNewItem, CurrentPlayerLuck);
 				if (LootOffer)
 				{
 					LootRewards.Add(LootOffer);
@@ -146,12 +170,12 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateLootRewards(const UPRInventory
 	return LootRewards;
 }
 
-UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, const UPRInventoryComponent* PlayerInventory, bool bIsNewItem)
+UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* ItemDef, const UPRInventoryComponent* PlayerInventory, bool bIsNewItem, float PlayerLuck)
 {
 	if (!ItemDef) return nullptr;
 
 	// --- 1. ROLL FOR RARITY ---
-	EUpgradeRarity RolledRarity = RollForRarity(50);
+	EUpgradeRarity RolledRarity = RollForRarity(PlayerLuck);
 
 	// --- 2. DETERMINE NUMBER OF EFFECTS ---
 	int32 NumEffectsToPick = 0;
@@ -296,7 +320,6 @@ EUpgradeRarity UPRRewardManager::RollForRarity(float PlayerLuck) const
 
 	// Total weight SHIFTED from the lower tiers.
 	float TotalShiftAmount = (W_C_BASE - CurrentW_C) + (W_UC_BASE - CurrentW_UC);
-
 
 	// --- 3. GAIN CALCULATION (Growing the Upper Tiers) ---
 

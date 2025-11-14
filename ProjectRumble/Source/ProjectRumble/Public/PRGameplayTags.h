@@ -44,6 +44,7 @@ namespace NativeGameplayTags
 		}
 		namespace Mobility
 		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Mobility_MovementSpeed_Base);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Mobility_MovementSpeed_Additive); // Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Mobility_MovementSpeed_Multiplicative); // Multiplicative
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Mobility_ExtraJump); // Flat
@@ -72,6 +73,14 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Resource_Gold); // Flat
 			//UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Resource_Silver); // Flat
 		}
+		namespace AI
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_BaseKnockback); // Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_ContactDamage) // Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_XP_Reward); // Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_Gold_Reward); // Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_Silver_Reward); // Flat
+		}
 	}
 
 	namespace EnemyTypes
@@ -97,6 +106,7 @@ namespace NativeGameplayTags
 		{
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Goblin);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Skeleton);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Neuron);
 		}
 	}
 	namespace Destructible

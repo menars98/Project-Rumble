@@ -3,6 +3,8 @@
 #include "Components/PRStatsComponent.h"
 #include "PRTypes.h"
 #include "PRGameplayTags.h"
+#include "GameModes/PRGameMode.h"
+#include "Kismet/GameplayStatics.h"
 
 UPRStatsComponent::UPRStatsComponent()
 {
@@ -17,8 +19,11 @@ void UPRStatsComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitializeStats();
-
+	if (StatsDataTable)
+	{
+		InitializeStats();
+	}
+	
 	// Start the health regeneration timer loop when the component begins play.
 	// The timer will call ProcessHealthRegen() every 'RegenInterval' seconds, and it will loop forever.
 	GetWorld()->GetTimerManager().SetTimer(
@@ -60,6 +65,45 @@ void UPRStatsComponent::InitializeStats()
 		}
 	}
 	
+	BroadcastHealth();
+	BroadcastShield();
+}
+
+void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStatsArray, float DifficultyMultiplier)
+{
+	// 1. Clear any existing stats.
+	CurrentStats.Empty();
+
+	// Clamp the multiplier for safety.
+	if (DifficultyMultiplier < 1.0f) { DifficultyMultiplier = 1.0f; }
+
+	bool bMaxHealthFound = false;
+	float LoadedMaxHealth = 0.0f;
+
+	// 2. Loop through the final, calculated stats provided by the AI.
+	for (const FStatDefinition& StatDef : BaseStatsArray)
+	{
+		// Apply the difficulty multiplier to the base value.
+		float FinalValue = StatDef.DefaultValue * DifficultyMultiplier;
+
+		// Add the stat tag and the final calculated value to the runtime map.
+		CurrentStats.Add(StatDef.StatID, FinalValue);
+
+		// Check for MaxHealth to set CurrentHealth.
+		if (StatDef.StatID == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP)
+		{
+			LoadedMaxHealth = FinalValue;
+			bMaxHealthFound = true;
+		}
+	}
+
+	// 3. Set Current Health to Max Health.
+	if (bMaxHealthFound)
+	{
+		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health, LoadedMaxHealth);
+	}
+
+	// 4. Broadcast initial values to update UI or other systems.
 	BroadcastHealth();
 	BroadcastShield();
 }

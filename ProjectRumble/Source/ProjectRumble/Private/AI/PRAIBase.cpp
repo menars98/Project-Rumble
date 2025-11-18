@@ -294,3 +294,22 @@ void APRAIBase::InitializeStats()
 	// from its StatsComponent and set it on the Blackboard or Movement Component.
 	BP_SetDifficultyStats(DifficultyMultiplier);
 }
+
+void APRAIBase::UpdateDifficultyMultiplier(float NewDifficultyMultiplier)
+{
+	// This function re-reads the Data Table and re-initializes the StatsComponent
+	// with the new multiplier. It's essentially a re-run of the initialization logic.
+
+	if (!AllEnemyStatsTable || DataTableID.IsNone()) return;
+
+	const FAIStats* AIStatsRow = AllEnemyStatsTable->FindRow<FAIStats>(DataTableID, TEXT("AI Stats Update"));
+	if (!AIStatsRow) return;
+
+	if (UPRStatsComponent* StatsComp = GetStatsComponent())
+	{
+		StatsComp->InitializeForAI(AIStatsRow->BaseStats, NewDifficultyMultiplier);
+	}
+
+	// Also update the AI Controller.
+	BP_SetDifficultyStats(NewDifficultyMultiplier);
+}

@@ -138,8 +138,6 @@ protected:
 	 */
 	void InitializeStats();
 
-	
-
 	/**
 	 * Handles the death of the owner. Broadcasts the OnDeathDelegate.
 	 */

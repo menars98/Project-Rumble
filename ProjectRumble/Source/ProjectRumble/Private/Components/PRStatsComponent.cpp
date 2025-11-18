@@ -83,8 +83,14 @@ void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStats
 	// 2. Loop through the final, calculated stats provided by the AI.
 	for (const FStatDefinition& StatDef : BaseStatsArray)
 	{
-		// Apply the difficulty multiplier to the base value.
-		float FinalValue = StatDef.DefaultValue * DifficultyMultiplier;
+		// 1. Calculate the scaled float value.
+		float ScaledValue = StatDef.DefaultValue * DifficultyMultiplier;
+
+		// --- 2. ROUND THE VALUE (NEW LOGIC) ---
+
+		// Round the final value to the nearest whole number.
+		// Example: 39.2f becomes 39.0f, 39.8f becomes 40.0f.
+		float FinalValue = FMath::RoundToFloat(ScaledValue);
 
 		// Add the stat tag and the final calculated value to the runtime map.
 		CurrentStats.Add(StatDef.StatID, FinalValue);

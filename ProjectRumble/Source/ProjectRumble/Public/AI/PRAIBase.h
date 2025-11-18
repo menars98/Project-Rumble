@@ -24,6 +24,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AI")
 	const FGameplayTagContainer& GetAITags() const { return AITags; }
 
+	/**
+	 * Re-applies the difficulty multiplier to all stats.
+	 * Called by the GameMode when the global difficulty changes mid-game.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "AI|Difficulty")
+	void UpdateDifficultyMultiplier(float NewDifficultyMultiplier);
+
 protected:
 	// -- COMPONENTS --
 	// The AI has its own StatsComponent directly on itself.

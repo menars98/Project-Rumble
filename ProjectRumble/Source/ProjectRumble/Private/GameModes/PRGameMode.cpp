@@ -5,7 +5,8 @@
 #include "Player/PRPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PRStatsComponent.h"
-#include <Game/PRGameState.h>
+#include "Game/PRGameState.h"
+#include "AI/PRAIBase.h"
 
 APRGameMode::APRGameMode()
 {
@@ -76,6 +77,17 @@ void APRGameMode::RecalculateActiveDifficulty()
 	{
 		// Set the value on the GameState. The GameState will handle replicating this to clients.
 		PR_GameState->SetActiveDifficultyMultiplier(HighestDifficulty);
+
+		TArray<AActor*> FoundAIs;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRAIBase::StaticClass(), FoundAIs);
+
+		for (AActor* AIActor : FoundAIs)
+		{
+			if (APRAIBase* AI = Cast<APRAIBase>(AIActor))
+			{
+				AI->UpdateDifficultyMultiplier(HighestDifficulty);
+			}
+		}
 	}
 }
 

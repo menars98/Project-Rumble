@@ -299,6 +299,10 @@ void APRCharacterBase::OnStatChanged(FGameplayTag StatTag, float NewValue)
 			//GetCharacterMovement()->JumpZVelocity = BaseJumpZ * (1.0f + NewValue);
 			GetCharacterMovement()->JumpZVelocity = BaseJumpZVelocity * (NewValue);
 			UE_LOG(LogTemp, Log, TEXT("JumpZVelocity updated to: %f"), GetCharacterMovement()->JumpZVelocity);
+			// 2. Update Gravity Scale (THE FIX)
+			// We scale gravity by the SQUARE of the jump height multiplier to keep the jump feeling snappy.
+			 // A simpler approach is a linear scale, but squared feels better. Let's start with linear.
+			GetCharacterMovement()->GravityScale = BaseGravityScale * NewValue;
 		}
 	}
 
@@ -340,3 +344,4 @@ void APRCharacterBase::OnDeath()
 	}
 	UE_LOG(LogTemp, Warning, TEXT("PLAYER HAS DIED. GAME OVER."));
 }
+

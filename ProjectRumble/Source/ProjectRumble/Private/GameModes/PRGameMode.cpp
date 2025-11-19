@@ -17,33 +17,54 @@ void APRGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Bind to all currently existing players (important for PIE testing or initial load).
-	TArray<AActor*> PlayerStates;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRPlayerState::StaticClass(), PlayerStates);
-
-	for (AActor* PlayerStateActor : PlayerStates)
-	{
-		if (APRPlayerState* PR_PlayerState = Cast<APRPlayerState>(PlayerStateActor))
-		{
-			// Bind to the StatsComponent's Difficulty Delegate.
-			BindToPlayerDifficulty(PR_PlayerState->StatsComponent);
-		}
-	}
 	
-	// Set the initial difficulty based on all players.
-	RecalculateActiveDifficulty();
+}
+
+void APRGameMode::StartPlay()
+{
+	Super::StartPlay();
+	//// At the start of play, bind to all existing players' stats components.
+	//TArray<AActor*> PlayerStates;
+	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRPlayerState::StaticClass(), PlayerStates);
+	//for (AActor* PlayerStateActor : PlayerStates)
+	//{
+	//	if (APRPlayerState* PR_PlayerState = Cast<APRPlayerState>(PlayerStateActor))
+	//	{
+	//		BindToPlayerDifficulty(PR_PlayerState->StatsComponent);
+	//	}
+	//}
+	//// Initial calculation of active difficulty.
+	//RecalculateActiveDifficulty();
 }
 
 void APRGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
-	// New player joined: Ensure we bind to their stats component.
-	if (APRPlayerState* PR_PlayerState = NewPlayer->GetPlayerState<APRPlayerState>())
+	// This is the SAFEST place to handle new player setup.
+	if (NewPlayer)
 	{
-		BindToPlayerDifficulty(PR_PlayerState->StatsComponent);
+		if (APRPlayerState* PR_PlayerState = NewPlayer->GetPlayerState<APRPlayerState>())
+		{
+			// The PlayerState is guaranteed to exist here.
+			// Now we wait for its internal components to be ready.
+			PR_PlayerState->OnStatsComponentReady.AddDynamic(this, &APRGameMode::HandlePlayerReady);
+		}
 	}
 }
+
+void APRGameMode::HandlePlayerReady(UPRStatsComponent* PlayerStatsComp)
+{
+	if (PlayerStatsComp)
+	{
+		// 1. Bind to the difficulty change delegate.
+		PlayerStatsComp->OnDifficultyChangedDelegate.AddDynamic(this, &APRGameMode::OnPlayerDifficultyChanged);
+
+		// 2. A player is now fully ready, so we recalculate the game's difficulty.
+		RecalculateActiveDifficulty();
+	}
+}
+
 void APRGameMode::OnPlayerDifficultyChanged(float NewDifficultyValue)
 {
 	// A stat has changed on one player, so we must find the highest difficulty among ALL players.
@@ -52,9 +73,17 @@ void APRGameMode::OnPlayerDifficultyChanged(float NewDifficultyValue)
 
 void APRGameMode::RecalculateActiveDifficulty()
 {
-	float HighestDifficulty = 1.0f;
-	TArray<AActor*> PlayerStates;
+	// --- GUARD CLAUSE: Ensure GameState is valid before proceeding ---
+	APRGameState* PR_GameState = GetGameState<APRGameState>();
+	if (!PR_GameState)
+	{
+		return;
+	}
 
+	// 1. FIND THE HIGHEST DIFFICULTY BONUS
+	float HighestDifficulty = 1.0f;
+
+	TArray<AActor*> PlayerStates;
 	// 1. Find all active player states in the world (handles co-op).
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRPlayerState::StaticClass(), PlayerStates);
 
@@ -65,19 +94,25 @@ void APRGameMode::RecalculateActiveDifficulty()
 			if (UPRStatsComponent* StatsComp = PR_PlayerState->StatsComponent)
 			{
 				float PlayerDifficulty = StatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty);
+				// Keep track of the highest value found among all players.
 				HighestDifficulty = FMath::Max(HighestDifficulty, PlayerDifficulty);
+
 			}
 		}
 	}
 
 	// --- 2. UPDATE THE GAME STATE ---
+	// Apply the hard cap defined in the GameMode's properties.
+	float FinalMultiplier = FMath::Min(HighestDifficulty, MaxDifficultyMultiplier);
 
-	// Get a reference to our custom GameState.
-	if (APRGameState* PR_GameState = GetGameState<APRGameState>())
+
+	// Only proceed if the value has actually changed.
+	if (!FMath::IsNearlyEqual(PR_GameState->GetActiveDifficultyMultiplier(), FinalMultiplier))
 	{
 		// Set the value on the GameState. The GameState will handle replicating this to clients.
-		PR_GameState->SetActiveDifficultyMultiplier(HighestDifficulty);
+		PR_GameState->SetActiveDifficultyMultiplier(FinalMultiplier);
 
+		// Update all existing AI actors in the world with the new multiplier.
 		TArray<AActor*> FoundAIs;
 		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRAIBase::StaticClass(), FoundAIs);
 
@@ -85,10 +120,14 @@ void APRGameMode::RecalculateActiveDifficulty()
 		{
 			if (APRAIBase* AI = Cast<APRAIBase>(AIActor))
 			{
-				AI->UpdateDifficultyMultiplier(HighestDifficulty);
+				// Call the function on each AI to re-initialize its stats with the new multiplier.
+				AI->UpdateDifficultyMultiplier(FinalMultiplier);
 			}
 		}
+		// Log the change for debugging.
+		UE_LOG(LogTemp, Log, TEXT("Active Difficulty Multiplier updated to: %.2f"), FinalMultiplier);
 	}
+	
 }
 
 void APRGameMode::BindToPlayerDifficulty(UPRStatsComponent* PlayerStatsComp)
@@ -97,10 +136,13 @@ void APRGameMode::BindToPlayerDifficulty(UPRStatsComponent* PlayerStatsComp)
 	{
 		// 1. Bind the function to the player's difficulty change delegate.
 		PlayerStatsComp->OnDifficultyChangedDelegate.AddDynamic(this, &APRGameMode::OnPlayerDifficultyChanged);
-
+		if (GetGameState<APRGameState>())
+		{
+			RecalculateActiveDifficulty();
+		}
 		// 2. Set the initial difficulty based on the new player's current stat.
 		// This handles the initial state after binding.
-		OnPlayerDifficultyChanged(PlayerStatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty));
+		//OnPlayerDifficultyChanged(PlayerStatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty));
 	}
 }
 

@@ -127,6 +127,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Movement")
 	float BaseJumpZVelocity = 700.0f;
 
+	float BaseGravityScale = 1.0f;
+
 private:
 	// The cached pointer for performance now lives here, where it's needed.
 	UPROPERTY()

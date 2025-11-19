@@ -52,6 +52,9 @@ void APRXpShard::OnCollected_Implementation()
 			const float XPGainModifier = StatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_XP_Gain);
 			const float FinalXPAward = Value * (XPGainModifier); // "Value" is inherited
 
+			UE_LOG(LogTemp, Log,TEXT("XP Shard Collected. Base Value: %.1f, Multiplier: %.2fx, Final XP: %.1f"),Value, XPGainModifier, FinalXPAward
+			);
+
 			StatsComp->AddXP(FinalXPAward);
 		}
 	}

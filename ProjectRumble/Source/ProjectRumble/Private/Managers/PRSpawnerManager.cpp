@@ -5,6 +5,7 @@
 #include "AI/PRAIBase.h"
 #include "GameModes/PRGameMode.h" 
 #include "Kismet/GameplayStatics.h"
+#include <Game/PRGameState.h>
 
 APRSpawnerManager::APRSpawnerManager()
 {
@@ -34,7 +35,14 @@ void APRSpawnerManager::Tick(float DeltaTime)
 	// GetTimeSeconds() automatically pauses when the game is paused.
 	float GameTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
 
-	ProcessWaveTimeline(GameTime);
+	// --- GET DIFFICULTY MULTIPLIER ---
+	float DifficultyMultiplier = 1.0f;
+	if (APRGameState* PRGameState = GetWorld()->GetGameState<APRGameState>())
+	{
+		DifficultyMultiplier = PRGameState->GetActiveDifficultyMultiplier();
+	}
+
+	ProcessWaveTimeline(GameTime, DifficultyMultiplier);
 	ProcessBossTimeline(GameTime);
 	// --- OUR DYNAMIC MAX AI LOGIC (Endless Mode Prep) ---
 
@@ -44,6 +52,9 @@ void APRSpawnerManager::Tick(float DeltaTime)
 
 	bool bInEndlessMode = (GameTime >= EndlessModeStartTime);
 
+	// The max number of active AI is also scaled by difficulty.
+	int32 ScaledBaseMaxAI = FMath::RoundToInt(BaseMaxActiveAI * DifficultyMultiplier);
+
 	if (bInEndlessMode)
 	{
 		// Calculate time passed since the beginning of Endless Mode.
@@ -51,19 +62,19 @@ void APRSpawnerManager::Tick(float DeltaTime)
 		int32 MinutesPassed = FMath::FloorToInt(EndlessTime / 60.f);
 
 		// Increase the max AI limit.
-		CurrentMaxActiveAI = BaseMaxActiveAI + (MinutesPassed * MaxAIIncreasePerMinute_Endless);
+		CurrentMaxActiveAI = ScaledBaseMaxAI + (MinutesPassed * MaxAIIncreasePerMinute_Endless);
 
 		// @TODO: Add logic to spawn Endless AI types here.
 	}
 	else
 	{
 		// Maintain the base limit during the initial 10 minutes.
-		CurrentMaxActiveAI = BaseMaxActiveAI;
+		CurrentMaxActiveAI = ScaledBaseMaxAI;
 	}
 
 }
 
-void APRSpawnerManager::ProcessWaveTimeline(float GameTime)
+void APRSpawnerManager::ProcessWaveTimeline(float GameTime, float DifficultyMultiplier)
 {
 	if (!GetWorld() || !GetWorld()->GetAuthGameMode()) return;
 
@@ -76,9 +87,12 @@ void APRSpawnerManager::ProcessWaveTimeline(float GameTime)
 	// Check if it's time for the next wave
 	if (GameTime >= WaveTimeline[NextWaveIndex].TimeToStart)
 	{
+		// Scale the population increase by the difficulty multiplier.
+		int32 ScaledPopulationIncrease = FMath::RoundToInt(WaveTimeline[NextWaveIndex].PopulationIncrease * DifficultyMultiplier);
+
 		// It's time! Increase the target population
-		TargetAICount += WaveTimeline[NextWaveIndex].PopulationIncrease;
-		UE_LOG(LogTemp, Log, TEXT("Wave %d triggered! Target AI count is now %d"), NextWaveIndex, TargetAICount);
+		TargetAICount += ScaledPopulationIncrease;
+		UE_LOG(LogTemp, Log, TEXT("Wave %d triggered! Target AI count is now %d (Scaled by %.2fx)"), NextWaveIndex, TargetAICount, DifficultyMultiplier);
 
 		// Move to the next wave in the timeline
 		NextWaveIndex++;

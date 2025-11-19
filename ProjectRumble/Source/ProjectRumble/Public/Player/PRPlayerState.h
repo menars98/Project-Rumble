@@ -6,6 +6,9 @@
 #include "GameFramework/PlayerState.h"
 #include "PRPlayerState.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStatsComponentReady, UPRStatsComponent*, StatsComponent);
+
+
 class UPRStatsComponent;
 class UPRInventoryComponent;
 
@@ -24,4 +27,12 @@ public:
 	// Component to manage the player's inventory (Weapons, Tomes, Relics, etc.)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UPRInventoryComponent> InventoryComponent;
+
+	// Broadcasts when the StatsComponent is valid and ready to be bound to.
+	UPROPERTY(BlueprintAssignable)
+	FOnStatsComponentReady OnStatsComponentReady;
+
+protected:
+
+	virtual void BeginPlay() override;
 };

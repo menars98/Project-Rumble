@@ -125,7 +125,7 @@ protected:
 	void SpawnLoop();
 
 	// Processes the wave timeline based on the current game time.
-	void ProcessWaveTimeline(float GameTime);
+	void ProcessWaveTimeline(float GameTime, float DifficultyMultiplier);
 	// Processes the boss timeline based on the current game time.
 	void ProcessBossTimeline(float GameTime);
 private:

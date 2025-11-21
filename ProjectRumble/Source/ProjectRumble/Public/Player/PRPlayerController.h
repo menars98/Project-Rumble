@@ -64,6 +64,14 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UUserWidget> StatScreenInstance;
 
+	// --- PAUSE MENU ---
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> PauseMenuWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> PauseMenuInstance;
+
 	// -- CORE --
 	// Called when this controller possesses a pawn (character).
 	// This is a more reliable place than BeginPlay to bind to player-specific delegates.
@@ -80,10 +88,36 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> ToggleInventoryAction;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<class UInputAction> PauseAction;
+
 	// Called when the ToggleInventoryAction is triggered.
 	void ToggleInventoryScreen();
 
-	
+	/** Called locally when the pause input is pressed. Sends a request to the server. */
+	void TogglePauseMenu();
+
+	/**
+   * [SERVER] Function to request a pause/unpause.
+   * The server will validate and then broadcast the change to all clients.
+   */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestTogglePause();
+
+	/**
+	 * [CLIENT] Function called by the server on ALL clients to actually show/hide the pause menu.
+	 * @param bIsPaused The new pause state of the game.
+	 */
+	UFUNCTION(Client, Reliable)
+	void Client_TogglePause(bool bIsPaused);
+
+	/**
+	 * [SERVER] Function to request resuming the game from a paused state.
+	 * Called by clients when they close the pause menu.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestResumeGame();
+
 public:
 	// Called by the UI Widget when a player clicks on a reward button.
 	UFUNCTION(BlueprintCallable, Category = "Rewards")
@@ -102,4 +136,12 @@ public:
 	// Called by UI widgets when they are closed to resume the game.
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ResumeGameFromUI();
+
+	/** Resumes the game from a paused state (e.g., from the pause menu). */
+	UFUNCTION(BlueprintCallable, Category = "Game")
+	void ResumeGame();
+
+	/** Quits the current match and returns to the main menu. */
+	UFUNCTION(BlueprintCallable, Category = "Game")
+	void QuitToMainMenu();
 };

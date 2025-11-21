@@ -12,6 +12,7 @@
 #include "UI/PRHUD.h"
 #include "Interfaces/PRBPIPlayerHUD.h"
 #include "Interfaces/PRBPIRewardScreen.h"
+#include <Kismet/GameplayStatics.h>
 
 void APRPlayerController::BeginPlay()
 {
@@ -22,6 +23,13 @@ void APRPlayerController::BeginPlay()
 void APRPlayerController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
+
+	// --- SET INPUT MODE FOR GAMEPLAY ---
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+
+	// Hide the mouse cursor for gameplay.
+	bShowMouseCursor = false;
 
     // Get our custom PlayerState
     if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
@@ -41,9 +49,16 @@ void APRPlayerController::SetupInputComponent()
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-
 		// --- BIND THE NEW ACTION ---
-		EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &APRPlayerController::ToggleInventoryScreen);
+		if (ToggleInventoryAction)
+		{
+			EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &APRPlayerController::ToggleInventoryScreen);
+		}
+		// --- BIND PAUSE ACTION ---
+		if (PauseAction)
+		{
+			EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &APRPlayerController::TogglePauseMenu);
+		}
 	}
 }
 
@@ -143,6 +158,60 @@ void APRPlayerController::ToggleInventoryScreen()
 	}
 }
 
+void APRPlayerController::TogglePauseMenu()
+{
+	Server_RequestTogglePause();
+}
+
+void APRPlayerController::Server_RequestTogglePause_Implementation()
+{
+	// The server is the only one who can actually pause the game.
+	bool bIsCurrentlyPaused = UGameplayStatics::IsGamePaused(GetWorld());
+
+	// Set the new pause state on the server.
+	UGameplayStatics::SetGamePaused(GetWorld(), !bIsCurrentlyPaused);
+
+	// Now, tell ALL connected clients (including the server's own client) about the change.
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (APRPlayerController* PC = Cast<APRPlayerController>(It->Get()))
+		{
+			PC->Client_TogglePause(!bIsCurrentlyPaused);
+		}
+	}
+}
+
+void APRPlayerController::Client_TogglePause_Implementation(bool bIsPaused)
+{
+	if (bIsPaused)
+	{
+		// --- PAUSE THE GAME ---
+		if (PauseMenuWidgetClass && !PauseMenuInstance)
+		{
+			PauseMenuInstance = CreateWidget(this, PauseMenuWidgetClass);
+			PauseMenuInstance->AddToViewport();
+		}
+
+		// Set input mode and show cursor (this is a local UI change).
+		FInputModeGameAndUI InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+	}
+	else
+	{
+		// --- RESUME THE GAME ---
+		if (PauseMenuInstance)
+		{
+			PauseMenuInstance->RemoveFromParent();
+			PauseMenuInstance = nullptr;
+		}
+
+		// Set input mode and hide cursor.
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+	}
+}
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {
 	if (!ChosenUpgrade) return;
@@ -253,4 +322,38 @@ void APRPlayerController::ResumeGameFromUI()
 	FInputModeGameOnly InputMode;
 	SetInputMode(InputMode);
 	bShowMouseCursor = false;
+}
+
+void APRPlayerController::ResumeGame()
+{
+	Server_RequestResumeGame();
+}
+
+void APRPlayerController::QuitToMainMenu()
+{
+	// Unpause the game before changing levels, just in case.
+	UGameplayStatics::SetGamePaused(GetWorld(), false);
+
+	// TODO: Replace "MainMenu_L" with the actual name of your main menu map.
+	UGameplayStatics::OpenLevel(this, FName("MainMenu_L"), true);
+}
+
+void APRPlayerController::Server_RequestResumeGame_Implementation()
+{
+	// Ensure the game is actually paused before trying to resume.
+	if (UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		// Unpause the game on the server.
+		UGameplayStatics::SetGamePaused(GetWorld(), false);
+
+		// Tell ALL connected clients to close their pause menu.
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (APRPlayerController* PC = Cast<APRPlayerController>(It->Get()))
+			{
+				// We reuse the Client_TogglePause function with "false"
+				PC->Client_TogglePause(false);
+			}
+		}
+	}
 }

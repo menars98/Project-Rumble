@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Net/UnrealNetwork.h"
 #include "Datas/PRCharacterDefinition.h"
 #include "PRCharacterBase.generated.h"
 
@@ -29,6 +30,10 @@ public:
 
 	// We override the function from our base class to provide player-specific logic.
 	virtual UPRStatsComponent* GetStatsComponent() const override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual void OnControllerPossess();
 protected:
 	// -- INPUT --
 	// This is the main Input Mapping Context that will be loaded for gameplay.
@@ -75,6 +80,10 @@ protected:
 
 	/** Handles interaction input. */
 	void Interact();
+
+	/** [SERVER] The actual implementation of the interaction logic, runs only on the server. */
+	UFUNCTION(Server, Reliable)
+	void Server_Interact();
 
 	// -- INITIALIZATION FUNCTIONS --
 	/** Initializes the character's properties from its assigned CharacterDefinition Data Asset. */

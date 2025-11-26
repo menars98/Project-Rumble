@@ -8,6 +8,7 @@
 #include "PRGameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -15,7 +16,8 @@ APREntityBase::APREntityBase()
 {
 	// Set this character to call Tick() every frame. You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	bReplicates = true;
+	SetReplicateMovement(true); 
 }
 
 UPRStatsComponent* APREntityBase::GetStatsComponent() const
@@ -192,4 +194,9 @@ float APREntityBase::ProcessShieldDamage(float InitialDamage, UPRStatsComponent*
 
 	// Return the damage that was NOT absorbed.
 	return RemainingDamage;
+}
+
+void APREntityBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }

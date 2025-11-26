@@ -18,10 +18,15 @@
 #include"Components/PRInteractionComponent.h"
 #include "Components/SphereComponent.h"
 #include "Actors/PRXpShard.h"
+#include "Net/UnrealNetwork.h"
 
 APRCharacterBase::APRCharacterBase()
 {
+	// This actor needs to be replicated.
+	bReplicates = true;
 
+	// For smooth movement on clients, this is also crucial.
+	SetReplicateMovement(true);
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
 	SpringArmComp->SetupAttachment(RootComponent);
@@ -80,33 +85,26 @@ void APRCharacterBase::BeginPlay()
 {
 	Super::BeginPlay(); 
 
-	InitializeFromDataAsset();
 	InitializeInput();
+	// Determine if we are on the server or client
+	FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
 
-	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
+	if (Controller)
 	{
-		OnStatChanged(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange));
-	}
-
-	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
-	{
-		// Bind to the virtual functions inherited from EntityBase.
-		MyStatsComponent->OnHealthChangedDelegate.AddDynamic(this, &APRCharacterBase::OnHealthChanged);
-		MyStatsComponent->OnDeathDelegate.AddDynamic(this, &APRCharacterBase::OnDeath);
-		MyStatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
-		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight));
-		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump));
-		
-	}
-	if (PickupSphere)
-	{
-		PickupSphere->OnComponentBeginOverlap.AddDynamic(this, &APRCharacterBase::OnPickupSphereOverlap);
-		UE_LOG(LogTemp, Error, TEXT("OnPickupSphereOverlap Binded!"), *GetName());
+		if (IsLocallyControlled())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s] %s BeginPlay: I have a controller AND I am locally controlled."), *RoleString, *GetName());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Log, TEXT("[%s] %s BeginPlay: I have a controller, but I am NOT locally controlled (I'm a proxy)."), *RoleString, *GetName());
+		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("CharacterBase %s could not find its StatsComponent!"), *GetName());
+		UE_LOG(LogTemp, Error, TEXT("[%s] %s BeginPlay: I DO NOT HAVE A CONTROLLER!"), *RoleString, *GetName());
 	}
+
 }
 
 void APRCharacterBase::InitializeFromDataAsset()
@@ -208,9 +206,11 @@ void APRCharacterBase::Move(const FInputActionValue& Value)
 
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+		if (IsLocallyControlled())
+		{
+			AddMovementInput(ForwardDirection, MovementVector.Y);
+			AddMovementInput(RightDirection, MovementVector.X);
+		}
 	}
 }
 
@@ -228,6 +228,12 @@ void APRCharacterBase::Look(const FInputActionValue& Value)
 
 void APRCharacterBase::TakeDebugDamage()
 {
+	// This function should only execute its logic on the server.
+	if (!HasAuthority())
+	{
+		return;
+
+	}
 	// Simple sphere trace in front of the character to find an enemy to damage
 	FVector Start = GetActorLocation();
 	FVector End = Start + (GetActorForwardVector() * 200.0f);
@@ -261,6 +267,15 @@ void APRCharacterBase::TakeDebugDamage()
 
 // A simple wrapper function to call the component's function.
 void APRCharacterBase::Interact()
+{
+	// Ensure we are the locally controlled player before sending an RPC.
+	if (IsLocallyControlled())
+	{
+		Server_Interact();
+	}
+}
+
+void APRCharacterBase::Server_Interact_Implementation()
 {
 	if (InteractionComp)
 	{
@@ -345,3 +360,38 @@ void APRCharacterBase::OnDeath()
 	UE_LOG(LogTemp, Warning, TEXT("PLAYER HAS DIED. GAME OVER."));
 }
 
+void APRCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
+
+void APRCharacterBase::OnControllerPossess()
+{
+	// This function now contains all the logic that REQUIRES a valid controller.
+
+	// Initialize Input
+	InitializeFromDataAsset();
+	InitializeInput();
+
+	// Bind to StatsComponent delegates if they depend on the controller or player state.
+	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
+	{
+		OnStatChanged(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange));
+	}
+
+	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
+	{
+		// Bind to the virtual functions inherited from EntityBase.
+		MyStatsComponent->OnHealthChangedDelegate.AddDynamic(this, &APRCharacterBase::OnHealthChanged);
+		MyStatsComponent->OnDeathDelegate.AddDynamic(this, &APRCharacterBase::OnDeath);
+		MyStatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
+		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight));
+		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump));
+
+	}
+	if (PickupSphere)
+	{
+		PickupSphere->OnComponentBeginOverlap.AddDynamic(this, &APRCharacterBase::OnPickupSphereOverlap);
+		UE_LOG(LogTemp, Error, TEXT("OnPickupSphereOverlap Binded!"), *GetName());
+	}
+}

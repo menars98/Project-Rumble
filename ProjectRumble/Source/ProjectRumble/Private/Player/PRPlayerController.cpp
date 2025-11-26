@@ -13,34 +13,41 @@
 #include "Interfaces/PRBPIPlayerHUD.h"
 #include "Interfaces/PRBPIRewardScreen.h"
 #include <Kismet/GameplayStatics.h>
+#include <Characters/PRCharacterBase.h>
 
 void APRPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
+	bReplicates = true;
+
+	 // Determine if we are on the server or client
+    FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
+	UE_LOG(LogTemp, Warning, TEXT("[%s] PlayerController BeginPlay for %s."), *RoleString, *GetName());
 }
 
 void APRPlayerController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
 
-	// --- SET INPUT MODE FOR GAMEPLAY ---
-	FInputModeGameOnly InputMode;
-	SetInputMode(InputMode);
+	// After possessing the pawn, tell the character to initialize its controller-dependent components.
+	if (APRCharacterBase* PlayerCharacter = Cast<APRCharacterBase>(InPawn))
+	{
+		PlayerCharacter->OnControllerPossess();
+	}
 
-	// Hide the mouse cursor for gameplay.
-	bShowMouseCursor = false;
+	// OnPossess runs ONLY ON THE SERVER.
+	// Server-side setup, like binding to delegates, happens here.
 
-    // Get our custom PlayerState
-    if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
-    {
-        // Check if it has a valid StatsComponent
-        if (UPRStatsComponent* StatsComp = PS->StatsComponent)
-        {
-            // Bind our function to the delegate
-            StatsComp->OnLevelUpDelegate.AddDynamic(this, &APRPlayerController::ShowLevelUpScreen);
-        }
-    }
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		if (UPRStatsComponent* StatsComp = PS->StatsComponent)
+		{
+			StatsComp->OnLevelUpDelegate.AddDynamic(this, &APRPlayerController::ShowLevelUpScreen);
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER ONLY] OnPossess called for %s, controlling Pawn %s."), *GetName(), *InPawn->GetName());
+
 }
 
 void APRPlayerController::SetupInputComponent()
@@ -211,6 +218,21 @@ void APRPlayerController::Client_TogglePause_Implementation(bool bIsPaused)
 		SetInputMode(InputMode);
 		bShowMouseCursor = false;
 	}
+}
+
+void APRPlayerController::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+
+	// OnRep_Pawn runs ON THE CLIENT after the server has assigned a pawn.
+	// This is the correct and reliable place to set up input for the client.
+
+	// --- SET INPUT MODE FOR GAMEPLAY ---
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+
+	// We could also initialize client-side UI elements here if needed.
 }
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {

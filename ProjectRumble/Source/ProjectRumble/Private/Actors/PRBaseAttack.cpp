@@ -108,3 +108,8 @@ void APRBaseAttack::Tick(float DeltaTime)
 
 }
 
+void APRBaseAttack::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
+

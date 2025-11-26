@@ -8,7 +8,29 @@
 #include "Engine/DataTable.h" 
 #include "PRTypes.h"
 #include "PRGameplayTags.h"
+#include "Net/UnrealNetwork.h"
 #include "PRStatsComponent.generated.h"
+
+
+USTRUCT(BlueprintType)
+struct FReplicatedStatEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FGameplayTag StatTag;
+
+	UPROPERTY()
+	float Value = 0.f;
+
+	// Default constructor
+	FReplicatedStatEntry() {}
+
+	FReplicatedStatEntry(FGameplayTag InTag, float InValue)
+		: StatTag(InTag), Value(InValue)
+	{
+	}
+};
 
 // This delegate will broadcast when any stat changes, sending the StatTag and its new value.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatChangedSignature, FGameplayTag, StatTag, float, NewValue);
@@ -74,6 +96,15 @@ public:
 	FOnDifficultyChangedSignature OnDifficultyChangedDelegate;
 
 	// --- PUBLIC FUNCTIONS ---
+
+	void InitializeWithDataTable(UDataTable* DataTableToUse);
+
+	/**
+	 * Initializes the Stats Component for an AI using its specific array of stat definitions.
+	 * @param BaseStatsArray The array of FStatDefinition structs from the AI's data table row.
+	 */
+	void InitializeForAI(const TArray<FStatDefinition>& BaseStatsArray, float DifficultyMultiplier);
+
 	/**
 	 * Gets the current value of a specified stat.
 	 * @param StatID The FName ID of the stat to retrieve (e.g., "Health").
@@ -106,8 +137,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
 	void ApplyDamage(float DamageAmount);
 
-	void InitializeWithDataTable(UDataTable* DataTableToUse);
-
 	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
 	void AddXP(float XPAmount);
 
@@ -122,12 +151,14 @@ public:
 	// Heals the owner by the specified amount, clamping to max health.
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void Heal(float HealAmount);
- 
+
 	/**
-	 * Initializes the Stats Component for an AI using its specific array of stat definitions.
-	 * @param BaseStatsArray The array of FStatDefinition structs from the AI's data table row.
+	 * Returns a copy of the current stats map (cache).
+	 * This is the safe way for Blueprints (like UI) to read all current stat values.
 	 */
-	void InitializeForAI(const TArray<FStatDefinition>& BaseStatsArray, float DifficultyMultiplier);
+	UFUNCTION(BlueprintPure, Category = "PR | Stats")
+	TMap<FGameplayTag, float> GetCurrentStats() const;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -152,10 +183,35 @@ private:
 
 	// A map that holds the RUNTIME values of all stats.
 	// FName is the StatID (e.g., "Health"), float is the current value.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
-	TMap<FGameplayTag, float> CurrentStats;
+	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = "true"))
+	TMap<FGameplayTag, float> CurrentStats;*/
+
+	//Now we are migrating to multiplayer we can delete upper value when everything goes accordingly
+	UPROPERTY(ReplicatedUsing = OnRep_ReplicatedStats, BlueprintReadOnly, Category = "Config", meta = (AllowPrivateAccess = "true"))
+	TArray<FReplicatedStatEntry> ReplicatedStats;
+
+	// Cache for quick lookup of current stats from the replicated array.
+	UPROPERTY()
+	TMap<FGameplayTag, float> CurrentStatsCache;
 
 	// --- PRIVATE FUNCTIONS ---
+
+	/**
+	 * RepNotify function for CurrentStats map.
+	 * Called on clients when CurrentStats is updated on the server.
+	 */
+	UFUNCTION()
+	void OnRep_ReplicatedStats();
+
+	/**
+	 * Helper: Sync from Array to Map
+	 */
+	void SyncCacheFromReplicatedData();
+
+	/**
+	 * Helper: Sync from Map to Array
+	 */
+	void SyncReplicatedDataFromCache();
 
 	/**
 	 * A helper function to easily broadcast the OnHealthChangedDelegate with current values.
@@ -205,4 +261,8 @@ private:
 	/** The function called by the tick timer to regenerate a portion of the shield. */
 	UFUNCTION()
 	void ProcessShieldRegenTick();
+	
+public:
+		virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 };

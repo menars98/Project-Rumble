@@ -14,9 +14,15 @@
 #include "Components/PRStatsComponent.h"
 #include <GameModes/PRGameMode.h>
 #include <Game/PRGameState.h>
+#include "GameFramework/PawnMovementComponent.h"
 
 APRAIBase::APRAIBase()
 {
+	// This actor needs to be replicated.
+	bReplicates = true;
+
+	// For smooth movement on clients, this is also crucial.
+	SetReplicateMovement(true);
 	// AI creates its own StatsComponent.
 	StatsComponent_AI = CreateDefaultSubobject<UPRStatsComponent>(TEXT("StatsComponent"));
 	LootComponent = CreateDefaultSubobject<UPRLootComponent>(TEXT("LootComponent"));

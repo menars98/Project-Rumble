@@ -118,6 +118,8 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestResumeGame();
 
+	virtual void OnRep_Pawn() override;
+
 public:
 	// Called by the UI Widget when a player clicks on a reward button.
 	UFUNCTION(BlueprintCallable, Category = "Rewards")

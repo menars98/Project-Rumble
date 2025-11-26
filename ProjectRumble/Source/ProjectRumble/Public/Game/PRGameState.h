@@ -3,18 +3,19 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameStateBase.h"
+#include "GameFramework/GameState.h"
 #include "PRGameState.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class PROJECTRUMBLE_API APRGameState : public AGameStateBase
+class PROJECTRUMBLE_API APRGameState : public AGameState
 {
 	GENERATED_BODY()
 	
 public:
+
 	// This function is required for replication.
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

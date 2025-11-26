@@ -12,7 +12,50 @@ UPRStatsComponent::UPRStatsComponent()
 	// We turned Tick off because this component doesn't need to do anything every single frame.
 	// This is a good performance optimization.
 	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
 
+}
+
+void UPRStatsComponent::OnRep_ReplicatedStats()
+{
+	// Update the local cache from the replicated array
+	SyncCacheFromReplicatedData();
+
+	// Update UI
+	BroadcastHealth();
+	BroadcastShield();
+
+	UE_LOG(LogTemp, Log, TEXT("[CLIENT] Stats replicated (%d stats received)"), ReplicatedStats.Num());
+}
+
+void UPRStatsComponent::SyncCacheFromReplicatedData()
+{
+	// Copy from Array to Map (on the client side)
+	CurrentStatsCache.Empty();
+	for (const FReplicatedStatEntry& Entry : ReplicatedStats)
+	{
+		CurrentStatsCache.Add(Entry.StatTag, Entry.Value);
+	}
+}
+
+void UPRStatsComponent::SyncReplicatedDataFromCache()
+{
+	//Copy from Map to Array(on the server side)
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	ReplicatedStats.Empty();
+	for (const TPair<FGameplayTag, float>& Pair : CurrentStatsCache)
+	{
+		ReplicatedStats.Add(FReplicatedStatEntry(Pair.Key, Pair.Value));
+	}
+}
+
+TMap<FGameplayTag, float> UPRStatsComponent::GetCurrentStats() const
+{
+	return CurrentStatsCache;
 }
 
 void UPRStatsComponent::BeginPlay()
@@ -58,13 +101,19 @@ void UPRStatsComponent::InitializeStats()
 
 		if (StatRow)
 		{
-			// Use the GameplayTag from the data row as the key for our map.
-			CurrentStats.Add(StatRow->StatID, StatRow->DefaultValue);
+			// Add the stat ID and its default value to the CurrentStats map 
+			CurrentStatsCache.Add(StatRow->StatID, StatRow->DefaultValue);
 
 			UE_LOG(LogTemp, Log, TEXT("Initialized Stat: %s with value: %f"), *StatRow->StatID.ToString(), StatRow->DefaultValue);
 		}
 	}
 	
+	// If it's a server, update the replicated array as well.
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		SyncReplicatedDataFromCache();
+	}
+
 	BroadcastHealth();
 	BroadcastShield();
 }
@@ -72,7 +121,7 @@ void UPRStatsComponent::InitializeStats()
 void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStatsArray, float DifficultyMultiplier)
 {
 	// 1. Clear any existing stats.
-	CurrentStats.Empty();
+	CurrentStatsCache.Empty();
 
 	// Clamp the multiplier for safety.
 	if (DifficultyMultiplier < 1.0f) { DifficultyMultiplier = 1.0f; }
@@ -93,7 +142,7 @@ void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStats
 		float FinalValue = FMath::RoundToFloat(ScaledValue);
 
 		// Add the stat tag and the final calculated value to the runtime map.
-		CurrentStats.Add(StatDef.StatID, FinalValue);
+		CurrentStatsCache.Add(StatDef.StatID, FinalValue);
 
 		// Check for MaxHealth to set CurrentHealth.
 		if (StatDef.StatID == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP)
@@ -116,8 +165,8 @@ void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStats
 
 float UPRStatsComponent::GetStatValue(FGameplayTag StatTag) const
 {
-	// Find() returns a pointer to the value if the key exists in the map.
-	const float* FoundValue = CurrentStats.Find(StatTag);
+	// Use the cache for fast lookups.
+	const float* FoundValue = CurrentStatsCache.Find(StatTag);
 
 	if (FoundValue)
 	{
@@ -131,12 +180,22 @@ float UPRStatsComponent::GetStatValue(FGameplayTag StatTag) const
 
 void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 {
+	// Only make changes on the server
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CLIENT] Attempted to SetStatValue - ignored (must be called on server)"));
+		return;
+	}
+
 	// Find() here returns a pointer that we can change.
-	float* FoundValue = CurrentStats.Find(StatTag);
+	float* FoundValue = CurrentStatsCache.Find(StatTag);
 
 	if (FoundValue)
 	{
 		*FoundValue = NewValue;
+
+		// Update the replicated array to reflect the change.
+		SyncReplicatedDataFromCache();
 
 		// Broadcast that a generic stat has changed
 		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
@@ -209,10 +268,14 @@ void UPRStatsComponent::InitializeWithDataTable(UDataTable* DataTableToUse)
 		{
 			// The key is now StatRow->StatID, which is an FGameplayTag.
 			// The old version used RowName as the key.
-			CurrentStats.Add(StatRow->StatID, StatRow->DefaultValue);
+			CurrentStatsCache.Add(StatRow->StatID, StatRow->DefaultValue);
 		}
 	}
 
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		SyncReplicatedDataFromCache();
+	}
 	BroadcastHealth();
 }
 
@@ -406,4 +469,11 @@ void UPRStatsComponent::ProcessShieldRegenTick()
 	{
 		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield, NewShield);
 	}
+}
+
+void UPRStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UPRStatsComponent, ReplicatedStats);
 }

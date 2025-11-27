@@ -58,6 +58,13 @@ TMap<FGameplayTag, float> UPRStatsComponent::GetCurrentStats() const
 	return CurrentStatsCache;
 }
 
+void UPRStatsComponent::ForceUpdateUI()
+{
+	// Simply call the broadcast functions to update any UI or systems listening to these delegates.
+	BroadcastHealth();
+	BroadcastShield();
+}
+
 void UPRStatsComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -114,6 +121,11 @@ void UPRStatsComponent::InitializeStats()
 		SyncReplicatedDataFromCache();
 	}
 
+	const float CurrentHealth = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+	const float MaxHealth = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP);
+
+	UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeStats complete | Health: %.0f/%.0f | Stats Count: %d"),GetOwner()->HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"),
+		CurrentHealth, MaxHealth, CurrentStatsCache.Num());
 	BroadcastHealth();
 	BroadcastShield();
 }
@@ -300,8 +312,8 @@ void UPRStatsComponent::BroadcastHealth()
 
 		const float CurrentHealth = GetStatValue(HealthTag);
 		const float MaxHealth = GetStatValue(MaxHPTag);
-		OnHealthChangedDelegate.Broadcast(CurrentHealth, MaxHealth);
 	}
+
 }
 
 void UPRStatsComponent::BroadcastShield()

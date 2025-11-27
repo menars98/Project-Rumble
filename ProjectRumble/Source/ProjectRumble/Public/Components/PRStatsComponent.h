@@ -159,6 +159,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PR | Stats")
 	TMap<FGameplayTag, float> GetCurrentStats() const;
 
+	/**
+	 * Forces the component to broadcast its current Health and Shield values.
+	 * Useful for initializing UI widgets after binding to delegates.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
+	void ForceUpdateUI();
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

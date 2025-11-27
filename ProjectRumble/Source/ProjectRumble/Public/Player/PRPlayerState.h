@@ -21,11 +21,11 @@ public:
 	APRPlayerState();
 
 	// Component to manage the player's stats (Health, XP, Modifiers, etc.)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", ReplicatedUsing = OnRep_StatsComponent)
 	TObjectPtr<UPRStatsComponent> StatsComponent;
 
 	// Component to manage the player's inventory (Weapons, Tomes, Relics, etc.)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", ReplicatedUsing = OnRep_InventoryComponent)
 	TObjectPtr<UPRInventoryComponent> InventoryComponent;
 
 	// Broadcasts when the StatsComponent is valid and ready to be bound to.
@@ -35,4 +35,17 @@ public:
 protected:
 
 	virtual void BeginPlay() override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// -- REPLICATION NOTIFY FUNCTIONS --
+	UFUNCTION()
+	void OnRep_StatsComponent();
+
+	UFUNCTION()
+	void OnRep_InventoryComponent();
+
+private:
+	void InitializeStatsComponent();
+	void InitializeInventoryComponent();
 };

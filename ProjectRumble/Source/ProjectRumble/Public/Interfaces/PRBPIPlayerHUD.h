@@ -23,6 +23,10 @@ class PROJECTRUMBLE_API IPRBPIPlayerHUD
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 
+	// A function that can have a default C++ implementation, but can also be overridden in Blueprint.
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "HUD")
+	void SetupHUD(class UPRStatsComponent* StatsComp);
+
 	// A function that can be implemented in Blueprint.
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "HUD")
 	void ToggleInventory();

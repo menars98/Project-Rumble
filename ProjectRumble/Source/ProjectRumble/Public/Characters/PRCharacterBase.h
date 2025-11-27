@@ -33,7 +33,6 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	virtual void OnControllerPossess();
 protected:
 	// -- INPUT --
 	// This is the main Input Mapping Context that will be loaded for gameplay.
@@ -62,11 +61,16 @@ protected:
 	TObjectPtr<UInputAction> InteractAction;
 
 	// -- CORE FUNCTIONS --
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	// Called to bind functionality to input
+	virtual void PossessedBy(AController* NewController) override;
+
+	virtual void OnRep_Controller() override;
+
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION()
+	void OnStatsComponentReady(UPRStatsComponent* ReadyStatsComp);
 
 	// -- INPUT HANDLING FUNCTIONS --
 	/** Called for movement input */
@@ -142,6 +146,8 @@ private:
 	// The cached pointer for performance now lives here, where it's needed.
 	UPROPERTY()
 	mutable TObjectPtr<UPRStatsComponent> CachedStatsComponent;
+
+	void InitializeCharacter();
 };
 
 

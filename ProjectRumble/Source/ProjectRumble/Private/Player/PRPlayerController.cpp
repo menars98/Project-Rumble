@@ -30,14 +30,16 @@ void APRPlayerController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
 
-	// After possessing the pawn, tell the character to initialize its controller-dependent components.
-	if (APRCharacterBase* PlayerCharacter = Cast<APRCharacterBase>(InPawn))
-	{
-		PlayerCharacter->OnControllerPossess();
-	}
-
-	// OnPossess runs ONLY ON THE SERVER.
 	// Server-side setup, like binding to delegates, happens here.
+
+	// On server, PlayerState is usually ready immediately, but let's be safe.
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
+		{
+			PRHUD->InitializeHUDStats(PS->StatsComponent);
+		}
+	}
 
 	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
 	{
@@ -233,6 +235,21 @@ void APRPlayerController::OnRep_Pawn()
 	bShowMouseCursor = false;
 
 	// We could also initialize client-side UI elements here if needed.
+}
+void APRPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	// CLIENT SIDE SETUP
+	// PlayerState is now valid. Let's initialize the HUD.
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
+		{
+			// Send the component to the HUD widget
+			PRHUD->InitializeHUDStats(PS->StatsComponent);
+		}
+	}
 }
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {

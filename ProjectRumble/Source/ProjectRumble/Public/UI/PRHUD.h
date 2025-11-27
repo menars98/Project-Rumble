@@ -6,9 +6,8 @@
 #include "GameFramework/HUD.h"
 #include "PRHUD.generated.h"
 
-/**
- * 
- */
+class UPRStatsComponent;
+
 UCLASS()
 class PROJECTRUMBLE_API APRHUD : public AHUD
 {
@@ -19,6 +18,8 @@ public:
     UFUNCTION(BlueprintPure, Category = "HUD")
     UUserWidget* GetPlayerHUDWidget() const { return PlayerHUDWidget; }
 	
+    void InitializeHUDStats(UPRStatsComponent* StatsComp);
+
 protected:
     // The main gameplay widget class to create.
     // We assign this in the Blueprint derived from this class.

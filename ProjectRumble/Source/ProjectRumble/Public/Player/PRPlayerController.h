@@ -73,6 +73,11 @@ protected:
 	TObjectPtr<UUserWidget> PauseMenuInstance;
 
 	// -- CORE --
+
+	virtual void OnRep_Pawn() override;
+	// Client-side: Called when PlayerState is correctly replicated.
+	virtual void OnRep_PlayerState() override;
+
 	// Called when this controller possesses a pawn (character).
 	// This is a more reliable place than BeginPlay to bind to player-specific delegates.
 	virtual void OnPossess(APawn* InPawn) override;
@@ -117,8 +122,6 @@ protected:
 	 */
 	UFUNCTION(Server, Reliable)
 	void Server_RequestResumeGame();
-
-	virtual void OnRep_Pawn() override;
 
 public:
 	// Called by the UI Widget when a player clicks on a reward button.

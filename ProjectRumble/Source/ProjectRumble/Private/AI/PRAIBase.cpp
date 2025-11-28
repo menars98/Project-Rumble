@@ -87,12 +87,14 @@ void APRAIBase::BeginPlay()
 
 float APRAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (!HasAuthority()) return 0.f;
+
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	if (ActualDamage > 0.f)
 	{
 		// Play the flash effect whenever damage is taken.
-		PlayHitFlash();
+		Multicast_PlayHitFlash();
 	}
 
 	return ActualDamage;
@@ -318,4 +320,9 @@ void APRAIBase::UpdateDifficultyMultiplier(float NewDifficultyMultiplier)
 
 	// Also update the AI Controller.
 	BP_SetDifficultyStats(NewDifficultyMultiplier);
+}
+
+void APRAIBase::Multicast_PlayHitFlash_Implementation()
+{
+	PlayHitFlash();
 }

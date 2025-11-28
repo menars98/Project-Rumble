@@ -30,12 +30,63 @@ void UPRStatsComponent::OnRep_ReplicatedStats()
 
 void UPRStatsComponent::SyncCacheFromReplicatedData()
 {
-	// Copy from Array to Map (on the client side)
-	CurrentStatsCache.Empty();
+	const FString OwnerName = GetOwner() ? GetOwner()->GetName() : TEXT("Unknown");
+	const FString NetRole = (GetOwner() && GetOwner()->HasAuthority()) ? TEXT("SERVER") : TEXT("CLIENT");
+
 	for (const FReplicatedStatEntry& Entry : ReplicatedStats)
 	{
-		CurrentStatsCache.Add(Entry.StatTag, Entry.Value);
+		// 1. Did this stat exist before, and what was its value?
+		float OldValue = 0.0f;
+		bool bIsNewOrChanged = false;
+		//	Find the stat in the cache
+		if (float* CachedValPtr = CurrentStatsCache.Find(Entry.StatTag))
+		{
+			OldValue = *CachedValPtr;
+
+			if (!FMath::IsNearlyEqual(OldValue, Entry.Value))
+			{
+				bIsNewOrChanged = true;
+				*CachedValPtr = Entry.Value;
+			}
+		}
+		else
+		{
+			// New stat, add it to the cache
+			bIsNewOrChanged = true;
+			CurrentStatsCache.Add(Entry.StatTag, Entry.Value);
+		}
+
+		// 2. If its new or changed, broadcast the appropriate delegates
+		if (bIsNewOrChanged)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s] Stat CHANGED on %s: %s | Old: %f -> New: %f"),
+				*NetRole,
+				*OwnerName,
+				*Entry.StatTag.ToString(),
+				OldValue,
+				Entry.Value);
+
+			if (OnStatChangedDelegate.IsBound())
+			{
+				OnStatChangedDelegate.Broadcast(Entry.StatTag, Entry.Value);
+			}
+			else
+			{
+				//If no one listens we need to see that too
+				UE_LOG(LogTemp, Error, TEXT("[%s] Stat changed but NO ONE IS BOUND to OnStatChangedDelegate!"), *NetRole);
+			}
+			// Special cases like (Resource etc.) can be added here
+			if (Entry.StatTag == NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty)
+			{
+				if (OnDifficultyChangedDelegate.IsBound())
+				{
+					OnDifficultyChangedDelegate.Broadcast(Entry.Value);
+				}
+			}
+		}
 	}
+
+	// If we delete stats on the server side, we would need to handle that here as well.
 }
 
 void UPRStatsComponent::SyncReplicatedDataFromCache()
@@ -207,7 +258,7 @@ void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 		*FoundValue = NewValue;
 
 		// Update the replicated array to reflect the change.
-		SyncReplicatedDataFromCache();
+		UpdateReplicatedStat(StatTag, NewValue);
 
 		// Broadcast that a generic stat has changed
 		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
@@ -299,6 +350,31 @@ void UPRStatsComponent::Die()
 	OnDeathDelegate.Broadcast();
 
 	UE_LOG(LogTemp, Log, TEXT("%s has died."), *GetOwner()->GetName());
+}
+
+void UPRStatsComponent::UpdateReplicatedStat(FGameplayTag StatTag, float NewValue)
+{
+	// Only run on server
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	// 1. Try to find the existing stat in the array and update it.
+	for (FReplicatedStatEntry& Entry : ReplicatedStats)
+	{
+		if (Entry.StatTag == StatTag)
+		{
+			// Found it! Update value and stop.
+			// Since we modify the value inside the array, Unreal's replication system 
+			// will detect ONLY this change and send a small packet.
+			Entry.Value = NewValue;
+			return;
+		}
+	}
+
+	// 2. If we are here, the stat doesn't exist in the array yet. Add it.
+	ReplicatedStats.Add(FReplicatedStatEntry(StatTag, NewValue));
 }
 
 void UPRStatsComponent::BroadcastHealth()
@@ -481,6 +557,22 @@ void UPRStatsComponent::ProcessShieldRegenTick()
 	{
 		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield, NewShield);
 	}
+}
+
+void UPRStatsComponent::RefreshCurrentStats()
+{
+	if (OnStatChangedDelegate.IsBound())
+	{
+		for (const TPair<FGameplayTag, float>& Pair : CurrentStatsCache)
+		{
+			OnStatChangedDelegate.Broadcast(Pair.Key, Pair.Value);
+		}
+	}
+
+	BroadcastHealth();
+	BroadcastShield();
+
+	UE_LOG(LogTemp, Log, TEXT("Refreshed all stats for %s. Processed %d entries."), *GetOwner()->GetName(), CurrentStatsCache.Num());
 }
 
 void UPRStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

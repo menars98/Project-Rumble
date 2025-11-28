@@ -30,36 +30,38 @@ public:
 	// These properties will be FILLED IN AT RUNTIME by the RewardManager.
 
 	/** The final, resolved name to show on the card (e.g., "Elven Bow"). */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Display")
 	FText DisplayName;
 
 	/** The final, resolved description to show (e.g., "Damage: +12.7%\nProjectile Speed: +0.35"). */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display", meta = (MultiLine = true))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Display", meta = (MultiLine = true))
 	FText Description;
 
 	/** The icon to display. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Display")
 	TObjectPtr<UTexture2D> Icon;
 
 	/** The final, resolved rarity of this specific upgrade offer. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Display")
 	EUpgradeRarity Rarity;
 
 	/** The level this upgrade represents (e.g., "LVL 2"). */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Display")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Display")
 	int32 UpgradeLevel;
 
 	// -- LOGIC --
 	// This array holds the FINAL, "rolled" effects that will be applied if this upgrade is chosen.
 	// All magnitudes are now fixed numbers, not ranges.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Logic")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Logic")
 	TArray<FPotentialUpgradeEffect> Effects;
 	// A reference back to the "rulebook" this offer was generated from.
 	// The InventoryComponent will use this to know which item to add or upgrade.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Logic")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Logic")
 	TObjectPtr<UPRItemDefinition> SourceItemDefinition;
 
+	virtual bool IsSupportedForNetworking() const override { return true; }
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	// We no longer need:
 	// - EUpgradeType
 	// - ItemClass

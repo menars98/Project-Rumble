@@ -17,45 +17,49 @@ class PROJECTRUMBLE_API UPRItemDefinition : public UDataAsset
 	
 public:
     // -- IDENTITY --
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Identity")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Identity")
     FText DisplayName;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Identity")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Identity")
     TObjectPtr<UTexture2D> Icon;
 
     // What type of item is this?
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Identity")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Identity")
     EItemType ItemType;
    
     // -- UPGRADE LOGIC --
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrades|Effect Count")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Upgrades|Effect Count")
     int32 NumEffects_Common = 1;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrades|Effect Count")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Upgrades|Effect Count")
     int32 NumEffects_Uncommon = 1;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrades|Effect Count")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Upgrades|Effect Count")
     int32 NumEffects_Rare = 2;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrades|Effect Count")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Upgrades|Effect Count")
     int32 NumEffects_Epic = 2;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrades|Effect Count")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Upgrades|Effect Count")
     int32 NumEffects_Legendary = 3;
 
     // A list of ALL possible stat upgrades this item can get when it levels up.
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Upgrades")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Upgrades")
     TArray<FPotentialUpgradeEffect> PotentialUpgradeEffects;
     /**
     * The C++ class that holds the logic for this item.
     * e.g., UPRWeaponItem for weapons, UPRPassiveItem for tomes.
     */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Logic")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Item Logic")
     TSubclassOf<UPRBaseItem> ItemClass;
 
     // This will only be visible in the editor if ItemType is 'Weapon'
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Data", meta = (EditCondition = "ItemType == EItemType::Weapon"))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Weapon Data", meta = (EditCondition = "ItemType == EItemType::Weapon"))
     FWeaponStats WeaponStats;
 
-    
+	// -- FUNCTIONS --
+	// Override to indicate that this Data Asset supports networking.
+    virtual bool IsSupportedForNetworking() const override { return true; }
+
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

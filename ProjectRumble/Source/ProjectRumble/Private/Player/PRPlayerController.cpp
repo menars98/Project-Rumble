@@ -13,7 +13,10 @@
 #include "Interfaces/PRBPIPlayerHUD.h"
 #include "Interfaces/PRBPIRewardScreen.h"
 #include <Kismet/GameplayStatics.h>
-#include <Characters/PRCharacterBase.h>
+#include "Characters/PRCharacterBase.h"
+#include "Net/UnrealNetwork.h"
+#include "Engine/ActorChannel.h"
+#include "Engine/TimerHandle.h"
 
 void APRPlayerController::BeginPlay()
 {
@@ -73,16 +76,12 @@ void APRPlayerController::SetupInputComponent()
 
 void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 {
-
 	// --- 1. VALIDATION ---
-	// Check if we have items to offer and a widget to show them with.
-	if (AllPossibleLevelUpItems.Num() == 0 || !LevelUpWidgetClass)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("ShowLevelUpScreen: No Level Up items or widget class assigned in PlayerController."));
-		return;
-	}
+	if (!HasAuthority()) return;
 
-	// --- 2. PREPARE THE MANAGER AND DATA ---
+	if (AllPossibleLevelUpItems.Num() == 0) return; 
+
+	// --- 2. PREPARE DATA ---
 	UPRRewardManager* RewardManager = NewObject<UPRRewardManager>();
 	if (!RewardManager) return;
 
@@ -91,28 +90,19 @@ void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 	UPRInventoryComponent* PlayerInventory = GetPlayerState<APRPlayerState>() ? GetPlayerState<APRPlayerState>()->InventoryComponent : nullptr;
 
 	// --- 3. GENERATE REWARDS ---
-	// Call the manager to get our LEVEL UP rewards from our specific level-up pool.
 	OfferedRewards = RewardManager->GenerateRewards(PlayerInventory, AllPossibleLevelUpItems, 3);
 
-	// --- 4. SHOW THE LEVEL UP UI ---
-	SetPause(true);
+	ForceNetUpdate();
 
-	LevelUpWidgetInstance = CreateWidget(this, LevelUpWidgetClass);
-	if (LevelUpWidgetInstance)
+	// --- 4. SEND TO CLIENT ---
+	// We are not calling the Client RPC! We are waiting for OnRep to run.
+	// However, OnRep does not run automatically for the Host (Listen Server); we must call it manually.
+	if (IsLocalPlayerController())
 	{
-		// Check if the widget implements our reward screen interface
-		if (LevelUpWidgetInstance->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
-		{
-			// Pass the generated rewards to the UI to display
-			IPRBPIRewardScreen::Execute_InitializeScreen(LevelUpWidgetInstance, OfferedRewards);
-		}
-
-		LevelUpWidgetInstance->AddToViewport();
+		OnRep_OfferedRewards();
 	}
 
-	FInputModeUIOnly InputMode;
-	SetInputMode(InputMode);
-	bShowMouseCursor = true;
+	// @TODO: We can send pause widget info to other player(s) here if needed.
 }
 
 void APRPlayerController::ToggleInventoryScreen()
@@ -236,6 +226,7 @@ void APRPlayerController::OnRep_Pawn()
 
 	// We could also initialize client-side UI elements here if needed.
 }
+
 void APRPlayerController::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
@@ -251,32 +242,127 @@ void APRPlayerController::OnRep_PlayerState()
 		}
 	}
 }
+
+void APRPlayerController::OnRep_OfferedRewards()
+{
+	// --- 1. VALIDATION ---
+	if (!IsLocalPlayerController()) return;
+
+	// Now we are using timer to make sure client get rewards but we can send some kind of event for that instead.
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	if (TimerManager.IsTimerActive(RetryHandle)) 
+	{
+		TimerManager.ClearTimer(RetryHandle);
+	}
+
+	if (OfferedRewards.Num() == 0) return;
+
+	bool bIsDataReady = true;
+	for (UPRUpgradeData* Data : OfferedRewards)
+	{
+		if (Data == nullptr)
+		{
+			bIsDataReady = false;
+			break;
+		}
+	}
+
+	if (!bIsDataReady)
+	{
+		TimerManager.SetTimer(RetryHandle, this, &APRPlayerController::OnRep_OfferedRewards, 0.1f, false);
+		return;
+	}
+
+	if (LevelUpWidgetClass)
+	{
+		if (LevelUpWidgetInstance && LevelUpWidgetInstance->IsInViewport())
+		{
+			return;
+		}
+
+		if (LevelUpWidgetInstance)
+		{
+			LevelUpWidgetInstance->RemoveFromParent();
+			LevelUpWidgetInstance = nullptr;
+		}
+		// Create Widget
+		LevelUpWidgetInstance = CreateWidget<UUserWidget>(this, LevelUpWidgetClass);
+
+		if (LevelUpWidgetInstance)
+		{
+			// Send data to widget via interface
+			if (LevelUpWidgetInstance->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+			{
+				IPRBPIRewardScreen::Execute_InitializeScreen(LevelUpWidgetInstance, OfferedRewards);
+			}
+
+			LevelUpWidgetInstance->AddToViewport();
+
+			FInputModeUIOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = true;
+
+			Server_PauseGameForLevelUp();
+		}
+	}
+}
+
+void APRPlayerController::Server_PauseGameForLevelUp_Implementation()
+{
+	if (!UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		UGameplayStatics::SetGamePaused(GetWorld(), true);
+	}
+}
+
+bool APRPlayerController::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+{
+	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	// Replicate each offered reward upgrade data
+	for (UPRUpgradeData* UpgradeData : OfferedRewards)
+	{
+		if (UpgradeData)
+		{
+			bWroteSomething |= Channel->ReplicateSubobject(UpgradeData, *Bunch, *RepFlags);
+		}
+	}
+
+	return bWroteSomething;
+}
+
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {
 	if (!ChosenUpgrade) return;
 
+	// --- CLEAN UP LEVEL UP WIDGET ---
+	if (LevelUpWidgetInstance)
+	{
+		LevelUpWidgetInstance->RemoveFromParent();
+		LevelUpWidgetInstance = nullptr;
+	}
+
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+
+	Server_ApplyReward(ChosenUpgrade);
+}
+
+void APRPlayerController::Server_ApplyReward_Implementation(UPRUpgradeData* ChosenUpgrade)
+{
+	// Apply reward on the server side
 	// The PlayerController's ONLY job is to forward the request to the correct component.
 	// It doesn't need to know HOW the reward is applied.
-
 	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
 	{
 		if (UPRInventoryComponent* InvComp = PS->InventoryComponent)
 		{
-			// Tell the InventoryComponent to handle this upgrade.
 			InvComp->AddOrUpgradeItem(ChosenUpgrade);
 		}
 	}
-
-	// --- Resume Game  ---
-	if (LevelUpWidgetInstance)
-	{
-		LevelUpWidgetInstance->RemoveFromParent();
-	}
-
-	SetPause(false);
-	FInputModeGameOnly InputMode;
-	SetInputMode(InputMode);
-	bShowMouseCursor = false;
+	// --- UNPAUSE THE GAME ---
+	UGameplayStatics::SetGamePaused(GetWorld(), false);
 }
 
 void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer, bool bGrantDirectly)
@@ -317,32 +403,29 @@ void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer,
 	// --- 4. GRANT THE REWARDS ---
 	if (GeneratedRewards.Num() > 0)
 	{
-		if (bGrantDirectly && ItemFoundPopupWidgetClass)
+		if (bGrantDirectly)
 		{
-			// We don't grant it directly to the inventory anymore.
-			// We show a popup UI instead.
-			UPRUpgradeData* RewardToShow = GeneratedRewards[0];
+			// 1. PAUSE THE GAME (Global Pause)
+			UGameplayStatics::SetGamePaused(GetWorld(), true);
 
-			// Pause the game or at least ignore player input
-		   // SetPause(true); // Pausing might be too disruptive. Let's just change input mode.
-			SetPause(true);
-			FInputModeUIOnly InputMode;
-			SetInputMode(InputMode);
-			bShowMouseCursor = true;
+			// 2. SEND TO CLIENT
+			Client_ShowRewardPopup(GeneratedRewards[0]);
 
-			// Create the popup widget
-			UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
+			//// Create the popup widget
+			//UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
 
-			// Now, we need to pass the data to it. We need an interface or a cast.
-			// Let's use an interface for this, it's cleaner.
-			// Assuming WBP_ItemFoundPopup implements BPI_ItemPopup
-			if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
-			{
-				// Call the interface function to initialize the widget with the reward data.
-				IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, GeneratedRewards);
-				PopupWidget->AddToViewport();
-			}
-		}
+			//// Now, we need to pass the data to it. We need an interface or a cast.
+			//// Let's use an interface for this, it's cleaner.
+			//// Assuming WBP_ItemFoundPopup implements BPI_ItemPopup
+			//if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+			//{
+			//	// Call the interface function to initialize the widget with the reward data.
+			//	IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, GeneratedRewards);
+			//	PopupWidget->AddToViewport();
+			//}
+
+			//@TODO: // Client_ShowRewardPopup(GeneratedRewards[0]); 
+ 		}
 		else
 		{
 			// This branch is for showing the level up screen with multiple choices
@@ -352,6 +435,36 @@ void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer,
 	else
 	{
 		UE_LOG(LogTemp, Log, TEXT("Loot pool '%s' generated no rewards."), *LootPool->GetName());
+	}
+}
+
+void APRPlayerController::Client_ShowRewardPopup_Implementation(UPRUpgradeData* RewardToDisplay)
+{
+	// --- VALIDATION ---
+	if (ItemFoundPopupWidgetClass)
+	{
+		// --- CREATE WIDGET ---
+		UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
+
+		if (PopupWidget)
+		{
+			// --- STORE REFERENCE ---
+			LevelUpWidgetInstance = PopupWidget;
+
+			// --- INITIALIZE WITH DATA ---
+			if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+			{
+				TArray<UPRUpgradeData*> SingleRewardArray;
+				SingleRewardArray.Add(RewardToDisplay);
+				IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, SingleRewardArray);
+			}
+
+			PopupWidget->AddToViewport();
+
+			FInputModeUIOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = true;
+		}
 	}
 }
 
@@ -395,4 +508,10 @@ void APRPlayerController::Server_RequestResumeGame_Implementation()
 			}
 		}
 	}
+}
+
+void APRPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APRPlayerController, OfferedRewards);
 }

@@ -120,6 +120,13 @@ void APRCharacterBase::OnRep_Controller()
 	InitializeCharacter();
 }
 
+void APRCharacterBase::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	InitializeCharacter();
+}
+
 void APRCharacterBase::InitializeFromDataAsset()
 {
 	UPRStatsComponent* MyStatsComponent = GetStatsComponent();
@@ -226,7 +233,6 @@ void APRCharacterBase::Move(const FInputActionValue& Value)
 	}
 }
 
-
 void APRCharacterBase::Look(const FInputActionValue& Value)
 {
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
@@ -305,6 +311,9 @@ void APRCharacterBase::OnHealthChanged(float CurrentHealth, float MaxHealth)
 
 void APRCharacterBase::OnStatChanged(FGameplayTag StatTag, float NewValue)
 {
+	FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
+	UE_LOG(LogTemp, Log, TEXT("[%s] Character %s received Stat Update: %s = %f"), *RoleString, *GetName(), *StatTag.ToString(), NewValue);
+
 	// --- EXTRA JUMP LOGIC ---
 	if (StatTag == NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump)
 	{
@@ -385,6 +394,14 @@ void APRCharacterBase::InitializeCharacter()
 	// Wait for the PlayerState to tell us the StatsComponent is ready.
 	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
 	{
+		if (PS->StatsComponent)
+		{
+			PS->StatsComponent->OnStatChangedDelegate.RemoveDynamic(this, &APRCharacterBase::OnStatChanged);
+			PS->StatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
+
+			//Just in case if we missed the ready event
+			PS->StatsComponent->RefreshCurrentStats();
+		}
 		// Subscribe to the event.
 		PS->OnStatsComponentReady.AddDynamic(this, &APRCharacterBase::OnStatsComponentReady);
 	}
@@ -420,6 +437,7 @@ void APRCharacterBase::OnStatsComponentReady(UPRStatsComponent* ReadyStatsComp)
 			HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"), *GetName());
 	}
 }
+
 void APRCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

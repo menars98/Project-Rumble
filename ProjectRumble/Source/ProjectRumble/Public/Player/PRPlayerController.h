@@ -18,8 +18,10 @@ class PROJECTRUMBLE_API APRPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 	
-	virtual void BeginPlay() override;
+public:
 
+	virtual void BeginPlay() override;
+	
 
 protected:
 	/**
@@ -31,7 +33,7 @@ protected:
 
 	// Array to hold the rewards that are currently being offered to the player.
 	// We make it BlueprintReadOnly so the UI can read it.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rewards")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_OfferedRewards, Category = "Rewards")
 	TArray<TObjectPtr<UPRUpgradeData>> OfferedRewards;
 
 	// -- DATA TABLES --
@@ -86,6 +88,10 @@ protected:
 	UFUNCTION()
 	void ShowLevelUpScreen(int32 NewLevel);
 
+	// Called when OfferedRewards is replicated.
+	UFUNCTION()
+	void OnRep_OfferedRewards();
+
 	virtual void SetupInputComponent() override;
 
 	// -- INPUT --
@@ -123,10 +129,19 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestResumeGame();
 
+	UFUNCTION(Server, Reliable)
+	void Server_PauseGameForLevelUp();
+
+	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
+
+	FTimerHandle RetryHandle;
 public:
 	// Called by the UI Widget when a player clicks on a reward button.
 	UFUNCTION(BlueprintCallable, Category = "Rewards")
 	void ApplyReward(UPRUpgradeData* ChosenUpgrade);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ApplyReward(UPRUpgradeData* ChosenUpgrade);
 
 	/**
 	 * A generic function to request and grant rewards from a specific loot pool.
@@ -149,4 +164,11 @@ public:
 	/** Quits the current match and returns to the main menu. */
 	UFUNCTION(BlueprintCallable, Category = "Game")
 	void QuitToMainMenu();
+
+	/**
+	 * [CLIENT] Called by the server to show the "Item Found" popup (e.g., from a Chest).
+	 * @param RewardToDisplay The specific upgrade data to show in the popup.
+	 */
+	UFUNCTION(Client, Reliable)
+	void Client_ShowRewardPopup(UPRUpgradeData* RewardToDisplay);
 };

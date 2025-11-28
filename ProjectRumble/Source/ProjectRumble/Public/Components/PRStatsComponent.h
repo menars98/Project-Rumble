@@ -137,6 +137,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
 	void ApplyDamage(float DamageAmount);
 
+	/**
+	 * Iterates through all cached stats and broadcasts them via OnStatChangedDelegate.
+	 * Call this after binding to ensure the listener is synced with current data.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
+	void RefreshCurrentStats();
+
 	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
 	void AddXP(float XPAmount);
 
@@ -219,6 +226,12 @@ private:
 	 * Helper: Sync from Map to Array
 	 */
 	void SyncReplicatedDataFromCache();
+
+	/**
+	 * Updates a specific stat in the replicated array without rebuilding the whole list.
+	 * This is much more network-efficient than clearing and refilling the array.
+	 */
+	void UpdateReplicatedStat(FGameplayTag StatTag, float NewValue);
 
 	/**
 	 * A helper function to easily broadcast the OnHealthChangedDelegate with current values.

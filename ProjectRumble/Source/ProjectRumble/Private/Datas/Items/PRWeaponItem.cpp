@@ -14,16 +14,20 @@ void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOw
 {
 	Super::Initialize(InItemDefinition, InOwningActor, InitialEffects);
 
-	UE_LOG(LogTemp, Error, TEXT("WEAPON INITIALIZE CALLED for %s!"), *InItemDefinition->DisplayName.ToString());
-
 	// Store and apply the initial effects for this weapon
 	AppliedEffects = InitialEffects;
 	ApplyBonuses(AppliedEffects);
 
-	// Start the attack loop
-	if (GetWorld())
+	// Only the server should start the attack timer
+	if (OwningActor && OwningActor->HasAuthority() && GetWorld())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[SERVER] Starting attack timer for %s"),
+			*ItemDefinition->DisplayName.ToString());
 		Attack();
+	}
+	else if (OwningActor)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[CLIENT] Weapon initialized but timer not started (client)"));
 	}
 }
 
@@ -39,12 +43,13 @@ void UPRWeaponItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffect
 	// Apply ONLY the new bonuses from this level up
 	ApplyBonuses(UpgradeEffects);
 
+
 	// When the weapon levels up, its stats (like cooldown) might change.
 	// We need to restart the timer with the new calculated cooldown.
-	if (OwningActor && GetWorld())
+	if (OwningActor && OwningActor->HasAuthority() && GetWorld())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
-		Attack(); // Restart the loop immediately
+		Attack();
 	}
 
 	// Check if we reached a milestone level.
@@ -63,11 +68,17 @@ void UPRWeaponItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffect
 
 void UPRWeaponItem::Attack()
 {
+	if (!OwningActor) return;
+
+	if (!OwningActor->HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CLIENT] Attack blocked - not authority"));
+		return;
+	}
+
 	// Get the actual class name of this object instance and print it.
 	FString ClassName = GetClass()->GetName();
 	UE_LOG(LogTemp, Error, TEXT("ATTACKING WITH CLASS: %s"), *ClassName);
-
-	if (!OwningActor) return;
 
 	// Perform the attack logic defined in the Blueprint.
 	ExecuteAttack();

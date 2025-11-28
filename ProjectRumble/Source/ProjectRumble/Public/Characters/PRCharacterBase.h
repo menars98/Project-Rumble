@@ -32,7 +32,6 @@ public:
 	virtual UPRStatsComponent* GetStatsComponent() const override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 protected:
 	// -- INPUT --
 	// This is the main Input Mapping Context that will be loaded for gameplay.
@@ -66,6 +65,8 @@ protected:
 	virtual void PossessedBy(AController* NewController) override;
 
 	virtual void OnRep_Controller() override;
+
+	virtual void OnRep_PlayerState() override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 

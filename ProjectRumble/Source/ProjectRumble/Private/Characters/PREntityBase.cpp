@@ -38,10 +38,20 @@ void APREntityBase::BeginPlay()
 
 float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (!HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CLIENT] TakeDamage blocked for %s - not authority"), *GetName());
+		return 0.f;
+	}
+
 	if (DamageAmount <= 0.f)
 	{
 		return 0.f;
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] %s taking %.1f damage from %s"),
+		*GetName(), DamageAmount, DamageCauser ? *DamageCauser->GetName() : TEXT("Unknown"));
+
 
 	UPRStatsComponent* MyStatsComponent = GetStatsComponent();
 	if (!MyStatsComponent)
@@ -53,6 +63,7 @@ float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	// --- 1. EVASION ---
 	if (CheckForEvasion(MyStatsComponent))
 	{
+		UE_LOG(LogTemp, Log, TEXT("[SERVER] %s EVADED the attack!"), *GetName());
 		return 0.f; // Damage is completely negated.
 	}
 
@@ -61,16 +72,15 @@ float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	float DamageAfterShields = ProcessShieldDamage(DamageAmount, MyStatsComponent);
 	if (DamageAfterShields <= 0.f)
 	{
+		UE_LOG(LogTemp, Log, TEXT("[SERVER] Shield absorbed all damage for %s"), *GetName());
 		// If shield absorbed all damage, we are done.
 		return 0.f; // Report that 0 damage was taken by health.
 	}
 
 	// --- 3. ARMOR REDUCTION ---
 	const float DamageToApply = CalculateArmorReduction(DamageAmount, MyStatsComponent);
-
 	// Round the damage to the nearest integer.
 	const int32 RoundedDamage = FMath::RoundToInt(DamageToApply);
-
 	// Ensure the rounded damage is at least 1 (We don't want 0 damage unless it was evaded).
 	const int32 FinalHealthDamage = FMath::Max(RoundedDamage, 1);
 

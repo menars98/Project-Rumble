@@ -31,6 +31,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AI|Difficulty")
 	void UpdateDifficultyMultiplier(float NewDifficultyMultiplier);
 
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayHitFlash();
+
 protected:
 	// -- COMPONENTS --
 	// The AI has its own StatsComponent directly on itself.

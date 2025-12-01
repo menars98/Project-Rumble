@@ -394,34 +394,51 @@ void APRCharacterBase::InitializeCharacter()
 	// Wait for the PlayerState to tell us the StatsComponent is ready.
 	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
 	{
+		PS->StatsComponent->OnStatChangedDelegate.RemoveDynamic(this, &APRCharacterBase::OnStatChanged);
+		PS->StatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
+
 		if (PS->StatsComponent)
 		{
-			PS->StatsComponent->OnStatChangedDelegate.RemoveDynamic(this, &APRCharacterBase::OnStatChanged);
-			PS->StatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
-
 			//Just in case if we missed the ready event
 			PS->StatsComponent->RefreshCurrentStats();
 		}
 		// Subscribe to the event.
+		PS->OnStatsComponentReady.RemoveDynamic(this, &APRCharacterBase::OnStatsComponentReady);
 		PS->OnStatsComponentReady.AddDynamic(this, &APRCharacterBase::OnStatsComponentReady);
 	}
 
 	if (PickupSphere)
 	{
+		PickupSphere->OnComponentBeginOverlap.RemoveDynamic(this, &APRCharacterBase::OnPickupSphereOverlap);
 		PickupSphere->OnComponentBeginOverlap.AddDynamic(this, &APRCharacterBase::OnPickupSphereOverlap);
 	}
 }
 
 void APRCharacterBase::OnStatsComponentReady(UPRStatsComponent* ReadyStatsComp)
 {
+	// 1. SAFETY CHECK: Ensure both the Character and the Component are valid and not being destroyed.
+	if (!IsValid(this) || !IsValid(ReadyStatsComp))
+	{
+		return;
+	}
+	UE_LOG(LogTemp, Log, TEXT("[%s] Binding to StatsComponent delegates for %s"),
+		HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"), *GetName());
+	// 2. SAFE BINDING: Use AddUniqueDynamic to prevent multiple bindings (though AddDynamic usually handles this, Unique is safer here).
+	// @TODO: We can also, verify IsBound checks internally if needed, but AddUnique is the key.
+
 	if (ReadyStatsComp)
 	{
 		UE_LOG(LogTemp, Error, TEXT("[%s] Binding to StatsComponent delegates for %s"),
 			HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"), *GetName());
 
-		ReadyStatsComp->OnHealthChangedDelegate.AddDynamic(this, &APRCharacterBase::OnHealthChanged);
-		ReadyStatsComp->OnDeathDelegate.AddDynamic(this, &APRCharacterBase::OnDeath);
-		ReadyStatsComp->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
+		ReadyStatsComp->OnHealthChangedDelegate.RemoveDynamic(this, &APRCharacterBase::OnHealthChanged);
+		ReadyStatsComp->OnHealthChangedDelegate.AddUniqueDynamic(this, &APRCharacterBase::OnHealthChanged);
+
+		ReadyStatsComp->OnDeathDelegate.RemoveDynamic(this, &APRCharacterBase::OnDeath);
+		ReadyStatsComp->OnDeathDelegate.AddUniqueDynamic(this, &APRCharacterBase::OnDeath);
+
+		ReadyStatsComp->OnStatChangedDelegate.RemoveDynamic(this, &APRCharacterBase::OnStatChanged);
+		ReadyStatsComp->OnStatChangedDelegate.AddUniqueDynamic(this, &APRCharacterBase::OnStatChanged);
 
 		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight, ReadyStatsComp->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight));
 		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump, ReadyStatsComp->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump));

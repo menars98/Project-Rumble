@@ -6,15 +6,27 @@
 #include "Datas/PRUpgradeData.h"
 #include "GameFramework/Pawn.h" 
 #include "GameFramework/PlayerState.h"
+#include "Net/UnrealNetwork.h"
+#include "Engine/ActorChannel.h" 
 
 UPRInventoryComponent::UPRInventoryComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
 }
 
 void UPRInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void UPRInventoryComponent::OnRep_InventoryUpdated()
+{
+	if (OnInventoryUpdated.IsBound())
+	{
+		OnInventoryUpdated.Broadcast();
+	}
+	UE_LOG(LogTemp, Log, TEXT("[CLIENT] Inventory Arrays Replicated. Broadcasting Update."));
 }
 
 void UPRInventoryComponent::AddStartingItem(UPRItemDefinition* ItemDef)
@@ -173,4 +185,59 @@ void UPRInventoryComponent::UpgradeExistingItem(UPRBaseItem* ItemToUpgrade, cons
 	}
 }
 
+bool UPRInventoryComponent::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+{
+	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
+	// 1. Replicate Weapons
+	for (UPRBaseItem* Item : OwnedWeapons)
+	{
+		if (Item)
+		{
+			bool bIsSupported = Item->IsSupportedForNetworking();
+			UE_LOG(LogTemp, Log, TEXT("Replicating Item: %s (Supported: %s)"), *Item->GetName(), bIsSupported ? TEXT("YES") : TEXT("NO"));
+			bWroteSomething |= Channel->ReplicateSubobject(Item, *Bunch, *RepFlags);
+		}
+	}
+
+	// 2. Replicate Tomes
+	for (UPRBaseItem* Item : OwnedTomes)
+	{
+		if (Item)
+		{
+			bool bIsSupported = Item->IsSupportedForNetworking();
+			UE_LOG(LogTemp, Log, TEXT("Replicating Item: %s (Supported: %s)"), *Item->GetName(), bIsSupported ? TEXT("YES") : TEXT("NO"));
+			bWroteSomething |= Channel->ReplicateSubobject(Item, *Bunch, *RepFlags);
+		}
+	}
+
+	// 3. Replicate Relics
+	for (UPRBaseItem* Item : OwnedRelics)
+	{
+		if (Item)
+		{
+			bool bIsSupported = Item->IsSupportedForNetworking();
+			UE_LOG(LogTemp, Log, TEXT("Replicating Item: %s (Supported: %s)"), *Item->GetName(), bIsSupported ? TEXT("YES") : TEXT("NO"));
+			bWroteSomething |= Channel->ReplicateSubobject(Item, *Bunch, *RepFlags);
+		}
+	}
+	// 4. Replicate Items
+	for(UPRBaseItem* Item : OwnedItems)
+	{
+		if(Item)
+		{
+			bool bIsSupported = Item->IsSupportedForNetworking();
+			UE_LOG(LogTemp, Log, TEXT("Replicating Item: %s (Supported: %s)"), *Item->GetName(), bIsSupported ? TEXT("YES") : TEXT("NO"));
+			bWroteSomething |= Channel->ReplicateSubobject(Item, *Bunch, *RepFlags);
+		}
+	}
+	return bWroteSomething;
+}
+void UPRInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UPRInventoryComponent, OwnedWeapons);
+	DOREPLIFETIME(UPRInventoryComponent, OwnedTomes);
+	DOREPLIFETIME(UPRInventoryComponent, OwnedRelics);
+	DOREPLIFETIME(UPRInventoryComponent, OwnedItems);
+}

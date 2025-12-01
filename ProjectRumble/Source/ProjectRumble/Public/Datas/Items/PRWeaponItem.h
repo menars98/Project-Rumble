@@ -39,6 +39,8 @@ public:
 	// Override the LevelUp function to potentially update the timer.
 	virtual void LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects) override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UPROPERTY(BlueprintAssignable)
 	FOnDamageDealtSignature OnDamageDealt;
 
@@ -112,7 +114,7 @@ protected:
 	FDamageCalculationResult CalculateFinalDamage(const APRAIBase* Target);
 
 	/** The list of all effects this weapon instance has applied to the player. */
-	UPROPERTY(VisibleAnywhere, Category = "Weapon")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Weapon")
 	TArray<FPotentialUpgradeEffect> AppliedEffects;
 
 	/** Helper function to apply a list of effects to the owner's StatsComponent. */

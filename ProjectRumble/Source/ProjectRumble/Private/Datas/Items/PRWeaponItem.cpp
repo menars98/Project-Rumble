@@ -9,6 +9,7 @@
 #include "Datas/PRItemDefinition.h"
 #include "PRGameplayTags.h"
 #include "TimerManager.h" 
+#include "Net/UnrealNetwork.h"
 
 void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects)
 {
@@ -447,4 +448,11 @@ FPRWeaponAttackStats UPRWeaponItem::GetCalculatedAttackStats() const
 	//For example, FinalStats.TickRate = ItemDefinition->WeaponStats.BaseTickRate;
 
 	return FinalStats;
+}
+
+void UPRWeaponItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UPRWeaponItem, AppliedEffects);
 }

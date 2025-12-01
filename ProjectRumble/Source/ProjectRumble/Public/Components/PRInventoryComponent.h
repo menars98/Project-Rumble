@@ -57,9 +57,16 @@ public:
 
 	UFUNCTION()
 	int GetMaxTomeCount() const { return MaxTomes;}
+
+	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags);
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void OnRep_InventoryUpdated();
 
 	/** Adds a new item to the inventory based on its definition. */
 	void AddNewItem(UPRItemDefinition* ItemDef, const TArray<FPotentialUpgradeEffect>& InitialEffects);
@@ -68,18 +75,18 @@ protected:
 	void UpgradeExistingItem(UPRBaseItem* ItemToUpgrade, const TArray<FPotentialUpgradeEffect>& UpgradeEffects);
 
 	// The list of all WEAPONS the player currently owns.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_InventoryUpdated, Category = "Inventory")
 	TArray<TObjectPtr<UPRBaseItem>> OwnedWeapons;
 
 	// The list of all TOMES the player currently owns.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_InventoryUpdated, Category = "Inventory")
 	TArray<TObjectPtr<UPRBaseItem>> OwnedTomes;
 
 	// The list of all RELICS the player currently owns.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_InventoryUpdated, Category = "Inventory")
 	TArray<TObjectPtr<UPRBaseItem>> OwnedRelics;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_InventoryUpdated, Category = "Inventory")
 	TArray<TObjectPtr<UPRBaseItem>> OwnedItems;
 
 	// Maximum number of items of each type the player can hold.

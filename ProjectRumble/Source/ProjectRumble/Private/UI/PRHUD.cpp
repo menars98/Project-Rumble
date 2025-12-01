@@ -6,12 +6,12 @@
 #include "Interfaces/PRBPIPlayerHUD.h"
 #include <Player/PRPlayerState.h>
 
-void APRHUD::InitializeHUDStats(UPRStatsComponent* StatsComp)
+void APRHUD::InitializeHUDStats(APRPlayerState* PlayerState)
 {
 	if (PlayerHUDWidget)
 	{
 
-		IPRBPIPlayerHUD::Execute_SetupHUD(PlayerHUDWidget, StatsComp); 
+        IPRBPIPlayerHUD::Execute_SetupHUD(PlayerHUDWidget, PlayerState);
 
 	}
 }
@@ -36,7 +36,7 @@ void APRHUD::BeginPlay()
                 {
                     if (PS->StatsComponent)
                     {
-                        InitializeHUDStats(PS->StatsComponent);
+                        InitializeHUDStats(PS);
                         UE_LOG(LogTemp, Warning, TEXT("[HUD] Initialized directly in BeginPlay (Server/Host path)."));
                     }
                 }

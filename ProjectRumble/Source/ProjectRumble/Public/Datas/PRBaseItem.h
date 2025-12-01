@@ -35,6 +35,10 @@ public:
 	 */
 	virtual void Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects);
 
+	virtual bool IsSupportedForNetworking() const override { return true; }
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	/**
 	 * Levels up the item. This function can be overridden by child classes
 	 * to apply specific level-up logic.
@@ -59,11 +63,11 @@ protected:
 	FGameplayTagContainer AcquiredAbilityTags;
 
 	// The static data that defines what this item is.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Item")
 	TObjectPtr<UPRItemDefinition> ItemDefinition;
 
 	// The current level of this specific item instance.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Item")
 	int32 CurrentLevel;
 
 	// A reference to the actor that owns this item (usually the player character).

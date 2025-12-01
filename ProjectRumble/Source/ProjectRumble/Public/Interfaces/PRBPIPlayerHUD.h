@@ -6,6 +6,8 @@
 #include "UObject/Interface.h"
 #include "PRBPIPlayerHUD.generated.h"
 
+class APRPlayerState;
+
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI, Blueprintable)
 class UPRBPIPlayerHUD : public UInterface
@@ -13,9 +15,7 @@ class UPRBPIPlayerHUD : public UInterface
 	GENERATED_BODY()
 };
 
-/**
- * 
- */
+
 class PROJECTRUMBLE_API IPRBPIPlayerHUD
 {
 	GENERATED_BODY()
@@ -25,7 +25,7 @@ public:
 
 	// A function that can have a default C++ implementation, but can also be overridden in Blueprint.
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "HUD")
-	void SetupHUD(class UPRStatsComponent* StatsComp);
+	void SetupHUD(APRPlayerState* PlayerState);
 
 	// A function that can be implemented in Blueprint.
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "HUD")

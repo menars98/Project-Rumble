@@ -242,6 +242,16 @@ private:
 	 * A helper function to easily broadcast the OnShieldChangedDelegate with current values.
 	 */
 	void BroadcastShield();
+
+	/**
+	 * A helper function to easily broadcast the OnXPChangedDelegate with current values.
+	 */
+	void BroadcastXP();
+
+	/**
+	 * A helper function to easily broadcast the OnResourceChangedDelegate with current values.
+	 */
+	void BroadcastResources();
 	// --- HEALTH REGEN ---
 
 	// Timer handle to manage the health regeneration loop.

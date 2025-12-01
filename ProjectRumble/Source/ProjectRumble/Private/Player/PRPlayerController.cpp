@@ -34,13 +34,27 @@ void APRPlayerController::OnPossess(APawn* InPawn)
     Super::OnPossess(InPawn);
 
 	// Server-side setup, like binding to delegates, happens here.
+	//Only if it's a Game Character, Configure Gameplay Settings ---
+	//We can make a new controller for main menu or other non-game pawns later if needed.
+	if (APRCharacterBase* MyCharacter = Cast<APRCharacterBase>(InPawn))
+	{
+		// 1. Gameplay Input Settings
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+		UE_LOG(LogTemp, Warning, TEXT("Gameplay Setup Complete for Character: %s"), *InPawn->GetName());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnPossess called for Non-Game Character (likely Main Menu). Skipping setup."));
+	}
 
 	// On server, PlayerState is usually ready immediately, but let's be safe.
 	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
 	{
 		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
 		{
-			PRHUD->InitializeHUDStats(PS->StatsComponent);
+			PRHUD->InitializeHUDStats(PS);
 		}
 	}
 
@@ -238,7 +252,7 @@ void APRPlayerController::OnRep_PlayerState()
 		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
 		{
 			// Send the component to the HUD widget
-			PRHUD->InitializeHUDStats(PS->StatsComponent);
+			PRHUD->InitializeHUDStats(PS);
 		}
 	}
 }

@@ -24,6 +24,7 @@ void UPRStatsComponent::OnRep_ReplicatedStats()
 	// Update UI
 	BroadcastHealth();
 	BroadcastShield();
+	BroadcastXP();
 
 	UE_LOG(LogTemp, Log, TEXT("[CLIENT] Stats replicated (%d stats received)"), ReplicatedStats.Num());
 }
@@ -83,6 +84,14 @@ void UPRStatsComponent::SyncCacheFromReplicatedData()
 					OnDifficultyChangedDelegate.Broadcast(Entry.Value);
 				}
 			}
+			if (Entry.StatTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Stat.Resource"))))
+			{
+				if (OnResourceChangedDelegate.IsBound())
+				{
+					// Resources are usually integers (Gold, Gems), so we round.
+					OnResourceChangedDelegate.Broadcast(Entry.StatTag, FMath::RoundToInt(Entry.Value));
+				}
+			}
 		}
 	}
 
@@ -114,6 +123,8 @@ void UPRStatsComponent::ForceUpdateUI()
 	// Simply call the broadcast functions to update any UI or systems listening to these delegates.
 	BroadcastHealth();
 	BroadcastShield();
+	BroadcastXP();
+	BroadcastResources();
 }
 
 void UPRStatsComponent::BeginPlay()
@@ -177,8 +188,7 @@ void UPRStatsComponent::InitializeStats()
 
 	UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeStats complete | Health: %.0f/%.0f | Stats Count: %d"),GetOwner()->HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"),
 		CurrentHealth, MaxHealth, CurrentStatsCache.Num());
-	BroadcastHealth();
-	BroadcastShield();
+	ForceUpdateUI();
 }
 
 void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStatsArray, float DifficultyMultiplier)
@@ -403,6 +413,38 @@ void UPRStatsComponent::BroadcastShield()
 	}
 }
 
+void UPRStatsComponent::BroadcastXP()
+{
+	if(OnXPChangedDelegate.IsBound())
+	{
+		const float CurrentXP = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_XP);
+		const float MaxXP = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxXP);
+		OnXPChangedDelegate.Broadcast(CurrentXP, MaxXP);
+	}
+}
+
+void UPRStatsComponent::BroadcastResources()
+{
+	if (!OnResourceChangedDelegate.IsBound())
+	{
+		return;
+	}
+
+	// Define the parent tag for resources
+	const FGameplayTag ResourceParentTag = FGameplayTag::RequestGameplayTag(FName("Stat.Resource"));
+
+	for (const TPair<FGameplayTag, float>& Pair : CurrentStatsCache)
+	{
+		// Check if the stat tag matches the Resource parent tag
+		if (Pair.Key.MatchesTag(ResourceParentTag))
+		{
+			int32 ResourceAmount = FMath::RoundToInt(Pair.Value);
+
+			OnResourceChangedDelegate.Broadcast(Pair.Key, ResourceAmount);
+		}
+	}
+}
+
 void UPRStatsComponent::AddXP(float XPAmount)
 {
 	if (XPAmount <= 0.f)
@@ -571,6 +613,8 @@ void UPRStatsComponent::RefreshCurrentStats()
 
 	BroadcastHealth();
 	BroadcastShield();
+	BroadcastXP();
+	BroadcastResources();
 
 	UE_LOG(LogTemp, Log, TEXT("Refreshed all stats for %s. Processed %d entries."), *GetOwner()->GetName(), CurrentStatsCache.Num());
 }

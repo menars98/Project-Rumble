@@ -22,7 +22,6 @@ public:
 
 	// --- COMPONENTS ---
 
-	// Root Component olarak kullanýlacak Sphere Collision. 
 	// Diðer Projectile'larda (Axe, Arrow) deðiþtirilebilir.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USphereComponent> RootCollision;

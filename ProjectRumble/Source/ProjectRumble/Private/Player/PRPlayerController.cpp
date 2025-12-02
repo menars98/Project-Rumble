@@ -17,6 +17,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/ActorChannel.h"
 #include "Engine/TimerHandle.h"
+#include "FunctionLibrary/PRGameplayStatics.h"
 
 void APRPlayerController::BeginPlay()
 {
@@ -27,6 +28,21 @@ void APRPlayerController::BeginPlay()
 	 // Determine if we are on the server or client
     FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
 	UE_LOG(LogTemp, Warning, TEXT("[%s] PlayerController BeginPlay for %s."), *RoleString, *GetName());
+}
+
+void APRPlayerController::Client_ShowDamageEffect_Implementation(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound)
+{
+	if (!TargetActor) return;
+
+	// 1. Show Damage Number (Only visible to player)
+	// We use 'this' as WorldContext because we are inside the local controller now.
+	UPRGameplayStatics::SpawnDamageNumber(this, DamageAmount, bIsCritical, TargetActor);
+
+	// 2. Play Hit Sound (Only audible to player)
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, HitSound, TargetActor->GetActorLocation());
+	}
 }
 
 void APRPlayerController::OnPossess(APawn* InPawn)

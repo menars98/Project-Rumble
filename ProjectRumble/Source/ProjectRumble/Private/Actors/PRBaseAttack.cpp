@@ -12,6 +12,9 @@ APRBaseAttack::APRBaseAttack()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
+    bReplicates = true;
+    SetReplicateMovement(true);
+
 	// Setup the default lifespan
 	InitialLifeSpan = AttackStats.LifeDuration; 
 
@@ -30,9 +33,9 @@ void APRBaseAttack::BeginPlay()
 
 void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 {
-    if (ImpactSound)
+    if (!HasAuthority())
     {
-        UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
+        return;
     }
 
     // Ensure all necessary actors are valid.
@@ -45,17 +48,11 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 
     // Owner is the Player Character, which is the actual damage dealer.
     APRCharacterBase* PlayerCharacter = Cast<APRCharacterBase>(GetOwner());
-    if (!PlayerCharacter)
-    {
-        return;
-    }
+    if (!PlayerCharacter) return;
 
     // Get the Stats Component from the Player Character.
     UPRStatsComponent* AttackerStats = PlayerCharacter->GetStatsComponent();
-    if (!AttackerStats)
-    {
-        return;
-    }
+    if (!AttackerStats) return;
 
     // Get Instigator Controller (The Controller of the Owner/Player).
     AController* InstigatorController = PlayerCharacter->GetController();
@@ -88,7 +85,8 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
         GetActorForwardVector(), // Knockback Direction (Can be changed in BP if needed)
         AttackStats.KnockbackMagnitude,
         AttackStats.StunChance,
-        AttackStats.StunDuration
+        AttackStats.StunDuration,
+        ImpactSound
     );
 }
 

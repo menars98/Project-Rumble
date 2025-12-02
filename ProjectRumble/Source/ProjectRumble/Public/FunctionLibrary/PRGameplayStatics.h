@@ -9,6 +9,7 @@
 
 class APRAIBase;
 class UPRStatsComponent;
+class USoundBase;
 
 UCLASS()
 class PROJECTRUMBLE_API UPRGameplayStatics : public UBlueprintFunctionLibrary
@@ -62,7 +63,8 @@ public:
 		const FVector& KnockbackDirection,
 		float KnockbackMagnitude,
 		float StunChance,
-		float StunDuration
+		float StunDuration,
+		USoundBase* HitSound = nullptr
 	);
 
 	/**

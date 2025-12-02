@@ -50,6 +50,10 @@ public:
 	TArray<FLevelMilestone> Milestones;
 
 protected:
+
+	// The timer handle that manages the attack loop.
+	FTimerHandle AttackTimerHandle;
+
 	// The function that performs the actual attack logic (spawning projectiles, etc.).
 	// This should be overridden by specific weapon Blueprints or C++ classes.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
@@ -91,9 +95,6 @@ protected:
 	// A helper function to get the final, calculated projectile bounce for this weapon.
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	int32 GetCalculatedProjectileBounce() const;
-
-	// The timer handle that manages the attack loop.
-	FTimerHandle AttackTimerHandle;
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	int32 GetCalculatedProjectileCount() const;

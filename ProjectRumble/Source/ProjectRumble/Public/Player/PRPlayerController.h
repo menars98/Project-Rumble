@@ -22,6 +22,16 @@ public:
 
 	virtual void BeginPlay() override;
 	
+	/**
+	 * [CLIENT] Shows damage numbers and plays hit sounds ONLY for this local player.
+	 * Called by the server when this player deals damage.
+	 * @param TargetActor The actor that was hit (for location).
+	 * @param DamageAmount The damage dealt.
+	 * @param bIsCritical Was it a crit?
+	 * @param HitSound Optional sound to play locally.
+	 */
+	UFUNCTION(Client, Unreliable) // Unreliable is faster and fine for FX.
+	void Client_ShowDamageEffect(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound);
 
 protected:
 	/**

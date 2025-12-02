@@ -10,8 +10,6 @@
 class UPRItemDefinition;
 class AActor;
 
-
-
 /**
  * The base class for all acquirable items in the game (Weapons, Tomes, Relics).
  * This is a UObject, meaning it does not exist in the world physically by itself.

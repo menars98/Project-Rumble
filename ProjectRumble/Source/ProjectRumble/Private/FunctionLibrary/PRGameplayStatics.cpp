@@ -12,6 +12,7 @@
 #include "UI/Widgets/PRWorldUserWidget.h"
 #include "Game/PRGameInstance.h"
 #include "Interfaces/PRBPIDamageNumber.h"
+#include <Player/PRPlayerController.h>
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -51,7 +52,7 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 	return Result;
 }
 
-float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor* DamagedActor, float BaseDamage, const FDamageCalculationResult& DamageResult, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration)
+float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor* DamagedActor, float BaseDamage, const FDamageCalculationResult& DamageResult, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration, USoundBase* HitSound)
 {
 	
 
@@ -141,7 +142,12 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 	// For now, let's just spawn a non-crit number.
 	if (ActualDamage > 0.f && WorldContextObject)
 	{
-		SpawnDamageNumber(WorldContextObject, ActualDamage, DamageResult.bWasCriticalHit, DamagedActor);
+		// Check if the damage dealer is a Player
+		if (APRPlayerController* PC = Cast<APRPlayerController>(EventInstigator))
+		{
+			// Send the visual/audio cue ONLY to the player who dealt the damage.
+			PC->Client_ShowDamageEffect(DamagedActor, ActualDamage, DamageResult.bWasCriticalHit, HitSound);
+		}
 	}
 	return ActualDamage;
 }

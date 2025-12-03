@@ -23,6 +23,15 @@ public:
 	float MaxDifficultyMultiplier = 6.0f;
 
 protected:
+
+	/** The class of the Spawner Manager to spawn at the start of the game. */
+	UPROPERTY(EditDefaultsOnly, Category = "Spawning")
+	TSubclassOf<class APRSpawnerManager> SpawnerManagerClass;
+
+	// A reference to the spawned Spawner Manager instance.
+	UPROPERTY()
+	TObjectPtr<class APRSpawnerManager> SpawnerManagerInstance;
+
 	// --- DIFFICULTY MANAGEMENT ---
 	/**
 	 * Recalculates the highest Difficulty Stat value among all players and updates ActiveDifficultyMultiplier.
@@ -30,10 +39,6 @@ protected:
 	 */
 	UFUNCTION()
 	void RecalculateActiveDifficulty();
-
-	// Function to bind to a player's stats component delegate.
-	UFUNCTION()
-	void BindToPlayerDifficulty(UPRStatsComponent* PlayerStatsComp);
 
 	/** Called when a PlayerState reports that its StatsComponent is ready. */
 

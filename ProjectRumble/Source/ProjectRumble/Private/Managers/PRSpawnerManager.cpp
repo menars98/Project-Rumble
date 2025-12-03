@@ -10,6 +10,8 @@
 APRSpawnerManager::APRSpawnerManager()
 {
 	PrimaryActorTick.bCanEverTick = true; // We need tick to check the game time
+	// This actor shouldnt live on client
+	bReplicates = false;
 	NextWaveIndex = 0;
 	TargetAICount = 0;
 	NextBossIndex = 0;
@@ -19,6 +21,17 @@ void APRSpawnerManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!HasAuthority())
+	{
+		// If this is a client, disable ticking to save performance and prevent logic execution.
+		SetActorTickEnabled(false);
+
+		// Clear any timers if they were somehow set (precautionary).
+		GetWorld()->GetTimerManager().ClearTimer(SpawnTimerHandle);
+
+		UE_LOG(LogTemp, Log, TEXT("[CLIENT] APRSpawnerManager disabled on client."));
+		return;
+	}
 	CurrentMaxActiveAI = BaseMaxActiveAI;
 
 	// Start the spawn loop timer
@@ -30,6 +43,12 @@ void APRSpawnerManager::BeginPlay()
 void APRSpawnerManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// Double check authority (though SetActorTickEnabled(false) in BeginPlay should handle it).
+	if (!HasAuthority())
+	{
+		return;
+	}
 
 	// GameTime is needed by the Wave Processor and the Max AI Logic.
 	// GetTimeSeconds() automatically pauses when the game is paused.

@@ -54,6 +54,10 @@ protected:
 	// The timer handle that manages the attack loop.
 	FTimerHandle AttackTimerHandle;
 
+	// Local stat modifiers specific to this weapon instance.
+	UPROPERTY()
+	TMap<FGameplayTag, float> LocalStatModifiers;
+
 	// The function that performs the actual attack logic (spawning projectiles, etc.).
 	// This should be overridden by specific weapon Blueprints or C++ classes.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
@@ -115,11 +119,17 @@ protected:
 	FDamageCalculationResult CalculateFinalDamage(const APRAIBase* Target);
 
 	/** The list of all effects this weapon instance has applied to the player. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Weapon")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AppliedEffects, Category = "Weapon")
 	TArray<FPotentialUpgradeEffect> AppliedEffects;
 
 	/** Helper function to apply a list of effects to the owner's StatsComponent. */
-	void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
+	//void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
+
+	UFUNCTION()
+	void OnRep_AppliedEffects();
+
+	// Recalculates local stats based on current effects and upgrades.
+	void RecalculateLocalStats();
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	FPRWeaponAttackStats GetCalculatedAttackStats() const;

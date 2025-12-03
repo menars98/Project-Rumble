@@ -7,6 +7,7 @@
 #include "Components/PRStatsComponent.h"
 #include "Game/PRGameState.h"
 #include "AI/PRAIBase.h"
+#include <Managers/PRSpawnerManager.h>
 
 APRGameMode::APRGameMode()
 {
@@ -16,25 +17,17 @@ APRGameMode::APRGameMode()
 void APRGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-
-	
 }
 
 void APRGameMode::StartPlay()
 {
 	Super::StartPlay();
-	//// At the start of play, bind to all existing players' stats components.
-	//TArray<AActor*> PlayerStates;
-	//UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRPlayerState::StaticClass(), PlayerStates);
-	//for (AActor* PlayerStateActor : PlayerStates)
-	//{
-	//	if (APRPlayerState* PR_PlayerState = Cast<APRPlayerState>(PlayerStateActor))
-	//	{
-	//		BindToPlayerDifficulty(PR_PlayerState->StatsComponent);
-	//	}
-	//}
-	//// Initial calculation of active difficulty.
-	//RecalculateActiveDifficulty();
+
+	if (SpawnerManagerClass)
+	{
+		GetWorld()->SpawnActor<APRSpawnerManager>(SpawnerManagerClass);
+		UE_LOG(LogTemp, Log, TEXT("Spawner Manager has been initialized by GameMode."));
+	}
 }
 
 void APRGameMode::PostLogin(APlayerController* NewPlayer)
@@ -50,6 +43,13 @@ void APRGameMode::PostLogin(APlayerController* NewPlayer)
 			// Now we wait for its internal components to be ready.
 			PR_PlayerState->OnStatsComponentReady.AddDynamic(this, &APRGameMode::HandlePlayerReady);
 		}
+
+		if (NewPlayer->GetPawn() == nullptr)
+		{
+			RestartPlayer(NewPlayer); 
+			UE_LOG(LogTemp, Warning, TEXT("[SERVER] Late joiner %s forced to spawn."), *NewPlayer->GetName());
+		}
+
 	}
 }
 
@@ -128,22 +128,6 @@ void APRGameMode::RecalculateActiveDifficulty()
 		UE_LOG(LogTemp, Log, TEXT("Active Difficulty Multiplier updated to: %.2f"), FinalMultiplier);
 	}
 	
-}
-
-void APRGameMode::BindToPlayerDifficulty(UPRStatsComponent* PlayerStatsComp)
-{
-	if (PlayerStatsComp)
-	{
-		// 1. Bind the function to the player's difficulty change delegate.
-		PlayerStatsComp->OnDifficultyChangedDelegate.AddDynamic(this, &APRGameMode::OnPlayerDifficultyChanged);
-		if (GetGameState<APRGameState>())
-		{
-			RecalculateActiveDifficulty();
-		}
-		// 2. Set the initial difficulty based on the new player's current stat.
-		// This handles the initial state after binding.
-		//OnPlayerDifficultyChanged(PlayerStatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty));
-	}
 }
 
 

@@ -24,11 +24,13 @@ public:
 	// Called by the InventoryComponent when the item is removed (for future use).
 	void Uninitialize();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	// Helper function to apply this item's bonuses to the StatsComponent.
 	void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
 
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	TArray<FPotentialUpgradeEffect> AppliedEffects;
 
 };

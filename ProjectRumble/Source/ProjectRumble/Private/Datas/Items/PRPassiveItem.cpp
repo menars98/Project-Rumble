@@ -52,3 +52,11 @@ void UPRPassiveItem::Uninitialize()
 	// TODO: Implement logic to REMOVE the bonuses this tome granted.
 	// This requires storing the applied bonuses or having a more advanced stat modification system.
 }
+
+void UPRPassiveItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Diziyi istemciye gönder
+	DOREPLIFETIME(UPRPassiveItem, AppliedEffects);
+}

@@ -18,71 +18,97 @@
 #include "Engine/ActorChannel.h"
 #include "Engine/TimerHandle.h"
 #include "FunctionLibrary/PRGameplayStatics.h"
+#include <GameModes/PRGameMode.h>
+
+APRPlayerController::APRPlayerController()
+{
+	bReplicates = true; 
+}
 
 void APRPlayerController::BeginPlay()
 {
     Super::BeginPlay();
-
-	bReplicates = true;
-
 	 // Determine if we are on the server or client
     FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
 	UE_LOG(LogTemp, Warning, TEXT("[%s] PlayerController BeginPlay for %s."), *RoleString, *GetName());
 }
 
-void APRPlayerController::Client_ShowDamageEffect_Implementation(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound)
+void APRPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	if (!TargetActor) return;
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APRPlayerController, OfferedRewards);
+}
 
-	// 1. Show Damage Number (Only visible to player)
-	// We use 'this' as WorldContext because we are inside the local controller now.
-	UPRGameplayStatics::SpawnDamageNumber(this, DamageAmount, bIsCritical, TargetActor);
+bool APRPlayerController::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+{
+	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
-	// 2. Play Hit Sound (Only audible to player)
-	if (HitSound)
+	// Replicate each offered reward upgrade data
+	for (UPRUpgradeData* UpgradeData : OfferedRewards)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, HitSound, TargetActor->GetActorLocation());
+		if (UpgradeData)
+		{
+			bWroteSomething |= Channel->ReplicateSubobject(UpgradeData, *Bunch, *RepFlags);
+		}
 	}
+
+	return bWroteSomething;
 }
 
 void APRPlayerController::OnPossess(APawn* InPawn)
 {
-    Super::OnPossess(InPawn);
-
-	// Server-side setup, like binding to delegates, happens here.
-	//Only if it's a Game Character, Configure Gameplay Settings ---
-	//We can make a new controller for main menu or other non-game pawns later if needed.
-	if (APRCharacterBase* MyCharacter = Cast<APRCharacterBase>(InPawn))
-	{
-		// 1. Gameplay Input Settings
-		FInputModeGameOnly InputMode;
-		SetInputMode(InputMode);
-		bShowMouseCursor = false;
-		UE_LOG(LogTemp, Warning, TEXT("Gameplay Setup Complete for Character: %s"), *InPawn->GetName());
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("OnPossess called for Non-Game Character (likely Main Menu). Skipping setup."));
-	}
-
-	// On server, PlayerState is usually ready immediately, but let's be safe.
+	Super::OnPossess(InPawn);
+// Server-side Setup
 	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
 	{
 		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
 		{
 			PRHUD->InitializeHUDStats(PS);
 		}
-	}
-
-	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
-	{
 		if (UPRStatsComponent* StatsComp = PS->StatsComponent)
 		{
 			StatsComp->OnLevelUpDelegate.AddDynamic(this, &APRPlayerController::ShowLevelUpScreen);
 		}
 	}
-	UE_LOG(LogTemp, Warning, TEXT("[SERVER ONLY] OnPossess called for %s, controlling Pawn %s."), *GetName(), *InPawn->GetName());
 
+	// If it's a Game Character, apply gameplay input settings
+	if (Cast<APRCharacterBase>(InPawn))
+	{
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] OnPossess for %s"), *GetName());
+
+}
+
+void APRPlayerController::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+
+	// Client-side Input Setup
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+
+	// We could also initialize client-side UI elements here if needed.
+}
+
+void APRPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	// CLIENT SIDE SETUP
+	// PlayerState is now valid. Let's initialize the HUD.
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
+		{
+			// Send the component to the HUD widget
+			PRHUD->InitializeHUDStats(PS);
+		}
+	}
 }
 
 void APRPlayerController::SetupInputComponent()
@@ -104,12 +130,79 @@ void APRPlayerController::SetupInputComponent()
 	}
 }
 
+void APRPlayerController::TogglePauseMenu()
+{
+	// Local check to decide whether to Open or Close
+	bool bShouldOpen = !bIsPauseMenuOpen;
+	Server_SetPauseMenuState(bShouldOpen);
+}
+
+void APRPlayerController::ResumeGame()
+{
+	// Explicitly close the menu
+	Server_SetPauseMenuState(false);
+}
+
+void APRPlayerController::Server_SetPauseMenuState_Implementation(bool bIsOpen)
+{
+	// Update Server State
+	bIsPauseMenuOpen = bIsOpen;
+
+	// Tell GameMode to lock/unlock the game globally
+	if (APRGameMode* GM = Cast<APRGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		if (bIsOpen)
+		{
+			GM->RegisterPlayerInMenu();
+		}
+		else
+		{
+			GM->UnregisterPlayerInMenu();
+		}
+	}
+
+	// Tell ALL clients (including owning client) to update UI
+	// Why ALL? Because in Co-op, we might want to show "Player 2 Paused" text.
+	// For now, we just tell THIS client to show the menu.
+	Client_TogglePauseMenuUI(bIsOpen);
+}
+
+void APRPlayerController::Client_TogglePauseMenuUI_Implementation(bool bOpen)
+{
+	// Update Local State
+	bIsPauseMenuOpen = bOpen;
+
+	if (bOpen)
+	{
+		// Open Menu
+		if (PauseMenuWidgetClass && !PauseMenuInstance)
+		{
+			PauseMenuInstance = CreateWidget(this, PauseMenuWidgetClass);
+			PauseMenuInstance->AddToViewport();
+		}
+		FInputModeGameAndUI InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+	}
+	else
+	{
+		// Close Menu
+		if (PauseMenuInstance)
+		{
+			PauseMenuInstance->RemoveFromParent();
+			PauseMenuInstance = nullptr;
+		}
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+	}
+}
+
 void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 {
 	// --- 1. VALIDATION ---
 	if (!HasAuthority()) return;
-
-	if (AllPossibleLevelUpItems.Num() == 0) return; 
+	if (AllPossibleLevelUpItems.Num() == 0) return;
 
 	// --- 2. PREPARE DATA ---
 	UPRRewardManager* RewardManager = NewObject<UPRRewardManager>();
@@ -133,6 +226,221 @@ void APRPlayerController::ShowLevelUpScreen(int32 NewLevel)
 	}
 
 	// @TODO: We can send pause widget info to other player(s) here if needed.
+}
+
+void APRPlayerController::OnRep_OfferedRewards()
+{
+	// --- 1. VALIDATION ---
+	if (!IsLocalPlayerController()) return;
+
+	// Clear retry timer if active
+	GetWorld()->GetTimerManager().ClearTimer(RetryHandle);
+
+	if (OfferedRewards.Num() == 0) return;
+
+	// Check for nulls
+	for (UPRUpgradeData* Data : OfferedRewards)
+	{
+		if (Data == nullptr)
+		{
+			GetWorld()->GetTimerManager().SetTimer(RetryHandle, this, &APRPlayerController::OnRep_OfferedRewards, 0.1f, false);
+			return;
+		}
+	}
+
+	if (LevelUpWidgetClass)
+	{
+		if (LevelUpWidgetInstance)
+		{
+			LevelUpWidgetInstance->RemoveFromParent();
+			LevelUpWidgetInstance = nullptr;
+		}
+		// Create Widget
+		LevelUpWidgetInstance = CreateWidget<UUserWidget>(this, LevelUpWidgetClass);
+
+		if (LevelUpWidgetInstance)
+		{
+			// Send data to widget via interface
+			if (LevelUpWidgetInstance->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+			{
+				IPRBPIRewardScreen::Execute_InitializeScreen(LevelUpWidgetInstance, OfferedRewards);
+			}
+
+			LevelUpWidgetInstance->AddToViewport();
+
+			FInputModeUIOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = true;
+
+			Server_PauseGameForLevelUp();
+		}
+	}
+}
+
+void APRPlayerController::Server_PauseGameForLevelUp_Implementation()
+{
+	if (APRGameMode* GM = Cast<APRGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GM->RegisterPlayerInMenu();
+	}
+}
+
+void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
+{
+	if (!ChosenUpgrade) return;
+
+	// --- CLEAN UP LEVEL UP WIDGET ---
+	if (LevelUpWidgetInstance)
+	{
+		LevelUpWidgetInstance->RemoveFromParent();
+		LevelUpWidgetInstance = nullptr;
+	}
+
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
+
+	Server_ApplyReward(ChosenUpgrade);
+}
+
+void APRPlayerController::Server_ApplyReward_Implementation(UPRUpgradeData* ChosenUpgrade)
+{
+	// Apply reward on the server side
+	// The PlayerController's ONLY job is to forward the request to the correct component.
+	// It doesn't need to know HOW the reward is applied.
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		if (UPRInventoryComponent* InvComp = PS->InventoryComponent)
+		{
+			InvComp->AddOrUpgradeItem(ChosenUpgrade);
+		}
+	}
+	// --- UNPAUSE THE GAME ---
+	if (APRGameMode* GM = Cast<APRGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GM->UnregisterPlayerInMenu();
+	}
+}
+
+void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer, bool bGrantDirectly)
+{
+	// --- 1. VALIDATION ---
+	// Make sure we have a valid LootPool to draw from and a valid number of offers.
+	if (!LootPool || NumToOffer <= 0 || !HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RequestRewards called with invalid parameters."));
+		return;
+	}
+
+	// --- 2. PREPARE THE MANAGER AND DATA ---
+	// Create a transient Reward Manager to handle the logic.
+	UPRRewardManager* RewardManager = NewObject<UPRRewardManager>();
+	if (!RewardManager)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to create RewardManager."));
+		return;
+	}
+
+	// The manager needs the Stats Info Table to generate proper descriptions for rewards.
+	RewardManager->Initialize(StatsInfoDataTable);
+
+	// The manager needs the inventory to check if an item is new or an upgrade.
+	UPRInventoryComponent* PlayerInventory = GetPlayerState<APRPlayerState>() ? GetPlayerState<APRPlayerState>()->InventoryComponent : nullptr;
+
+	if (!PlayerInventory)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Cannot grant rewards, PlayerInventory is not valid."));
+		return;
+	}
+
+	// --- 3. GENERATE REWARDS USING THE CORRECT FUNCTION ---
+	// Call the new function that is specifically designed to work with Loot Data Tables.
+	TArray<UPRUpgradeData*> GeneratedRewards = RewardManager->GenerateLootRewards(PlayerInventory, LootPool, NumToOffer);
+
+	// --- 4. GRANT THE REWARDS ---
+	if (GeneratedRewards.Num() > 0)
+	{
+		if (bGrantDirectly)
+		{
+			// 1. PAUSE THE GAME (Global Pause)
+			if (APRGameMode* GM = Cast<APRGameMode>(UGameplayStatics::GetGameMode(this)))
+			{
+				GM->RegisterPlayerInMenu();
+			}
+
+			// 2. SEND TO CLIENT
+			Client_ShowRewardPopup(GeneratedRewards[0]);
+
+			//// Create the popup widget
+			//UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
+
+			//// Now, we need to pass the data to it. We need an interface or a cast.
+			//// Let's use an interface for this, it's cleaner.
+			//// Assuming WBP_ItemFoundPopup implements BPI_ItemPopup
+			//if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+			//{
+			//	// Call the interface function to initialize the widget with the reward data.
+			//	IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, GeneratedRewards);
+			//	PopupWidget->AddToViewport();
+			//}
+
+			//@TODO: // Client_ShowRewardPopup(GeneratedRewards[0]); 
+		}
+		else
+		{
+			// This branch is for showing the level up screen with multiple choices
+			// ...
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("Loot pool '%s' generated no rewards."), *LootPool->GetName());
+	}
+}
+
+void APRPlayerController::Client_ShowRewardPopup_Implementation(UPRUpgradeData* RewardToDisplay)
+{
+	// --- VALIDATION ---
+	if (ItemFoundPopupWidgetClass)
+	{
+		// --- CREATE WIDGET ---
+		UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
+
+		if (PopupWidget)
+		{
+			// --- STORE REFERENCE ---
+			LevelUpWidgetInstance = PopupWidget;
+
+			// --- INITIALIZE WITH DATA ---
+			if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+			{
+				TArray<UPRUpgradeData*> SingleRewardArray;
+				SingleRewardArray.Add(RewardToDisplay);
+				IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, SingleRewardArray);
+			}
+
+			PopupWidget->AddToViewport();
+
+			FInputModeUIOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = true;
+		}
+	}
+}
+
+void APRPlayerController::Client_ShowDamageEffect_Implementation(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound)
+{
+	if (!TargetActor) return;
+
+	// 1. Show Damage Number (Only visible to player)
+	// We use 'this' as WorldContext because we are inside the local controller now.
+	UPRGameplayStatics::SpawnDamageNumber(this, DamageAmount, bIsCritical, TargetActor);
+
+	// 2. Play Hit Sound (Only audible to player)
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, HitSound, TargetActor->GetActorLocation());
+	}
 }
 
 void APRPlayerController::ToggleInventoryScreen()
@@ -187,330 +495,6 @@ void APRPlayerController::ToggleInventoryScreen()
 	}
 }
 
-void APRPlayerController::TogglePauseMenu()
-{
-	Server_RequestTogglePause();
-}
-
-void APRPlayerController::Server_RequestTogglePause_Implementation()
-{
-	// The server is the only one who can actually pause the game.
-	bool bIsCurrentlyPaused = UGameplayStatics::IsGamePaused(GetWorld());
-
-	// Set the new pause state on the server.
-	UGameplayStatics::SetGamePaused(GetWorld(), !bIsCurrentlyPaused);
-
-	// Now, tell ALL connected clients (including the server's own client) about the change.
-	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-	{
-		if (APRPlayerController* PC = Cast<APRPlayerController>(It->Get()))
-		{
-			PC->Client_TogglePause(!bIsCurrentlyPaused);
-		}
-	}
-}
-
-void APRPlayerController::Client_TogglePause_Implementation(bool bIsPaused)
-{
-	if (bIsPaused)
-	{
-		// --- PAUSE THE GAME ---
-		if (PauseMenuWidgetClass && !PauseMenuInstance)
-		{
-			PauseMenuInstance = CreateWidget(this, PauseMenuWidgetClass);
-			PauseMenuInstance->AddToViewport();
-		}
-
-		// Set input mode and show cursor (this is a local UI change).
-		FInputModeGameAndUI InputMode;
-		SetInputMode(InputMode);
-		bShowMouseCursor = true;
-	}
-	else
-	{
-		// --- RESUME THE GAME ---
-		if (PauseMenuInstance)
-		{
-			PauseMenuInstance->RemoveFromParent();
-			PauseMenuInstance = nullptr;
-		}
-
-		// Set input mode and hide cursor.
-		FInputModeGameOnly InputMode;
-		SetInputMode(InputMode);
-		bShowMouseCursor = false;
-	}
-}
-
-void APRPlayerController::OnRep_Pawn()
-{
-	Super::OnRep_Pawn();
-
-	// OnRep_Pawn runs ON THE CLIENT after the server has assigned a pawn.
-	// This is the correct and reliable place to set up input for the client.
-
-	// --- SET INPUT MODE FOR GAMEPLAY ---
-	FInputModeGameOnly InputMode;
-	SetInputMode(InputMode);
-	bShowMouseCursor = false;
-
-	// We could also initialize client-side UI elements here if needed.
-}
-
-void APRPlayerController::OnRep_PlayerState()
-{
-	Super::OnRep_PlayerState();
-
-	// CLIENT SIDE SETUP
-	// PlayerState is now valid. Let's initialize the HUD.
-	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
-	{
-		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
-		{
-			// Send the component to the HUD widget
-			PRHUD->InitializeHUDStats(PS);
-		}
-	}
-}
-
-void APRPlayerController::OnRep_OfferedRewards()
-{
-	// --- 1. VALIDATION ---
-	if (!IsLocalPlayerController()) return;
-
-	// Now we are using timer to make sure client get rewards but we can send some kind of event for that instead.
-	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
-	if (TimerManager.IsTimerActive(RetryHandle)) 
-	{
-		TimerManager.ClearTimer(RetryHandle);
-	}
-
-	if (OfferedRewards.Num() == 0) return;
-
-	bool bIsDataReady = true;
-	for (UPRUpgradeData* Data : OfferedRewards)
-	{
-		if (Data == nullptr)
-		{
-			bIsDataReady = false;
-			break;
-		}
-	}
-
-	if (!bIsDataReady)
-	{
-		TimerManager.SetTimer(RetryHandle, this, &APRPlayerController::OnRep_OfferedRewards, 0.1f, false);
-		return;
-	}
-
-	if (LevelUpWidgetClass)
-	{
-		if (LevelUpWidgetInstance && LevelUpWidgetInstance->IsInViewport())
-		{
-			return;
-		}
-
-		if (LevelUpWidgetInstance)
-		{
-			LevelUpWidgetInstance->RemoveFromParent();
-			LevelUpWidgetInstance = nullptr;
-		}
-		// Create Widget
-		LevelUpWidgetInstance = CreateWidget<UUserWidget>(this, LevelUpWidgetClass);
-
-		if (LevelUpWidgetInstance)
-		{
-			// Send data to widget via interface
-			if (LevelUpWidgetInstance->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
-			{
-				IPRBPIRewardScreen::Execute_InitializeScreen(LevelUpWidgetInstance, OfferedRewards);
-			}
-
-			LevelUpWidgetInstance->AddToViewport();
-
-			FInputModeUIOnly InputMode;
-			SetInputMode(InputMode);
-			bShowMouseCursor = true;
-
-			Server_PauseGameForLevelUp();
-		}
-	}
-}
-
-void APRPlayerController::Server_PauseGameForLevelUp_Implementation()
-{
-	if (!UGameplayStatics::IsGamePaused(GetWorld()))
-	{
-		UGameplayStatics::SetGamePaused(GetWorld(), true);
-	}
-}
-
-bool APRPlayerController::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
-{
-	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
-
-	// Replicate each offered reward upgrade data
-	for (UPRUpgradeData* UpgradeData : OfferedRewards)
-	{
-		if (UpgradeData)
-		{
-			bWroteSomething |= Channel->ReplicateSubobject(UpgradeData, *Bunch, *RepFlags);
-		}
-	}
-
-	return bWroteSomething;
-}
-
-void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
-{
-	if (!ChosenUpgrade) return;
-
-	// --- CLEAN UP LEVEL UP WIDGET ---
-	if (LevelUpWidgetInstance)
-	{
-		LevelUpWidgetInstance->RemoveFromParent();
-		LevelUpWidgetInstance = nullptr;
-	}
-
-	FInputModeGameOnly InputMode;
-	SetInputMode(InputMode);
-	bShowMouseCursor = false;
-
-	Server_ApplyReward(ChosenUpgrade);
-}
-
-void APRPlayerController::Server_ApplyReward_Implementation(UPRUpgradeData* ChosenUpgrade)
-{
-	// Apply reward on the server side
-	// The PlayerController's ONLY job is to forward the request to the correct component.
-	// It doesn't need to know HOW the reward is applied.
-	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
-	{
-		if (UPRInventoryComponent* InvComp = PS->InventoryComponent)
-		{
-			InvComp->AddOrUpgradeItem(ChosenUpgrade);
-		}
-	}
-	// --- UNPAUSE THE GAME ---
-	UGameplayStatics::SetGamePaused(GetWorld(), false);
-}
-
-void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer, bool bGrantDirectly)
-{
-	// --- 1. VALIDATION ---
-	// Make sure we have a valid LootPool to draw from and a valid number of offers.
-	if (!LootPool || NumToOffer <= 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("RequestRewards called with invalid parameters."));
-		return;
-	}
-
-	// --- 2. PREPARE THE MANAGER AND DATA ---
-	// Create a transient Reward Manager to handle the logic.
-	UPRRewardManager* RewardManager = NewObject<UPRRewardManager>();
-	if (!RewardManager)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to create RewardManager."));
-		return;
-	}
-
-	// The manager needs the Stats Info Table to generate proper descriptions for rewards.
-	RewardManager->Initialize(StatsInfoDataTable);
-
-	// The manager needs the inventory to check if an item is new or an upgrade.
-	UPRInventoryComponent* PlayerInventory = GetPlayerState<APRPlayerState>() ? GetPlayerState<APRPlayerState>()->InventoryComponent : nullptr;
-
-	if (!PlayerInventory)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Cannot grant rewards, PlayerInventory is not valid."));
-		return;
-	}
-
-	// --- 3. GENERATE REWARDS USING THE CORRECT FUNCTION ---
-	// Call the new function that is specifically designed to work with Loot Data Tables.
-	TArray<UPRUpgradeData*> GeneratedRewards = RewardManager->GenerateLootRewards(PlayerInventory, LootPool, NumToOffer);
-
-	// --- 4. GRANT THE REWARDS ---
-	if (GeneratedRewards.Num() > 0)
-	{
-		if (bGrantDirectly)
-		{
-			// 1. PAUSE THE GAME (Global Pause)
-			UGameplayStatics::SetGamePaused(GetWorld(), true);
-
-			// 2. SEND TO CLIENT
-			Client_ShowRewardPopup(GeneratedRewards[0]);
-
-			//// Create the popup widget
-			//UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
-
-			//// Now, we need to pass the data to it. We need an interface or a cast.
-			//// Let's use an interface for this, it's cleaner.
-			//// Assuming WBP_ItemFoundPopup implements BPI_ItemPopup
-			//if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
-			//{
-			//	// Call the interface function to initialize the widget with the reward data.
-			//	IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, GeneratedRewards);
-			//	PopupWidget->AddToViewport();
-			//}
-
-			//@TODO: // Client_ShowRewardPopup(GeneratedRewards[0]); 
- 		}
-		else
-		{
-			// This branch is for showing the level up screen with multiple choices
-			// ...
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Log, TEXT("Loot pool '%s' generated no rewards."), *LootPool->GetName());
-	}
-}
-
-void APRPlayerController::Client_ShowRewardPopup_Implementation(UPRUpgradeData* RewardToDisplay)
-{
-	// --- VALIDATION ---
-	if (ItemFoundPopupWidgetClass)
-	{
-		// --- CREATE WIDGET ---
-		UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
-
-		if (PopupWidget)
-		{
-			// --- STORE REFERENCE ---
-			LevelUpWidgetInstance = PopupWidget;
-
-			// --- INITIALIZE WITH DATA ---
-			if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
-			{
-				TArray<UPRUpgradeData*> SingleRewardArray;
-				SingleRewardArray.Add(RewardToDisplay);
-				IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, SingleRewardArray);
-			}
-
-			PopupWidget->AddToViewport();
-
-			FInputModeUIOnly InputMode;
-			SetInputMode(InputMode);
-			bShowMouseCursor = true;
-		}
-	}
-}
-
-void APRPlayerController::ResumeGameFromUI()
-{
-	SetPause(false); // If the game was paused
-	FInputModeGameOnly InputMode;
-	SetInputMode(InputMode);
-	bShowMouseCursor = false;
-}
-
-void APRPlayerController::ResumeGame()
-{
-	Server_RequestResumeGame();
-}
-
 void APRPlayerController::QuitToMainMenu()
 {
 	// Unpause the game before changing levels, just in case.
@@ -520,28 +504,3 @@ void APRPlayerController::QuitToMainMenu()
 	UGameplayStatics::OpenLevel(this, FName("MainMenu_L"), true);
 }
 
-void APRPlayerController::Server_RequestResumeGame_Implementation()
-{
-	// Ensure the game is actually paused before trying to resume.
-	if (UGameplayStatics::IsGamePaused(GetWorld()))
-	{
-		// Unpause the game on the server.
-		UGameplayStatics::SetGamePaused(GetWorld(), false);
-
-		// Tell ALL connected clients to close their pause menu.
-		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-		{
-			if (APRPlayerController* PC = Cast<APRPlayerController>(It->Get()))
-			{
-				// We reuse the Client_TogglePause function with "false"
-				PC->Client_TogglePause(false);
-			}
-		}
-	}
-}
-
-void APRPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(APRPlayerController, OfferedRewards);
-}

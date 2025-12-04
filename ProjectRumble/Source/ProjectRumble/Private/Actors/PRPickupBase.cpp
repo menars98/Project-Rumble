@@ -5,10 +5,22 @@
 #include "Player/PRPlayerState.h"
 #include "PRGameplayTags.h"
 #include "Components/PRLootComponent.h"
+#include "Net/UnrealNetwork.h"
 
 APRPickupBase::APRPickupBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	bReplicates = true;
+	SetReplicateMovement(true);
+}
+
+void APRPickupBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(APRPickupBase, Value);
+	DOREPLIFETIME(APRPickupBase, HomingTarget);
 }
 
 void APRPickupBase::BeginPlay()
@@ -19,18 +31,36 @@ void APRPickupBase::BeginPlay()
 void APRPickupBase::StartHoming(APRCharacterBase* Target)
 {
 	// If we are NOT already homing, lock on to the target.
-	if (!bIsHoming && Target)
+	if (GetLocalRole() == ROLE_Authority)
 	{
-		HomingTarget = Target;
-		bIsHoming = true;
+		if (!bIsHoming && Target)
+		{
+			HomingTarget = Target;
+			bIsHoming = true;
 
-		// --- INITIALIZE THE SPEED ---
-		// When homing starts, set the current speed to the initial speed.
-		CurrentHomingSpeed = InitialHomingSpeed;
+			// --- INITIALIZE THE SPEED ---
+			// When homing starts, set the current speed to the initial speed.
+			CurrentHomingSpeed = InitialHomingSpeed;
 
-		UE_LOG(LogTemp, Log, TEXT("XP Shard is now homing to player."));
+			// We can close server side pyhsics if needed
+			// (StaticMesh -> SetSimulatePhysics(false)
+
+			UE_LOG(LogTemp, Log, TEXT("XP Shard is now homing to player."));
+		}
 	}
+	
 
+}
+
+void APRPickupBase::OnRep_HomingTarget()
+{
+	
+	if (HomingTarget)
+	{
+		bIsHoming = true;
+		CurrentHomingSpeed = InitialHomingSpeed;
+		// We can play vfx/sfx here on clients if needed
+	}
 }
 
 void APRPickupBase::Tick(float DeltaTime)
@@ -40,7 +70,7 @@ void APRPickupBase::Tick(float DeltaTime)
 	UE_LOG(LogTemp, Log, TEXT("PickupBase Tick is running for %s..."), *GetName());
 
 	// If we have a target, move towards it.
-	if (HomingTarget)
+	if (bIsHoming  && HomingTarget)
 	{
 		// --- 1. ACCELERATE ---
 		// Increase the current speed over time, but don't exceed the max speed.
@@ -55,25 +85,27 @@ void APRPickupBase::Tick(float DeltaTime)
 		// Calculate the new location by moving towards the target at the CURRENT speed.
 		FVector CurrentLocation = GetActorLocation();
 		FVector TargetLocation = HomingTarget->GetActorLocation();
-
-
 		FVector DirectionToTarget = (TargetLocation - CurrentLocation).GetSafeNormal();
+		
 		FVector NewLocation = CurrentLocation + (DirectionToTarget * CurrentHomingSpeed * DeltaTime);
-
 		SetActorLocation(NewLocation);
 
-		// --- 3. CHECK FOR ARRIVAL ---
-		const float DistanceToTarget = FVector::DistSquared(CurrentLocation, TargetLocation);
 		// Check against a squared distance to avoid expensive Sqrt calculation
-		if (DistanceToTarget < FMath::Square(100.f))
+		if (HasAuthority())
 		{
-			// Call the overridable function
-			OnCollected();
-			Destroy();
-
-			// Destroy self
-			Destroy();
+			// --- 3. CHECK FOR ARRIVAL ---
+			const float DistanceToTarget = FVector::DistSquared(CurrentLocation, TargetLocation);
+			if (DistanceToTarget < FMath::Square(100.f))
+			{
+				// Call the overridable function
+				OnCollected();
+				Destroy();
+			}
 		}
 	}
 }
 
+void APRPickupBase::OnCollected_Implementation()
+{
+
+}

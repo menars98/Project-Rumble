@@ -152,6 +152,7 @@ struct FWeaponStats
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     float BaseStunDuration = 0.5f;
+
 };
 
 USTRUCT(BlueprintType)
@@ -225,10 +226,19 @@ struct PROJECTRUMBLE_API FPRWeaponAttackStats
 
     // Constructor with defaults to ensure valid values
     FPRWeaponAttackStats()
-        : Damage(0.0f), CritChance(0.0f), CritMultiplier(1.0f), SizeMultiplier(1.0f), KnockbackMagnitude(0.0f),
-        StunChance(0.0f), StunDuration(0.0f), LifeDuration(0.0f), ProjectileCount(1),
-        ProjectileSpeed(0.0f), ProjectileBounce(0), TickRate(0.0f) {
-    }
+        : Damage(0.0f)
+        , CritChance(0.0f)
+        , CritMultiplier(1.0f)
+        , KnockbackMagnitude(0.0f) 
+        , StunChance(0.0f)
+        , StunDuration(0.0f)
+        , SizeMultiplier(1.0f)     
+        , LifeDuration(0.0f)
+        , ProjectileCount(1)
+        , ProjectileSpeed(0.0f)
+        , ProjectileBounce(0)
+        , TickRate(0.0f)
+    { }
 
     // 1. Core Combat Properties (Used by most/all attacks)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")

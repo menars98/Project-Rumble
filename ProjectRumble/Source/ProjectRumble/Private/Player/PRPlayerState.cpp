@@ -12,7 +12,7 @@ APRPlayerState::APRPlayerState()
     InventoryComponent = CreateDefaultSubobject<UPRInventoryComponent>(TEXT("InventoryComponent"));
 
 	SetReplicates(true);
-	NetUpdateFrequency = 10.0f;
+	SetNetUpdateFrequency(10.0f);
 }
 
 void APRPlayerState::BeginPlay()

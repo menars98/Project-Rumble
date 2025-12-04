@@ -116,19 +116,17 @@ float UPRWeaponItem::GetCalculatedCooldown() const
 		}
 	}
 
-	// Total Attack Speed Multiplier (Base 1.0 + Weapon% + Player%)
-	// e.g. 1.0 + 0.2 (Weapon) + 0.5 (Tome) = 1.7x Speed
-	float TotalSpeedMultiplier = 1.0f + LocalAttackSpeedBonus + GlobalAttackSpeedBonus;
+	// Total Attack Speed Multiplier (Weapon% + Player%)
+	// e.g. Base 1 + 0.2 (Weapon) + 0.5 (Tome) = 1.7x Speed
+	float TotalSpeedMultiplier = LocalAttackSpeedBonus + GlobalAttackSpeedBonus;
 
 	// Ensure we don't divide by zero or negative
 	TotalSpeedMultiplier = FMath::Max(0.1f, TotalSpeedMultiplier);
 
 	// Formula: (BaseTime - FlatReduction) / SpeedMultiplier
-	float FinalCooldown = (WeaponBaseCooldown - GlobalAdditiveReduction) / TotalSpeedMultiplier;
+	FinalCooldown = (WeaponBaseCooldown - GlobalAdditiveReduction) / TotalSpeedMultiplier;
 
 	return FMath::Max(FinalCooldown, 0.1f); // Hard cap at 0.1s to prevent infinite spam
-
-	return FMath::Max(FinalCooldown, 0.1f); // Ensure cooldown doesn't become zero or negative
 }
 
 float UPRWeaponItem::GetCalculatedDamage() const

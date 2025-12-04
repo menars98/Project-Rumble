@@ -6,9 +6,8 @@
 #include "GameFramework/GameState.h"
 #include "PRGameState.generated.h"
 
-/**
- * 
- */
+
+
 UCLASS()
 class PROJECTRUMBLE_API APRGameState : public AGameState
 {

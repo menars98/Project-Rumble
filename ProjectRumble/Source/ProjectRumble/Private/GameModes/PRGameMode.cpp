@@ -14,6 +14,46 @@ APRGameMode::APRGameMode()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
+void APRGameMode::RegisterPlayerInMenu()
+{
+	// Increment the counter.
+	PlayersInLevelUpMenu++;
+
+	// Ensure the game is paused.
+	if (!UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		UGameplayStatics::SetGamePaused(GetWorld(), true);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[GameMode] Player entered menu. Pending: %d"), PlayersInLevelUpMenu);
+}
+
+void APRGameMode::UnregisterPlayerInMenu()
+{
+	// Decrement the counter.
+	PlayersInLevelUpMenu--;
+
+	// Safety check
+	if (PlayersInLevelUpMenu < 0) PlayersInLevelUpMenu = 0;
+
+	UE_LOG(LogTemp, Log, TEXT("[GameMode] Player left menu. Pending: %d"), PlayersInLevelUpMenu);
+
+	// If no one is left in the menu, unpause the game.
+	if (PlayersInLevelUpMenu == 0)
+	{
+		UGameplayStatics::SetGamePaused(GetWorld(), false);
+		UE_LOG(LogTemp, Log, TEXT("[GameMode] All players ready. Game Unpaused."));
+	}
+}
+
+void APRGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+	// If a player leaves, force a check or decrement to prevent stuck pause state.
+	// For a simple prototype, we can just force unpause or reset the counter if needed.
+	// But ideally, we would check if 'Exiting' was one of the pending players.
+}
+
 void APRGameMode::BeginPlay()
 {
 	Super::BeginPlay();

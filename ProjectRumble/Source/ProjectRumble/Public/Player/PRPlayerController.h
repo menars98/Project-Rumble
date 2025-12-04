@@ -19,80 +19,80 @@ class PROJECTRUMBLE_API APRPlayerController : public APlayerController
 	GENERATED_BODY()
 	
 public:
+	APRPlayerController();
 
 	virtual void BeginPlay() override;
-	
-	/**
-	 * [CLIENT] Shows damage numbers and plays hit sounds ONLY for this local player.
-	 * Called by the server when this player deals damage.
-	 * @param TargetActor The actor that was hit (for location).
-	 * @param DamageAmount The damage dealt.
-	 * @param bIsCritical Was it a crit?
-	 * @param HitSound Optional sound to play locally.
-	 */
-	UFUNCTION(Client, Unreliable) // Unreliable is faster and fine for FX.
-	void Client_ShowDamageEffect(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound);
 
 protected:
-	/**
-	 * An array of Data Assets that holds all possible ITEMS (Weapons, Tomes, etc.) available in the level up pool.
-	 * Assigned in the BP_PlayerController.
-	 */
+	// -- CORE REPLICATION  --
+	virtual void OnRep_Pawn() override;
+	virtual void OnRep_PlayerState() override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
+
+	// -- INPUT --
+	virtual void SetupInputComponent() override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> ToggleInventoryAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<class UInputAction> PauseAction;
+
+	// -- DATA & REWARDS --
+
+	//An array of Data Assets that holds all possible ITEMS (Weapons, Tomes, etc.) available in the level up pool.
 	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
 	TArray<TObjectPtr<UPRItemDefinition>> AllPossibleLevelUpItems;
 
-	// Array to hold the rewards that are currently being offered to the player.
-	// We make it BlueprintReadOnly so the UI can read it.
+	// Array to hold the rewards that are currently being offered to the player. We make it BlueprintReadOnly so the UI can read it.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_OfferedRewards, Category = "Rewards")
 	TArray<TObjectPtr<UPRUpgradeData>> OfferedRewards;
-
-	// -- DATA TABLES --
+	
 	// This is our main STAT definition table.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Data")
 	TObjectPtr<UDataTable> StatsInfoDataTable;
 
-	// -- UI --
+	// -- UI CLASSES --
 	// The Level Up screen widget class. Assigned in the BP_PlayerController Blueprint.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UUserWidget> LevelUpWidgetClass;
-
-	// The instance of the level up screen, so we can remove it later.
-	UPROPERTY()
-	TObjectPtr<UUserWidget> LevelUpWidgetInstance;
 
 	// The Inventory screen widget class.
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> InventoryScreenWidgetClass;
 
-	// The instance of the inventory screen, so we can check if it's open.
-	UPROPERTY()
-	TObjectPtr<UUserWidget> InventoryScreenInstance;
-
 	// The Stat screen widget class.
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> ItemFoundPopupWidgetClass;
 
-	// The instance of the inventory screen, so we can check if it's open.
-	UPROPERTY()
-	TObjectPtr<UUserWidget> StatScreenInstance;
-
-	// --- PAUSE MENU ---
-
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> PauseMenuWidgetClass;
+
+	// -- UI INSTANCES --
+	UPROPERTY()
+	TObjectPtr<UUserWidget> LevelUpWidgetInstance;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> InventoryScreenInstance;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> StatScreenInstance;
 
 	UPROPERTY()
 	TObjectPtr<UUserWidget> PauseMenuInstance;
 
-	// -- CORE --
+	// -- INTERNAL LOGIC --
 
-	virtual void OnRep_Pawn() override;
-	// Client-side: Called when PlayerState is correctly replicated.
-	virtual void OnRep_PlayerState() override;
+	// Tracks if THIS controller currently has the pause menu open.
+	bool bIsPauseMenuOpen = false;
+	// Called when the ToggleInventoryAction is triggered.
+	void ToggleInventoryScreen();
 
-	// Called when this controller possesses a pawn (character).
-	// This is a more reliable place than BeginPlay to bind to player-specific delegates.
-	virtual void OnPossess(APawn* InPawn) override;
+	/** Called locally when the pause input is pressed. Sends a request to the server. */
+	void TogglePauseMenu();
+
+	// --- LEVEL UP SYSTEM ---
 
 	// Called by the StatsComponent's OnLevelUpDelegate.
 	UFUNCTION()
@@ -102,83 +102,48 @@ protected:
 	UFUNCTION()
 	void OnRep_OfferedRewards();
 
-	virtual void SetupInputComponent() override;
-
-	// -- INPUT --
-	// The Input Action for toggling the inventory screen.
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<UInputAction> ToggleInventoryAction;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> PauseAction;
-
-	// Called when the ToggleInventoryAction is triggered.
-	void ToggleInventoryScreen();
-
-	/** Called locally when the pause input is pressed. Sends a request to the server. */
-	void TogglePauseMenu();
-
-	/**
-   * [SERVER] Function to request a pause/unpause.
-   * The server will validate and then broadcast the change to all clients.
-   */
-	UFUNCTION(Server, Reliable)
-	void Server_RequestTogglePause();
-
-	/**
-	 * [CLIENT] Function called by the server on ALL clients to actually show/hide the pause menu.
-	 * @param bIsPaused The new pause state of the game.
-	 */
-	UFUNCTION(Client, Reliable)
-	void Client_TogglePause(bool bIsPaused);
-
-	/**
-	 * [SERVER] Function to request resuming the game from a paused state.
-	 * Called by clients when they close the pause menu.
-	 */
-	UFUNCTION(Server, Reliable)
-	void Server_RequestResumeGame();
-
-	UFUNCTION(Server, Reliable)
-	void Server_PauseGameForLevelUp();
-
-	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
-
 	FTimerHandle RetryHandle;
-public:
-	// Called by the UI Widget when a player clicks on a reward button.
-	UFUNCTION(BlueprintCallable, Category = "Rewards")
-	void ApplyReward(UPRUpgradeData* ChosenUpgrade);
 
+	// --- SERVER RPCs (STATE CHANGERS) ---
+	/** Tells server we are opening the Pause Menu (locks game). */
+	UFUNCTION(Server, Reliable)
+	void Server_SetPauseMenuState(bool bIsOpen);
+
+	/** Tells server we finished Level Up selection (unlocks game). */
 	UFUNCTION(Server, Reliable)
 	void Server_ApplyReward(UPRUpgradeData* ChosenUpgrade);
 
-	/**
-	 * A generic function to request and grant rewards from a specific loot pool.
-	 * Can be called by chests, bosses, or any other reward-granting source.
-	 * @param LootPool A Data Table containing UUpgradePoolEntry structs that define what can be dropped.
-	 * @param NumToOffer The number of rewards to generate and offer.
-	 * @param bGrantDirectly If true, grants the first reward immediately. If false, shows the Level Up screen. (For future flexibility)
-	 */
+	/** Tells server we opened the Level Up widget (locks game). */
+	UFUNCTION(Server, Reliable)
+	void Server_PauseGameForLevelUp();
+
+
+public:
+	// --- CLIENT RPCs (UI TRIGGERS) ---
+
+	/** Tells client to show/hide pause menu widget. */
+	UFUNCTION(Client, Reliable)
+	void Client_TogglePauseMenuUI(bool bOpen);
+
+	UFUNCTION(Client, Reliable)
+	void Client_ShowRewardPopup(UPRUpgradeData* RewardToDisplay);
+
+	UFUNCTION(Client, Unreliable)
+	void Client_ShowDamageEffect(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound);
+
+	// --- PUBLIC INTERFACE ---
+
+	UFUNCTION(BlueprintCallable, Category = "Rewards")
+	void ApplyReward(UPRUpgradeData* ChosenUpgrade);
+
 	UFUNCTION(BlueprintCallable, Category = "Rewards")
 	void RequestRewards(UDataTable* LootPool, int32 NumToOffer, bool bGrantDirectly = true);
 
-	// Called by UI widgets when they are closed to resume the game.
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	void ResumeGameFromUI();
-
-	/** Resumes the game from a paused state (e.g., from the pause menu). */
+	/** Resumes the game (closes pause menu). Called by UI Button. */
 	UFUNCTION(BlueprintCallable, Category = "Game")
 	void ResumeGame();
 
-	/** Quits the current match and returns to the main menu. */
 	UFUNCTION(BlueprintCallable, Category = "Game")
 	void QuitToMainMenu();
 
-	/**
-	 * [CLIENT] Called by the server to show the "Item Found" popup (e.g., from a Chest).
-	 * @param RewardToDisplay The specific upgrade data to show in the popup.
-	 */
-	UFUNCTION(Client, Reliable)
-	void Client_ShowRewardPopup(UPRUpgradeData* RewardToDisplay);
 };

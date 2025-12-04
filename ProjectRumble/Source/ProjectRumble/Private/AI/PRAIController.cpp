@@ -6,6 +6,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "BehaviorTree/BehaviorTree.h"
+#include "Components/PRStatsComponent.h"
+
 
 
 APRAIController::APRAIController()
@@ -16,3 +18,4 @@ void APRAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 }
+

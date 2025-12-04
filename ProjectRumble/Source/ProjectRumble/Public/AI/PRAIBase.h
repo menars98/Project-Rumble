@@ -145,5 +145,7 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "AI|Difficulty")
 	void BP_SetDifficultyStats(float DifficultyMultiplier);
 
+	void UpdateMovementSpeed();
+
 };
 

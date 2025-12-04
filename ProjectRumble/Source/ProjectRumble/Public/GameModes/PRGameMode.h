@@ -22,6 +22,20 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game|Difficulty")
 	float MaxDifficultyMultiplier = 6.0f;
 
+	/**
+	 * Called by a PlayerController when it opens the Level Up UI.
+	 * Pauses the game and increments the lock counter.
+	 */
+	void RegisterPlayerInMenu();
+
+	/**
+	 * Called by a PlayerController when it finishes selection (ApplyReward).
+	 * Decrements the counter and unpauses ONLY if no one else is in the menu.
+	 */
+	void UnregisterPlayerInMenu();
+
+	virtual void Logout(AController* Exiting) override;
+
 protected:
 
 	/** The class of the Spawner Manager to spawn at the start of the game. */
@@ -32,6 +46,8 @@ protected:
 	UPROPERTY()
 	TObjectPtr<class APRSpawnerManager> SpawnerManagerInstance;
 
+	// How many players are currently looking at the Level Up screen?
+	int32 PlayersInLevelUpMenu = 0;
 	// --- DIFFICULTY MANAGEMENT ---
 	/**
 	 * Recalculates the highest Difficulty Stat value among all players and updates ActiveDifficultyMultiplier.

@@ -20,6 +20,12 @@ void APRGoldPickup::Tick(float DeltaTime)
 
 void APRGoldPickup::OnCollected_Implementation()
 {
+	// Security Check
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	Super::OnCollected_Implementation();
 
 	if (!HomingTarget) return;

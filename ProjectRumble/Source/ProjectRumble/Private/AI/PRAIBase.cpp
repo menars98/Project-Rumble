@@ -15,6 +15,7 @@
 #include <GameModes/PRGameMode.h>
 #include <Game/PRGameState.h>
 #include "GameFramework/PawnMovementComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 APRAIBase::APRAIBase()
 {
@@ -83,6 +84,54 @@ void APRAIBase::BeginPlay()
 	}
 
 	InitializeStats();
+}
+
+void APRAIBase::InitializeStats()
+{
+	// Initialization logic should only run on the server. 
+	// The stats will be replicated to clients via the StatsComponent.
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// 1. READ DATA: Get the AI's base stat row from the Data Table.
+	if (!AllEnemyStatsTable || DataTableID.IsNone())
+	{
+		UE_LOG(LogTemp, Error, TEXT("APRAIBase '%s' is missing AllEnemyStatsTable or DataTableID!"), *GetName());
+		return;
+	}
+
+	const FAIStats* AIStatsRow = AllEnemyStatsTable->FindRow<FAIStats>(DataTableID, TEXT("AI Stats Initialization"));
+	if (!AIStatsRow)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not find row '%s' in AllEnemyStatsTable for %s!"), *DataTableID.ToString(), *GetName());
+		return;
+	}
+
+	// 2. GET MULTIPLIER: Get the global difficulty multiplier from the GameState.
+	float DifficultyMultiplier = 1.0f; // Default safety value.
+	if (APRGameState* PRGameState = GetWorld()->GetGameState<APRGameState>())
+	{
+		DifficultyMultiplier = PRGameState->GetActiveDifficultyMultiplier();
+	}
+
+	// 3. INITIALIZE COMPONENT: Pass the base stats and multiplier to the StatsComponent.
+	if (UPRStatsComponent* StatsComp = GetStatsComponent())
+	{
+		// The StatsComponent will handle applying the multiplier internally.
+		// We pass the RAW BaseStats array from the Data Table.
+		StatsComp->InitializeForAI(AIStatsRow->BaseStats, DifficultyMultiplier);
+	}
+
+	// 4. UPDATE AI CONTROLLER (e.g., Movement Speed)
+	// The StatsComponent now has the correct, difficulty-modified speed.
+	// We call this Blueprint Event to allow the AI's Blueprint to read the new speed 
+	// from its StatsComponent and set it on the Blackboard or Movement Component.
+	BP_SetDifficultyStats(DifficultyMultiplier);
+
+	// We set Movement Speed After Difficulty, because it will read the updated stat value.
+	UpdateMovementSpeed();
 }
 
 float APRAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -258,49 +307,20 @@ void APRAIBase::ResetContactDamage()
 	}
 }
 
-void APRAIBase::InitializeStats()
+void APRAIBase::UpdateMovementSpeed()
 {
-	// Initialization logic should only run on the server. 
-	// The stats will be replicated to clients via the StatsComponent.
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	// 1. READ DATA: Get the AI's base stat row from the Data Table.
-	if (!AllEnemyStatsTable || DataTableID.IsNone())
-	{
-		UE_LOG(LogTemp, Error, TEXT("APRAIBase '%s' is missing AllEnemyStatsTable or DataTableID!"), *GetName());
-		return;
-	}
-
-	const FAIStats* AIStatsRow = AllEnemyStatsTable->FindRow<FAIStats>(DataTableID, TEXT("AI Stats Initialization"));
-	if (!AIStatsRow)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Could not find row '%s' in AllEnemyStatsTable for %s!"), *DataTableID.ToString(), *GetName());
-		return;
-	}
-
-	// 2. GET MULTIPLIER: Get the global difficulty multiplier from the GameState.
-	float DifficultyMultiplier = 1.0f; // Default safety value.
-	if (APRGameState* PRGameState = GetWorld()->GetGameState<APRGameState>())
-	{
-		DifficultyMultiplier = PRGameState->GetActiveDifficultyMultiplier();
-	}
-
-	// 3. INITIALIZE COMPONENT: Pass the base stats and multiplier to the StatsComponent.
 	if (UPRStatsComponent* StatsComp = GetStatsComponent())
 	{
-		// The StatsComponent will handle applying the multiplier internally.
-		// We pass the RAW BaseStats array from the Data Table.
-		StatsComp->InitializeForAI(AIStatsRow->BaseStats, DifficultyMultiplier);
-	}
+		float NewSpeed = StatsComp->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_MovementSpeed_Base);
 
-	// 4. UPDATE AI CONTROLLER (e.g., Movement Speed)
-	// The StatsComponent now has the correct, difficulty-modified speed.
-	// We call this Blueprint Event to allow the AI's Blueprint to read the new speed 
-	// from its StatsComponent and set it on the Blackboard or Movement Component.
-	BP_SetDifficultyStats(DifficultyMultiplier);
+		if (NewSpeed > 0.f)
+		{
+			if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+			{
+				MoveComp->MaxWalkSpeed = NewSpeed;
+			}
+		}
+	}
 }
 
 void APRAIBase::UpdateDifficultyMultiplier(float NewDifficultyMultiplier)
@@ -320,6 +340,8 @@ void APRAIBase::UpdateDifficultyMultiplier(float NewDifficultyMultiplier)
 
 	// Also update the AI Controller.
 	BP_SetDifficultyStats(NewDifficultyMultiplier);
+
+	UpdateMovementSpeed();
 }
 
 void APRAIBase::Multicast_PlayHitFlash_Implementation()

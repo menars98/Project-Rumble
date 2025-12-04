@@ -17,17 +17,18 @@ class PROJECTRUMBLE_API APRPickupBase : public AActor
 public:	
 	// Sets default values for this actor's properties
 	APRPickupBase();
-
-	// The generic value this pickup holds (e.g., amount of XP, Gold, Health).
-	// Set by the LootComponent when spawned.
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Rumble | Pickup")
-	float Value;
-
 	/** Starts the homing process towards a target character. */
 	void StartHoming(APRCharacterBase* Target);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pickup|Movement")
 	bool bStartHomingOnSpawn = false;
+
+	// The generic value this pickup holds (e.g., amount of XP, Gold, Health).
+	// Set by the LootComponent when spawned.
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated, Category = "Rumble | Pickup")
+	float Value;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	// Called when the game starts or when spawned
@@ -44,7 +45,7 @@ protected:
 	virtual void OnCollected_Implementation(); // C++ implementation for the above
 
 	// The character this shard is currently moving towards.
-	UPROPERTY()
+	UPROPERTY(ReplicatedUsing = OnRep_HomingTarget)
 	TObjectPtr<APRCharacterBase> HomingTarget;
 
 	// The speed at which the shard STARTS moving towards the target.
@@ -65,4 +66,6 @@ protected:
 	// A flag to prevent StartHoming from being called multiple times.
 	bool bIsHoming = false;
 
+	UFUNCTION()
+	void OnRep_HomingTarget();
 };

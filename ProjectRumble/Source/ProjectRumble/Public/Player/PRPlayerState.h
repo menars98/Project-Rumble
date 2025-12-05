@@ -32,6 +32,12 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnStatsComponentReady OnStatsComponentReady;
 
+	UFUNCTION(BlueprintCallable, Category = "Lobby")
+	void SetIsReady(bool bReady);
+
+	UFUNCTION(BlueprintPure, Category = "Lobby")
+	bool GetIsReady() const { return bIsReady; }
+
 protected:
 
 	virtual void BeginPlay() override;
@@ -45,6 +51,12 @@ protected:
 	UFUNCTION()
 	void OnRep_InventoryComponent();
 
+	UFUNCTION(Server, Reliable)
+	void Server_SetIsReady(bool bReady);
+
+	// -- LOBBY FUNCTIONALITY --
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Lobby")
+	bool bIsReady = false;
 private:
 	void InitializeStatsComponent();
 	void InitializeInventoryComponent();

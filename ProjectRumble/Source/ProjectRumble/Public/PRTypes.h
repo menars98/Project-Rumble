@@ -318,3 +318,4 @@ public:
     TArray<FStatDefinition> BaseStats;
 
 };
+

@@ -68,6 +68,11 @@ void APRGameMode::StartPlay()
 		GetWorld()->SpawnActor<APRSpawnerManager>(SpawnerManagerClass);
 		UE_LOG(LogTemp, Log, TEXT("Spawner Manager has been initialized by GameMode."));
 	}
+	//After spawning, start timer.
+	if (APRGameState* GS = GetGameState<APRGameState>())
+	{
+		GS->StartGameTimer();
+	}
 }
 
 void APRGameMode::PostLogin(APlayerController* NewPlayer)

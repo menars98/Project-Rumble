@@ -15,6 +15,19 @@ APRPlayerState::APRPlayerState()
 	SetNetUpdateFrequency(10.0f);
 }
 
+void APRPlayerState::SetIsReady(bool bReady)
+{
+	if (HasAuthority())
+	{
+		bIsReady = bReady;
+	}
+	else
+	{
+		// If not the server, send a request to the server to change the ready status.
+		Server_SetIsReady(bReady);
+	}
+}
+
 void APRPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
@@ -35,6 +48,7 @@ void APRPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	
 	DOREPLIFETIME(APRPlayerState, StatsComponent);
 	DOREPLIFETIME(APRPlayerState, InventoryComponent);
+	DOREPLIFETIME(APRPlayerState, bIsReady);
 }
 
 void APRPlayerState::OnRep_StatsComponent()
@@ -49,6 +63,11 @@ void APRPlayerState::OnRep_InventoryComponent()
 	UE_LOG(LogTemp, Warning, TEXT("[CLIENT] InventoryComponent replicated"));
 
 	InitializeInventoryComponent();
+}
+
+void APRPlayerState::Server_SetIsReady_Implementation(bool bReady)
+{
+	bIsReady = bReady;
 }
 
 void APRPlayerState::InitializeStatsComponent()

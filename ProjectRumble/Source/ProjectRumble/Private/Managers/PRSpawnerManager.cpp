@@ -6,6 +6,8 @@
 #include "GameModes/PRGameMode.h" 
 #include "Kismet/GameplayStatics.h"
 #include <Game/PRGameState.h>
+#include "Datas/Wave/PRSpawnConfig.h" 
+
 
 APRSpawnerManager::APRSpawnerManager()
 {
@@ -50,14 +52,17 @@ void APRSpawnerManager::Tick(float DeltaTime)
 		return;
 	}
 
-	// GameTime is needed by the Wave Processor and the Max AI Logic.
-	// GetTimeSeconds() automatically pauses when the game is paused.
-	float GameTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+	// Don't use GetTimeSeconds(). Use the synchronized game time from GameState.
+	float GameTime = 0.f;
 
 	// --- GET DIFFICULTY MULTIPLIER ---
 	float DifficultyMultiplier = 1.0f;
 	if (APRGameState* PRGameState = GetWorld()->GetGameState<APRGameState>())
 	{
+		// Get the synced time that respects pause/gameplay flow.
+		GameTime = PRGameState->GetServerGameTime();
+
+		// Get the difficulty multiplier while we are here.
 		DifficultyMultiplier = PRGameState->GetActiveDifficultyMultiplier();
 	}
 
@@ -98,16 +103,16 @@ void APRSpawnerManager::ProcessWaveTimeline(float GameTime, float DifficultyMult
 	if (!GetWorld() || !GetWorld()->GetAuthGameMode()) return;
 
 	// Check if there are any waves left to process
-	if (!WaveTimeline.IsValidIndex(NextWaveIndex))
+	if (!SpawnConfig->Waves.IsValidIndex(NextWaveIndex))
 	{
 		return; // All scheduled waves are done
 	}
 
 	// Check if it's time for the next wave
-	if (GameTime >= WaveTimeline[NextWaveIndex].TimeToStart)
+	if (GameTime >= SpawnConfig->Waves[NextWaveIndex].TimeToStart)
 	{
 		// Scale the population increase by the difficulty multiplier.
-		int32 ScaledPopulationIncrease = FMath::RoundToInt(WaveTimeline[NextWaveIndex].PopulationIncrease * DifficultyMultiplier);
+		int32 ScaledPopulationIncrease = FMath::RoundToInt(SpawnConfig->Waves[NextWaveIndex].PopulationIncrease * DifficultyMultiplier);
 
 		// It's time! Increase the target population
 		TargetAICount += ScaledPopulationIncrease;
@@ -121,12 +126,12 @@ void APRSpawnerManager::ProcessWaveTimeline(float GameTime, float DifficultyMult
 void APRSpawnerManager::ProcessBossTimeline(float GameTime)
 {
 	// Check if all bosses are spawned or if we don't have a valid boss to check.
-	if (!BossTimeline.IsValidIndex(NextBossIndex))
+	if (!SpawnConfig->Bosses.IsValidIndex(NextBossIndex))
 	{
 		return;
 	}
 
-	const FBossWaveData& NextBoss = BossTimeline[NextBossIndex];
+	const FBossWaveData& NextBoss = SpawnConfig->Bosses[NextBossIndex];
 
 	// Check if it's time for the next boss to spawn.
 	if (GameTime >= NextBoss.TimeToSpawn)
@@ -156,7 +161,7 @@ TSubclassOf<APRAIBase> APRSpawnerManager::GetWeightedRandomActiveAIClass(float G
 	// Only iterate through waves that have already started.
 	for (int32 i = 0; i < NextWaveIndex; ++i)
 	{
-		const FWaveData& Wave = WaveTimeline[i];
+		const FWaveData& Wave = SpawnConfig->Waves[i];
 		if (!Wave.AIClass) continue;
 
 		// 1. Calculate the time this wave has been active, in minutes.

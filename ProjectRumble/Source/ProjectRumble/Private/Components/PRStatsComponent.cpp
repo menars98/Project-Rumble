@@ -66,32 +66,7 @@ void UPRStatsComponent::SyncCacheFromReplicatedData()
 				*Entry.StatTag.ToString(),
 				OldValue,
 				Entry.Value);
-
-			if (OnStatChangedDelegate.IsBound())
-			{
-				OnStatChangedDelegate.Broadcast(Entry.StatTag, Entry.Value);
-			}
-			else
-			{
-				//If no one listens we need to see that too
-				UE_LOG(LogTemp, Error, TEXT("[%s] Stat changed but NO ONE IS BOUND to OnStatChangedDelegate!"), *NetRole);
-			}
-			// Special cases like (Resource etc.) can be added here
-			if (Entry.StatTag == NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty)
-			{
-				if (OnDifficultyChangedDelegate.IsBound())
-				{
-					OnDifficultyChangedDelegate.Broadcast(Entry.Value);
-				}
-			}
-			if (Entry.StatTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Stat.Resource"))))
-			{
-				if (OnResourceChangedDelegate.IsBound())
-				{
-					// Resources are usually integers (Gold, Gems), so we round.
-					OnResourceChangedDelegate.Broadcast(Entry.StatTag, FMath::RoundToInt(Entry.Value));
-				}
-			}
+				BroadcastSingleStatChange(Entry.StatTag, Entry.Value);
 		}
 	}
 
@@ -273,23 +248,7 @@ void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 		// Broadcast that a generic stat has changed
 		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
 
-		// Check if the changed stat is a "Resource" and broadcast the specific event.
-		if (StatTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Stat.Resource"))))
-		{
-			// Convert the float value to an integer for the delegate.
-			const int32 NewAmount = FMath::RoundToInt(NewValue);
-			OnResourceChangedDelegate.Broadcast(StatTag, NewAmount);
-		}
-
-		// If the stat that changed is relevant to the shield, broadcast the shield delegate.
-		if (StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield || StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield)
-		{
-			BroadcastShield();
-		}
-		if (StatTag == NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty)
-		{
-			OnDifficultyChangedDelegate.Broadcast(NewValue);
-		}
+		BroadcastSingleStatChange(StatTag, NewValue);
 	}
 	else
 	{
@@ -389,15 +348,20 @@ void UPRStatsComponent::UpdateReplicatedStat(FGameplayTag StatTag, float NewValu
 
 void UPRStatsComponent::BroadcastHealth()
 {
-	// Ensure the delegate is bound before broadcasting.
+	const FGameplayTag HealthTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health.GetTag();
+	const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP.GetTag();
+
+	const float CurrentHealth = GetStatValue(HealthTag);
+	const float MaxHealth = GetStatValue(MaxHPTag);
+
 	if (OnHealthChangedDelegate.IsBound())
 	{
-		// Request the tags once for clarity. In a real project, you might store these in a central header.
-		const FGameplayTag HealthTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health.GetTag();
-		const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP.GetTag();
-
-		const float CurrentHealth = GetStatValue(HealthTag);
-		const float MaxHealth = GetStatValue(MaxHPTag);
+		UE_LOG(LogTemp, Warning, TEXT("Broadcasting Health Update: %.1f / %.1f (Listeners Bound)"), CurrentHealth, MaxHealth);
+		OnHealthChangedDelegate.Broadcast(CurrentHealth, MaxHealth);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("BroadcastHealth called but NO LISTENERS BOUND! HP: %.1f / %.1f"), CurrentHealth, MaxHealth);
 	}
 
 }
@@ -442,6 +406,49 @@ void UPRStatsComponent::BroadcastResources()
 
 			OnResourceChangedDelegate.Broadcast(Pair.Key, ResourceAmount);
 		}
+	}
+}
+
+void UPRStatsComponent::BroadcastSingleStatChange(const FGameplayTag& StatTag, float NewValue)
+{
+	// 1. Generic Stat Change
+	if (OnStatChangedDelegate.IsBound())
+	{
+		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
+	}
+
+	// 2. Resource Control
+	if (StatTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Stat.Resource"))))
+	{
+		if (OnResourceChangedDelegate.IsBound())
+		{
+			OnResourceChangedDelegate.Broadcast(StatTag, FMath::RoundToInt(NewValue));
+		}
+	}
+
+	// 3. Difficulty Control
+	if (StatTag == NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty)
+	{
+		if (OnDifficultyChangedDelegate.IsBound())
+		{
+			OnDifficultyChangedDelegate.Broadcast(NewValue);
+		}
+	}
+
+	// 4. Health Control 
+	if (StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health ||
+		StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Health/MaxHP Change Detected! Calling BroadcastHealth..."));
+
+		BroadcastHealth();
+	}
+
+	// 5. Shield Control
+	if (StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield ||
+		StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield)
+	{
+		BroadcastShield();
 	}
 }
 

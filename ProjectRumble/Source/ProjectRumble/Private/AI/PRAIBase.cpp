@@ -11,11 +11,11 @@
 #include "Actors/PRXpShard.h"
 #include "PRGameplayTags.h"
 #include "Components/PRLootComponent.h"
-#include "Components/PRStatsComponent.h"
 #include <GameModes/PRGameMode.h>
 #include <Game/PRGameState.h>
 #include "GameFramework/PawnMovementComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/SphereComponent.h"
 
 APRAIBase::APRAIBase()
 {
@@ -31,8 +31,16 @@ APRAIBase::APRAIBase()
 	// Set the default AI Controller class for ALL pawns that inherit from APRAIBase.
 	AIControllerClass = APRAIController::StaticClass();
 
-	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &APRAIBase::OnHit);
-	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &APRAIBase::OnEndOverlap);
+	DamageInteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("DamageInteractionSphere"));
+	DamageInteractionSphere->SetupAttachment(RootComponent);
+
+	DamageInteractionSphere->SetSphereRadius(60.0f);
+
+	/*GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &APRAIBase::OnHit);
+	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &APRAIBase::OnEndOverlap);*/
+
+	DamageInteractionSphere->OnComponentBeginOverlap.AddDynamic(this, &APRAIBase::OnDamageSphereOverlap);
+	DamageInteractionSphere->OnComponentEndOverlap.AddDynamic(this, &APRAIBase::OnEndOverlap);
 }
 
 void APRAIBase::BeginPlay()
@@ -233,6 +241,19 @@ void APRAIBase::Tick(float DeltaTime)
 
 }
 
+void APRAIBase::OnDamageSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// Check Authority & Damage flag
+	if (HasAuthority() && bCanApplyContactDamage)
+	{
+		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OtherActor))
+		{
+			ContactTarget = Player;
+			ApplyContactDamage(Player);
+		}
+	}
+}
+
 void APRAIBase::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	// If the player is no longer touching us, clear the target.
@@ -243,22 +264,22 @@ void APRAIBase::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* O
 	}
 }
 
-void APRAIBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
-{
-	// Check if we hit a player and if we are currently able to deal damage.
-	if (bCanApplyContactDamage)
-	{
-		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OtherActor))
-		{
-			// Store the target.
-			ContactTarget = Player;
-
-			// Call the member function ApplyContactDamage. "this->" is implicit.
-			ApplyContactDamage(Player);
-
-		}
-	}
-}
+//void APRAIBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+//{
+//	// Check if we hit a player and if we are currently able to deal damage.
+//	if (bCanApplyContactDamage)
+//	{
+//		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OtherActor))
+//		{
+//			// Store the target.
+//			ContactTarget = Player;
+//
+//			// Call the member function ApplyContactDamage. "this->" is implicit.
+//			ApplyContactDamage(Player);
+//
+//		}
+//	}
+//}
 
 void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 {
@@ -270,11 +291,27 @@ void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 	DamageResult.bWasCriticalHit = false;   // Contact damage can't crit (design decision).
 
 	// --- 2. APPLY DAMAGE AND KNOCKBACK ---
-	FVector DirectionFromAI = TargetPlayer->GetActorLocation() - GetActorLocation();
-	DirectionFromAI.Normalize();
+	// Player's position - AI position = Direction from AI to Player.
+	FVector DirectionToPlayer = TargetPlayer->GetActorLocation() - GetActorLocation();
+	DirectionToPlayer.Normalize();
 	
-	UPRGameplayStatics::ApplyRumbleDamage(this,TargetPlayer, ContactDamage,DamageResult , GetController(), this, nullptr, DirectionFromAI, 0, ContactStunChance, ContactStunDuration);
+	// Tweak: Add a tiny bit of upward force so ground friction doesn't eat the knockback immediately.
+	DirectionToPlayer.Z = 0.2f;
+	DirectionToPlayer.Normalize();
 
+	UPRGameplayStatics::ApplyRumbleDamage(
+		this,
+		TargetPlayer,
+		ContactDamage,
+		DamageResult,
+		GetController(),
+		this,
+		nullptr,
+		DirectionToPlayer,
+		KnockbackStrengthToPlayer,
+		ContactStunChance,
+		ContactStunDuration
+	);
 	// --- 2. START THE COOLDOWN ---
 	// Disable our ability to deal damage immediately.
 	bCanApplyContactDamage = false;
@@ -291,19 +328,32 @@ void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 
 void APRAIBase::ResetContactDamage()
 {
-	// The cooldown is over. We can now deal damage again.
 	bCanApplyContactDamage = true;
 
-	// --- CONTINUOUS DAMAGE LOGIC ---
-	// If we are STILL overlapping with the target, apply damage again immediately
-	// and restart the cooldown timer. This creates a damage-over-time effect while in contact.
-	if (ContactTarget)
+	// Instead of manual target or distance control, ask the Sphere Component:
+	// “Is there currently a Player (APRCharacterBase) inside you?”
+	TArray<AActor*> OverlappingActors;
+	if (DamageInteractionSphere)
 	{
-		// Check if the capsule is still overlapping the target
-		if (GetCapsuleComponent()->IsOverlappingActor(ContactTarget))
+		// Only get actors of type APRCharacterBase
+		DamageInteractionSphere->GetOverlappingActors(OverlappingActors, APRCharacterBase::StaticClass());
+	}
+
+	if (OverlappingActors.Num() > 0)
+	{
+		// Usually there should only be one player overlapping, but just in case, we take the first one.
+		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OverlappingActors[0]))
 		{
-			ApplyContactDamage(ContactTarget);
+			// Update the contact target.
+			ContactTarget = Player;
+
+			ApplyContactDamage(Player);
 		}
+	}
+	else
+	{
+		// Clear
+		ContactTarget = nullptr;
 	}
 }
 

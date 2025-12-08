@@ -32,6 +32,13 @@ public:
 	virtual UPRStatsComponent* GetStatsComponent() const override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	/**
+	 * Called when the character takes significant damage/knockback.
+	 * Stops movement and briefly disables input to sell the impact.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void OnKnockbackReceived();
 protected:
 	// -- INPUT --
 	// This is the main Input Mapping Context that will be loaded for gameplay.
@@ -143,6 +150,10 @@ protected:
 
 	float BaseGravityScale = 1.0f;
 
+	// Knockback Functions & Properties
+	void ReEnableInput();
+
+	FTimerHandle KnockbackTimerHandle;
 private:
 	// The cached pointer for performance now lives here, where it's needed.
 	UPROPERTY()

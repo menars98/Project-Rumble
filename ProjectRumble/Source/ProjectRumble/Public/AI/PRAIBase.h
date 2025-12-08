@@ -43,6 +43,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UPRLootComponent> LootComponent;
 
+	// A slightly larger sphere designated ONLY for detecting overlap damage.
+	// This separates physics blocking from damage logic.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class USphereComponent* DamageInteractionSphere;
+
 	// -- COMBAT --
 	// The damage this AI deals on contact.
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
@@ -56,10 +61,10 @@ protected:
 
 	// How often (in seconds) to apply contact damage while overlapping.
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
-	float DamageInterval = 2.0f; 
+	float DamageInterval = 0.5f; 
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Combat")
-	float KnockbackStrengthToPlayer = 500.0f;
+	float KnockbackStrengthToPlayer = 50.0f;
 
 	// The Data Table that defines all possible stats and their default values.
 	// This should be assigned in the Blueprint derived from this component.
@@ -119,12 +124,14 @@ protected:
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 	// -- ONHIT & OVERLAP EVENTS --
+	UFUNCTION()
+	void OnDamageSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION()
 	void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	/*UFUNCTION()
+	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);*/
 
 	// Function to apply contact damage to the target player.
 	void ApplyContactDamage(APRCharacterBase* TargetPlayer);

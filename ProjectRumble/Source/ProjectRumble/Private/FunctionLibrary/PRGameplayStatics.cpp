@@ -55,7 +55,6 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor* DamagedActor, float BaseDamage, const FDamageCalculationResult& DamageResult, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration, USoundBase* HitSound)
 {
 	
-
 	// --- 1. APPLY KNOCKBACK FIRST (OR INDEPENDENTLY) ---
 	// Knockback should happen even if the damage is 0 or absorbed.
 	if (KnockbackMagnitude > 0.f)
@@ -65,6 +64,12 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 			FVector LaunchVelocity = KnockbackDirection * KnockbackMagnitude;
 			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
 			
+			// Close Input connection to notify the character it has been knocked back.
+			if (APRCharacterBase* PRChar = Cast<APRCharacterBase>(TargetCharacter))
+			{
+				PRChar->OnKnockbackReceived();
+
+			}
 		}
 	}
 	// --- 2. APPLY STUN  ---

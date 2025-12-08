@@ -460,3 +460,30 @@ void APRCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void APRCharacterBase::ReEnableInput()
+{
+	if (Controller)
+	{
+		Controller->SetIgnoreMoveInput(false);
+	}
+}
+
+void APRCharacterBase::OnKnockbackReceived()
+{
+	// 1. Stop movement
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+	}
+
+	// 2. Close input for a brief moment
+	if (Controller)
+	{
+		// Only close keyboard not mouse
+		Controller->SetIgnoreMoveInput(true);
+
+		// Open it again after a short delay. We can tweak the duration as needed.
+		GetWorld()->GetTimerManager().SetTimer(KnockbackTimerHandle, this, &APRCharacterBase::ReEnableInput, 0.15f, false);
+	}
+}
+

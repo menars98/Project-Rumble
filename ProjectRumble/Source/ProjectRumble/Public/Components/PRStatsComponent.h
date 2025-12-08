@@ -252,6 +252,11 @@ private:
 	 * A helper function to easily broadcast the OnResourceChangedDelegate with current values.
 	 */
 	void BroadcastResources();
+	/**
+	 * Helper function to handle broadcasting logic for a single stat change.
+	 * Called automatically when a stat changes via Replication or SetStatValue.
+	 */
+	void BroadcastSingleStatChange(const FGameplayTag& StatTag, float NewValue);
 	// --- HEALTH REGEN ---
 
 	// Timer handle to manage the health regeneration loop.

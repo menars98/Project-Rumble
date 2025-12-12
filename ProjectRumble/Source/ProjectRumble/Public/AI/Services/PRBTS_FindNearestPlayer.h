@@ -22,6 +22,12 @@ protected:
 
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
+	UPROPERTY(EditAnywhere, Category = "AI")
+	FBlackboardKeySelector AttackConditionKey;
+
+	UPROPERTY(EditAnywhere, Category = "AI", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float AttackProbability = 0.1f;
+
 	// Blackboard Key to set (TargetActor)
 	UPROPERTY(EditAnywhere, Category = "AI")
 	FBlackboardKeySelector TargetActorKey;

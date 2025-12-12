@@ -7,6 +7,7 @@
 #include "AI/PRAIBase.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 APRBaseAttack::APRBaseAttack()
 {
@@ -21,6 +22,16 @@ APRBaseAttack::APRBaseAttack()
     AudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComponent"));
     AudioComp->SetupAttachment(RootCollision);
     AudioComp->bAutoActivate = false;
+
+	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
+	// Default Settings(For straight-flying bullets)
+
+	ProjectileMovement->UpdatedComponent = RootCollision;
+	ProjectileMovement->InitialSpeed = 0.f;
+	ProjectileMovement->MaxSpeed = 0.f;
+	ProjectileMovement->bRotationFollowsVelocity = true;
+	ProjectileMovement->bShouldBounce = false;
+	ProjectileMovement->ProjectileGravityScale = 0.f;
 }
 
 void APRBaseAttack::BeginPlay()
@@ -33,61 +44,62 @@ void APRBaseAttack::BeginPlay()
 
 void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 {
-    if (!HasAuthority())
-    {
-        return;
-    }
+    if (!HasAuthority()) return;
+    if (!IsValid(TargetActor) || !IsValid(GetOwner())) return;
 
-    // Ensure all necessary actors are valid.
-    if (!IsValid(TargetActor) || !IsValid(GetOwner()))
-    {
-        return;
-    }
+    // 
+    float FinalDamage = AttackStats.Damage;
+    FDamageCalculationResult DamageResult;
+    DamageResult.FinalDamage = FinalDamage;
 
-    // 1. Get Required Components/Actors
 
-    // Owner is the Player Character, which is the actual damage dealer.
-    APRCharacterBase* PlayerCharacter = Cast<APRCharacterBase>(GetOwner());
-    if (!PlayerCharacter) return;
+    AController* InstigatorController = nullptr;
+    AActor* DamageCauser = GetOwner();
 
-    // Get the Stats Component from the Player Character.
-    UPRStatsComponent* AttackerStats = PlayerCharacter->GetStatsComponent();
-    if (!AttackerStats) return;
+	// --- (PLAYER) ---
+	if (APRCharacterBase* PlayerOwner = Cast<APRCharacterBase>(GetOwner()))
+	{
+		InstigatorController = PlayerOwner->GetController();
 
-    // Get Instigator Controller (The Controller of the Owner/Player).
-    AController* InstigatorController = PlayerCharacter->GetController();
-    AActor* DamageCauser = GetOwner(); // The actual character dealing the damage.
+		if (UPRStatsComponent* PlayerStats = PlayerOwner->GetStatsComponent())
+		{
+			const APRAIBase* TargetAI = Cast<APRAIBase>(TargetActor);
 
-    // Get the target as a Base AI to pass to the damage calculator.
-    const APRAIBase* TargetAI = Cast<APRAIBase>(TargetActor);
+			DamageResult = UPRGameplayStatics::CalculateFinalDamage(
+				PlayerStats,
+				AttackStats.Damage,
+				AttackStats.CritChance,
+				AttackStats.CritMultiplier,
+				TargetAI
+			);
+			FinalDamage = DamageResult.FinalDamage;
+		}
+	}
+	// --- (AI) ---
+	else if (APRAIBase* AIOwner = Cast<APRAIBase>(GetOwner()))
+	{
+		InstigatorController = AIOwner->GetController();
+		//We need to take damage from tag
+		FinalDamage = AttackStats.Damage;
+		DamageResult.FinalDamage = FinalDamage;
+		DamageResult.bWasCriticalHit = false; // AI Crit atmasýn (veya buraya eklenebilir)
+	}
 
-    // 2. Calculate Final Damage using the UPRGameplayStatics Helper
-    // We pass the base stats from the AttackStats struct.
-    FDamageCalculationResult DamageResult = UPRGameplayStatics::CalculateFinalDamage(
-        AttackerStats,
-        AttackStats.Damage,           // Base Damage from the struct
-        AttackStats.CritChance,       // Base Crit Chance from the struct
-        AttackStats.CritMultiplier,   // Base Crit Multiplier from the struct
-        TargetAI
-    );
-
-    // 3. Apply Damage
-
-    // Call the central damage application function.
-    UPRGameplayStatics::ApplyRumbleDamage(
-        this, // WorldContextObject (The Projectile Actor itself)
-        TargetActor,
-        AttackStats.Damage, 
-        DamageResult,             
-        InstigatorController,
-        DamageCauser,
-        UDamageType::StaticClass(),
-        GetActorForwardVector(), // Knockback Direction (Can be changed in BP if needed)
-        AttackStats.KnockbackMagnitude,
-        AttackStats.StunChance,
-        AttackStats.StunDuration,
-        ImpactSound
-    );
+	// --- Apply Damage ---
+	UPRGameplayStatics::ApplyRumbleDamage(
+		this,
+		TargetActor,
+		FinalDamage,
+		DamageResult,
+		InstigatorController,
+		DamageCauser,
+		UDamageType::StaticClass(),
+		GetActorForwardVector(),
+		AttackStats.KnockbackMagnitude,
+		AttackStats.StunChance,
+		AttackStats.StunDuration,
+		ImpactSound
+	);
 }
 
 void APRBaseAttack::OnAttackOverlap_Implementation(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

@@ -8,6 +8,7 @@
 #include "GameFramework/Character.h"
 #include "Game/PRGameState.h"
 #include "Player/PRPlayerState.h"
+#include "AI/PRAIBase.h"
 
 UPRBTS_FindNearestPlayer::UPRBTS_FindNearestPlayer()
 {
@@ -18,17 +19,21 @@ UPRBTS_FindNearestPlayer::UPRBTS_FindNearestPlayer()
 
 void UPRBTS_FindNearestPlayer::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
+
 	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
-	APawn* AIPawn = OwnerComp.GetAIOwner()->GetPawn();
+	APRAIBase* AIPawn = Cast<APRAIBase>(OwnerComp.GetAIOwner()->GetPawn());
 	if (!AIPawn) return;
 
-	//Finding players through GameState is a faster way(instead of GetAllActorsOfClass).
 	APRGameState* GameState = GetWorld()->GetGameState<APRGameState>();
 	if (!GameState) return;
 
+	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	if (!BB) return;
+
+
 	AActor* ClosestPlayer = nullptr;
-	float MinDistanceSq = FLT_MAX; // Infinite
+	float MinDistanceSq = FLT_MAX;
 	FVector AILocation = AIPawn->GetActorLocation();
 
 	for (APlayerState* PS : GameState->PlayerArray)
@@ -37,15 +42,13 @@ void UPRBTS_FindNearestPlayer::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 		{
 			APawn* PlayerPawn = PS->GetPawn();
 
-			// Dont target destroyed actors(Maybe add health control)
-			if (!PlayerPawn->IsActorBeingDestroyed())
+			if (!PlayerPawn->IsActorBeingDestroyed()) 
 			{
-				// Squared distance for performance
 				float DistSq = FVector::DistSquared(AILocation, PlayerPawn->GetActorLocation());
 
 				if (DistSq < MinDistanceSq)
 				{
-					MinDistanceSq = DistSq;
+					MinDistanceSq = DistSq; 
 					ClosestPlayer = PlayerPawn;
 				}
 			}
@@ -54,14 +57,33 @@ void UPRBTS_FindNearestPlayer::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 
 	if (ClosestPlayer)
 	{
-		FString TargetName = ClosestPlayer->GetName();
-		UE_LOG(LogTemp, Warning, TEXT("AI %s selected target: %s"), *AIPawn->GetName(), *TargetName);
-		OwnerComp.GetBlackboardComponent()->SetValueAsObject(TargetActorKey.SelectedKeyName, ClosestPlayer);
+		UObject* CurrentTarget = BB->GetValueAsObject(TargetActorKey.SelectedKeyName);
+		if (CurrentTarget != ClosestPlayer)
+		{
+			BB->SetValueAsObject(TargetActorKey.SelectedKeyName, ClosestPlayer);
+			// OwnerComp.RestartTree(); 
+		}
 
+		float AttackRange = AIPawn->GetAttackRange();
+		float RangeSq = FMath::Square(AttackRange); // + ErrorMargin maybe
+
+		UE_LOG(LogTemp, Warning, TEXT("DistSq: %f, RangeSq: %f"), MinDistanceSq, RangeSq);
+
+		bool bShouldAttack = false;
+
+		if (MinDistanceSq <= RangeSq)
+		{
+			if (FMath::FRand() <= AttackProbability)
+			{
+				bShouldAttack = true;
+			}
+		}
+
+		BB->SetValueAsBool(AttackConditionKey.SelectedKeyName, bShouldAttack);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("AI %s found NO TARGET!"), *AIPawn->GetName());
-		OwnerComp.GetBlackboardComponent()->ClearValue(TargetActorKey.SelectedKeyName);
+		BB->ClearValue(TargetActorKey.SelectedKeyName);
+		BB->SetValueAsBool(AttackConditionKey.SelectedKeyName, false);
 	}
 }

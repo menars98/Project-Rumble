@@ -80,6 +80,8 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_XP_Reward); // Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_Gold_Reward); // Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_Silver_Reward); // Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_AttackRange); // Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_AttackDamage)
 		}
 	}
 
@@ -107,6 +109,7 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Goblin);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Skeleton);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Neuron);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Cactus);
 		}
 	}
 	namespace Destructible

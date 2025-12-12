@@ -16,6 +16,9 @@
 #include "GameFramework/PawnMovementComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SphereComponent.h"
+#include "Actors/PRBaseAttack.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+
 
 APRAIBase::APRAIBase()
 {
@@ -264,23 +267,6 @@ void APRAIBase::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* O
 	}
 }
 
-//void APRAIBase::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
-//{
-//	// Check if we hit a player and if we are currently able to deal damage.
-//	if (bCanApplyContactDamage)
-//	{
-//		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OtherActor))
-//		{
-//			// Store the target.
-//			ContactTarget = Player;
-//
-//			// Call the member function ApplyContactDamage. "this->" is implicit.
-//			ApplyContactDamage(Player);
-//
-//		}
-//	}
-//}
-
 void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 {
 	// --- 1. PREPARE THE DAMAGE DATA ---
@@ -373,6 +359,20 @@ void APRAIBase::UpdateMovementSpeed()
 	}
 }
 
+float APRAIBase::GetAttackRange() const
+{
+	if (StatsComponent_AI)
+	{
+		// Fetch the value using the tag we defined.
+		float Range = StatsComponent_AI->GetStatValue(NativeGameplayTags::Stats::AI::TAG_Stat_AI_AttackRange);
+
+		// If range is 0 (stat missing or not set), default to a melee range.
+		return (Range > 0.f) ? Range : 100.0f;
+	}
+
+	return 100.0f; // Safe default
+}
+
 void APRAIBase::UpdateDifficultyMultiplier(float NewDifficultyMultiplier)
 {
 	// This function re-reads the Data Table and re-initializes the StatsComponent
@@ -392,6 +392,167 @@ void APRAIBase::UpdateDifficultyMultiplier(float NewDifficultyMultiplier)
 	BP_SetDifficultyStats(NewDifficultyMultiplier);
 
 	UpdateMovementSpeed();
+}
+
+void APRAIBase::PerformAttack(AActor* TargetActor)
+{
+	if (!HasAuthority() || !RangedProjectileClass || !TargetActor) return;
+
+	if (bIsAttacking) return;
+
+	if (GetWorld()->GetTimerManager().IsTimerActive(AttackDelayTimerHandle)) return;
+
+	bIsAttacking = true;
+
+	// 1. Calculate target direction
+	// Not slightly above the ground, but right where your foot lands (the floor).
+	FVector TargetLocation = TargetActor->GetActorLocation();
+	TargetLocation.Z -= 50.0f; // Lower to ground level 
+
+	CachedTargetLocation = TargetLocation;
+
+	// 2. Calculate Spawn Location (e.g., slightly in front of the AI)
+	FVector SpawnLoc = GetActorLocation() + (GetActorUpVector() * 100.0f); // Above head
+	FRotator SpawnRot = FRotator::ZeroRotator;
+
+	AActor* Indicator = nullptr;
+	// --- (INDICATOR) ---
+	if (AttackIndicatorClass)
+	{
+		Indicator = GetWorld()->SpawnActor<AActor>(AttackIndicatorClass, TargetLocation, FRotator::ZeroRotator);
+	}
+	// Set the indicator's duration until the bullet falls (or slightly longer).
+	if (Indicator)
+	{
+		Indicator->SetLifeSpan(3.0f); 
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("AI %s is attacking towards location %s"), *GetName(), *CachedTargetLocation.ToString());
+
+	// 3. Start Timer (e.g., fire after 1.5 seconds)
+	// This duration is the time required for the player to escape.
+	float Delay = 1.5f;
+	GetWorld()->GetTimerManager().SetTimer(
+		AttackDelayTimerHandle,
+		this,
+		&APRAIBase::SpawnRangedProjectile,
+		Delay,
+		false
+	);
+}
+
+void APRAIBase::ResetAttackState()
+{
+	bIsAttacking = false;
+}
+
+void APRAIBase::SpawnRangedProjectile()
+{
+	// Control
+	if (!RangedProjectileClass) return;
+
+	UE_LOG(LogTemp, Log, TEXT("AI %s is attacking towards location %s "), *GetName(), *CachedTargetLocation.ToString());
+
+	// 1. Spawn Points (Above Head)
+	FVector SpawnLoc = GetActorLocation() + (GetActorUpVector() * 100.0f);
+
+	// 2. Curved Shot Calculation (Go to CachedTargetLocation!)
+	FVector TossVelocity = FVector::ZeroVector;
+	
+	// Fill Struct
+	UGameplayStatics::FSuggestProjectileVelocityParameters Params(
+		this,                 
+		SpawnLoc,             
+		CachedTargetLocation, 
+		2000.0f               
+	);
+	Params.OverrideGravityZ = 0.0f; // 0 = World Gravity 
+	Params.TraceOption = ESuggestProjVelocityTraceOption::DoNotTrace;
+	Params.bFavorHighArc = true;  // false = Low trajectory (direct fire), true = High trajectory (artillery fire)
+	// Params.CollisionRadius = 0.f;.
+
+	bool bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(Params, TossVelocity);
+
+	if (!bHaveSolution)
+	{
+		// If there's no solution (if it's too far away, etc.), just throw it there directly.
+		TossVelocity = (CachedTargetLocation - SpawnLoc).GetSafeNormal() * 1000.0f;
+	}
+
+	// Adjust the bullet's direction according to its speed
+	FRotator SpawnRot = TossVelocity.Rotation();
+
+	// 3. Deferred Spawn
+	APRBaseAttack* Projectile = GetWorld()->SpawnActorDeferred<APRBaseAttack>(
+		RangedProjectileClass,
+		FTransform(SpawnRot, SpawnLoc),
+		this,
+		this,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn
+	);
+
+	// 4. Calculate Stats
+	float CalculatedDamage = 10.0f;
+	float CalculatedKnockback = 500.0f;
+	float ProjectileSpeed = 1000.0f;
+	if (StatsComponent_AI)
+	{
+		CalculatedDamage = StatsComponent_AI->GetStatValue(NativeGameplayTags::Stats::AI::TAG_Stat_AI_AttackDamage);
+		CalculatedKnockback = StatsComponent_AI->GetStatValue(NativeGameplayTags::Stats::Physics::TAG_Stat_Physics_Knockback);
+		//ProjectileSpeed = StatsComponent_AI->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileSpeed);
+		// Safety checks
+		if (CalculatedDamage <= 0.f) CalculatedDamage = 1.0f;
+		if (CalculatedKnockback <= 0.f) CalculatedKnockback = 100.0f;
+		if (ProjectileSpeed <= 0.f) ProjectileSpeed = 500.0f;
+	}
+
+	//Calculate flying time
+	float Distance = FVector::Dist(SpawnLoc, CachedTargetLocation);
+	ProjectileSpeed = TossVelocity.Size();
+
+	float EstimatedFlightTime = (ProjectileSpeed > 0.f) ? (Distance / ProjectileSpeed) : 1.0f;
+
+	// High-arc shots extend the path, so let's add a little extra time (e.g., x1.5 or +0.5s).
+   // Since the cactus shot is slow, +1.0s is a safe margin.
+	float RecoveryTime = EstimatedFlightTime + 0.5f;
+
+	GetWorld()->GetTimerManager().SetTimer(
+		AttackRecoveryTimerHandle,
+		this,
+		&APRAIBase::ResetAttackState,
+		RecoveryTime,
+		false
+	);
+
+	if (Projectile)
+	{
+		// 5. Fill struct
+		FPRWeaponAttackStats NewStats;
+		NewStats.Damage = CalculatedDamage;
+		NewStats.KnockbackMagnitude = 500.0f;
+		NewStats.ProjectileSpeed = 1000.0f;
+
+		Projectile->AttackStats = NewStats;
+
+		if (Projectile->ProjectileMovement)
+		{
+
+			Projectile->ProjectileMovement->bInitialVelocityInLocalSpace = false;
+
+			Projectile->ProjectileMovement->ProjectileGravityScale = 1.0f;
+
+			float DesiredSpeed = TossVelocity.Size();
+
+			Projectile->ProjectileMovement->InitialSpeed = DesiredSpeed;
+			Projectile->ProjectileMovement->MaxSpeed = DesiredSpeed;
+
+			Projectile->ProjectileMovement->Velocity = TossVelocity;
+			//Force to update
+			Projectile->ProjectileMovement->UpdateComponentVelocity();
+		}
+
+		UGameplayStatics::FinishSpawningActor(Projectile, FTransform(SpawnRot, SpawnLoc));
+	}
 }
 
 void APRAIBase::Multicast_PlayHitFlash_Implementation()

@@ -189,15 +189,22 @@ void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStats
 		// Example: 39.2f becomes 39.0f, 39.8f becomes 40.0f.
 		float FinalValue = FMath::RoundToFloat(ScaledValue);
 
+		UE_LOG(LogTemp, Warning, TEXT("AI Init: Adding Stat %s with Value %f"), *StatDef.StatID.ToString(), FinalValue);
 		// Add the stat tag and the final calculated value to the runtime map.
 		CurrentStatsCache.Add(StatDef.StatID, FinalValue);
 
+		UpdateReplicatedStat(StatDef.StatID, FinalValue);
 		// Check for MaxHealth to set CurrentHealth.
 		if (StatDef.StatID == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP)
 		{
 			LoadedMaxHealth = FinalValue;
 			bMaxHealthFound = true;
 		}
+	}
+
+	if (GetOwner()->HasAuthority())
+	{
+		SyncReplicatedDataFromCache(); 
 	}
 
 	// 3. Set Current Health to Max Health.

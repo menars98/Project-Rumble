@@ -10,6 +10,7 @@
 class UAudioComponent;
 class USoundBase;
 class USphereComponent;
+class UProjectileMovementComponent;
 
 UCLASS()
 class PROJECTRUMBLE_API APRBaseAttack : public AActor
@@ -22,7 +23,9 @@ public:
 
 	// --- COMPONENTS ---
 
-	// Diðer Projectile'larda (Axe, Arrow) deðiþtirilebilir.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USphereComponent> RootCollision;
 

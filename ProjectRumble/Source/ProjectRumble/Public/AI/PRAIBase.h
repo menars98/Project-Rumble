@@ -10,6 +10,9 @@ class UPRStatsComponent;
 class APRCharacterBase;
 class APRXpShard;
 class UPRLootComponent; 
+class APRBaseAttack;
+class UBehaviorTree;
+class AActor;
 
 UCLASS()
 class PROJECTRUMBLE_API APRAIBase : public APREntityBase
@@ -24,6 +27,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AI")
 	const FGameplayTagContainer& GetAITags() const { return AITags; }
 
+	// Getter for the Controller
+	UBehaviorTree* GetBehaviorTree() const { return EnemyBehaviorTree; }
+
+	/**
+	* Retrieves the current Attack Range from the Stats Component.
+	* Returns a default melee range if the stat is missing.
+	*/
+	UFUNCTION(BlueprintPure, Category = "AI|Combat")
+	float GetAttackRange() const;
+
 	/**
 	 * Re-applies the difficulty multiplier to all stats.
 	 * Called by the GameMode when the global difficulty changes mid-game.
@@ -33,6 +46,10 @@ public:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayHitFlash();
+
+	/** Triggers the attack logic (Spawns projectile). Called by BTTask. */
+	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
+	void PerformAttack(AActor* TargetActor);
 
 protected:
 	// -- COMPONENTS --
@@ -48,7 +65,18 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class USphereComponent* DamageInteractionSphere;
 
+	/** The specific Behavior Tree this enemy type uses. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	TObjectPtr<UBehaviorTree> EnemyBehaviorTree;
+
 	// -- COMBAT --
+	// The projectile class to spawn for ranged attacks (Assigned in BP_Cactus).
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
+	TSubclassOf<APRBaseAttack> RangedProjectileClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
+	TSubclassOf<AActor> AttackIndicatorClass;
+
 	// The damage this AI deals on contact.
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
 	float ContactDamage = 5.0f; 
@@ -88,11 +116,19 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Rumble | Combat")
 	bool bCanApplyDamage = true;
 
+	bool bIsAttacking = false;
+
+	// --- TIMERS ---
 	// The timer handle to manage the duration of the flash effect.
 	FTimerHandle FlashTimerHandle;
 
 	// The timer handle for applying contact damage.
 	FTimerHandle ContactDamageTimerHandle;
+
+	FTimerHandle AttackDelayTimerHandle;
+
+	// The timer handle for projectile
+	FTimerHandle AttackRecoveryTimerHandle;
 
 	// Flag to check if we are currently able to apply contact damage.
 	bool bCanApplyContactDamage = true;
@@ -152,7 +188,15 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "AI|Difficulty")
 	void BP_SetDifficultyStats(float DifficultyMultiplier);
 
+	UFUNCTION()
+	void ResetAttackState();
+
 	void UpdateMovementSpeed();
+
+	// The main firing function that will run when the timer expires.
+	void SpawnRangedProjectile();
+
+	FVector CachedTargetLocation;
 
 };
 

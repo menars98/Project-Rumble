@@ -479,11 +479,20 @@ void APRCharacterBase::OnKnockbackReceived()
 	// 2. Close input for a brief moment
 	if (Controller)
 	{
-		// Only close keyboard not mouse
-		Controller->SetIgnoreMoveInput(true);
+		FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 
-		// Open it again after a short delay. We can tweak the duration as needed.
-		GetWorld()->GetTimerManager().SetTimer(KnockbackTimerHandle, this, &APRCharacterBase::ReEnableInput, 0.15f, false);
+		// --- COUNTER CHECK ---
+		// If the Timer is already running, the character has already been stunned.
+		// In this case, do not increase the counter (Stack) by saying “Ignore Input” again.
+		if (!TimerManager.IsTimerActive(KnockbackTimerHandle))
+		{
+			Controller->SetIgnoreMoveInput(true); 
+		}
+
+		// Always restart/extend the timer.
+		// This way, if we take consecutive hits, the stun duration increases but the input remains intact.
+		TimerManager.SetTimer(KnockbackTimerHandle, this, &APRCharacterBase::ReEnableInput, 0.15f, false);
+
 	}
 }
 

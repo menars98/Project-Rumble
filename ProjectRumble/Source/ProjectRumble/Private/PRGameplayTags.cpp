@@ -80,6 +80,7 @@ namespace NativeGameplayTags
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_BaseKnockback, "Stat.AI.BaseKnockback");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_DetectionRange, "Stat.AI.DetectionRange");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_AttackRange, "Stat.AI.AttackRange");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_AttackDamage, "Stat.AI.AttackDamage");
 		}
 	}
 
@@ -108,6 +109,8 @@ namespace NativeGameplayTags
 		{
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Goblin, "Enemies.Type.Goblin");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Skeleton, "Enemies.Type.Skeleton");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Neuron, "Enemies.Type.Neuron");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Cactus, "Enemies.Type.Cactus");
 		}
 	}
 

@@ -22,23 +22,40 @@ This project serves as a technical showcase for advanced C++ gameplay programmin
 ## 🛠️ Technical Highlights
 
 Unlike typical blueprint-heavy projects, Project Rumble relies on C++ for 95% of its core logic (Networking, AI, Physics, Stats), using Blueprints mostly and strictly for UI and Visual composition.
+
 ### 1. Multiplayer Architecture & Replication
+
 Designed a robust Server-Authoritative framework to handle high-intensity co-op gameplay without desynchronization.
+
 Synchronized State Management: Implemented a custom GameState to handle Shared XP and Difficulty Scaling. When one player collects XP, it is distributed to the entire team, promoting cooperative play.
+
 Race-Condition Safe UI: Solved critical initialization timing issues in multiplayer using a Delegate-driven architecture. Clients wait for OnRep_PlayerState and OnStatsComponentReady signals before binding HUD elements, preventing null-pointer crashes on join.
+
 Optimized Network Traffic: To reduce bandwidth in a bullet-hell scenario, visual feedback (Damage Numbers, Hit Sounds) utilizes Client RPCs targeting only the instigator, rather than expensive NetMulticast broadcasts.
+
 ### 2. Advanced AI System (C++ & Behavior Trees)
+
 The AI system is built to handle hundreds of active units while maintaining performance.
+
 Custom BT Services: Wrote efficient C++ services (FindNearestPlayer) that iterate through the GameState player array rather than using expensive GetAllActorsOfClass calls.
+
 Spatial Optimization: Utilized custom Collision Channels to filter overlap queries at the physics engine level, avoiding costly Blueprint loops for target selection.
+
 Ballistic Projectiles: Implemented Ranged AI (Cactus) using SuggestProjectileVelocity to calculate physics-based mortar trajectories that dynamically adjust to the player's distance.
+
 ### 3. Scalable Data-Driven Design
+
 The game logic is decoupled from hard-coded values, allowing designers to balance the game via Data Tables without touching code.
+
 Stat System via GameplayTags: Constructed a flexible Stat Component that handles Health, Damage, Luck, and Cooldowns using GameplayTags. This allows for modular stat modifiers (e.g., "+10% Fire Damage" items).
+
 Dynamic Difficulty: Enemy stats (Health, Speed, Damage) are read from a Data Table and scaled at runtime based on a global DifficultyMultiplier, which increases over time and per player count.
+
 ### 4. Mathematical Algorithms
 Exponential Luck Curve: Designed a custom RollForRarity algorithm using Exponential Decay.
+
 Logic: As the player's Luck stat increases, the weight of "Common" items decreases exponentially, shifting probability to "Legendary" tiers. This creates a satisfying progression curve for late-game builds.
+
 ---
 ## 💻 Code Snippets
 

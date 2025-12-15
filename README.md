@@ -103,6 +103,9 @@ void APRCharacterBase::OnRep_PlayerState()
 `- [ ]`  Persistence: Save/Load system for meta-progression (Gold/Unlocks).
 
 Engine: Unreal Engine 5.6
+
 Language: C++
-Developer: Enes [Your Surname]
+
+Developer: Enes Urlu
+
 Note: This project is part of my professional portfolio demonstrating Full Networked Gameplay Programming capabilities.

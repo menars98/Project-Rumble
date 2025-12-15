@@ -1,14 +1,16 @@
-### Project Rumble ⚔️
-
+## Project Rumble ⚔️
+---
 ![alt text](https://img.shields.io/badge/Unreal_Engine-5.6+-black?style=for-the-badge&logo=unrealengine)
 ![alt text](https://img.shields.io/badge/Language-C++-blue?style=for-the-badge&logo=cplusplus)
 ![alt text](https://img.shields.io/badge/Architecture-Server_Authoritative-red?style=for-the-badge)
 ![alt text](https://img.shields.io/badge/Pattern-Data_Driven-green?style=for-the-badge)
 
 A 2-Player Co-op Action-Roguelike built with Unreal Engine 5.
+
 This project serves as a technical showcase for advanced C++ gameplay programming, server-authoritative replication, and scalable data-driven architecture.
 
-### 🎥 Gameplay Showcase
+---
+## 🎥 Gameplay Showcase
 
 ![alt text](https://img.youtube.com/vi/-zTRvWn5Gs4/maxresdefault.jpg)
 ### Video Highlights:
@@ -16,8 +18,8 @@ This project serves as a technical showcase for advanced C++ gameplay programmin
 - Server-Authoritative Combat & Shared XP.
 - Synchronized Level-Up: Demonstrating the Global Pause system where the game waits for both players to make a selection.
 - Ranged AI Behavior & Physics-based Projectiles.
-
-### 🛠️ Technical Highlights
+---
+## 🛠️ Technical Highlights
 
 Unlike typical blueprint-heavy projects, Project Rumble relies on C++ for 95% of its core logic (Networking, AI, Physics, Stats), using Blueprints mostly and strictly for UI and Visual composition.
 ### 1. Multiplayer Architecture & Replication
@@ -37,8 +39,8 @@ Dynamic Difficulty: Enemy stats (Health, Speed, Damage) are read from a Data Tab
 ### 4. Mathematical Algorithms
 Exponential Luck Curve: Designed a custom RollForRarity algorithm using Exponential Decay.
 Logic: As the player's Luck stat increases, the weight of "Common" items decreases exponentially, shifting probability to "Legendary" tiers. This creates a satisfying progression curve for late-game builds.
-
-### 💻 Code Snippets
+---
+## 💻 Code Snippets
 
 ### A. Dynamic Rarity Calculation (Math & Algorithms)
 
@@ -89,23 +91,19 @@ void APRCharacterBase::OnRep_PlayerState()
     }
 }
 ```
+---
+## 🚀 Roadmap & Future Improvements
 
-### 🚀 Roadmap & Future Improvements
+- [x] **Core Loop:** Combat, Leveling, Upgrades, Enemy Waves.
+- [x] **Multiplayer:** Lobby, Host/Join, Replication.
+- [ ] **Online Subsystem:** Integrate Steam/EOS for invite-based matchmaking (Architecture is currently ready via `IOnlineSessionInterface`).
+- [ ] **Optimization:** Implement **Object Pooling** for projectiles and enemies to reduce Garbage Collection overhead.
+- [ ] **Persistence:** Save/Load system for meta-progression (Gold/Unlocks).
 
-`- [x]`  Core Loop: Combat, Leveling, Upgrades, Enemy Waves.
+---
 
-`- [x]`  Multiplayer: Lobby, Host/Join, Replication.
+- **Engine:** Unreal Engine 5.4
+- **Language:** C++
+- **Developer:** Enes [Soyadınız]
 
-`- [ ]`  Online Subsystem: Integrate Steam/EOS for invite-based matchmaking (Architecture is currently ready via IOnlineSessionInterface).
-
-`- [ ]`  Optimization: Implement Object Pooling for projectiles and enemies to reduce Garbage Collection overhead.
-
-`- [ ]`  Persistence: Save/Load system for meta-progression (Gold/Unlocks).
-
-Engine: Unreal Engine 5.6
-
-Language: C++
-
-Developer: Enes Urlu
-
-Note: This project is part of my professional portfolio demonstrating Full Networked Gameplay Programming capabilities.
+> **Note:** *This project is part of my professional portfolio demonstrating Full Networked Gameplay Programming capabilities.*

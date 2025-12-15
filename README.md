@@ -12,7 +12,7 @@ This project serves as a technical showcase for advanced C++ gameplay programmin
 ---
 ## 🎥 Gameplay Showcase
 
-![alt text](https://img.youtube.com/vi/-zTRvWn5Gs4/maxresdefault.jpg)
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/-zTRvWn5Gs4/maxresdefault.jpg)](http://www.youtube.com/watch?v=-zTRvWn5Gs4 "Video Title")
 ### Video Highlights:
 - Lobby System & Synchronization (Ready Check).
 - Server-Authoritative Combat & Shared XP.

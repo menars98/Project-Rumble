@@ -119,8 +119,8 @@ void APRCharacterBase::OnRep_PlayerState()
 
 ---
 
-- **Engine:** Unreal Engine 5.4
+- **Engine:** Unreal Engine 5.6
 - **Language:** C++
-- **Developer:** Enes [Soyadınız]
+- **Developer:** Enes Urlu
 
 > **Note:** *This project is part of my professional portfolio demonstrating Full Networked Gameplay Programming capabilities.*

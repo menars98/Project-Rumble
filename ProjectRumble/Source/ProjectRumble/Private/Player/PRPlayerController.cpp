@@ -285,6 +285,46 @@ void APRPlayerController::Server_PauseGameForLevelUp_Implementation()
 	}
 }
 
+// Called by the PlayerCharacter when it dies.
+void APRPlayerController::Server_OnPlayerDied_Implementation()
+{
+	if (APRGameMode* GM = Cast<APRGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		// Let the GameMode check if all players are dead.
+		GM->CheckPlayerDeaths();
+	}
+}
+
+void APRPlayerController::Client_ShowGameOverScreen_Implementation(bool bWon)
+{
+	if (GameOverWidgetClass)
+	{
+		// Clean UI
+		if (LevelUpWidgetInstance) LevelUpWidgetInstance->RemoveFromParent();
+		// Hide HUD if needed?
+		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
+		{
+			// PRHUD->HideHUD(); // @TODO: We need to add HideHUD function to the HUD interface.
+		}
+
+		UUserWidget* GameOverWidget = CreateWidget(this, GameOverWidgetClass);
+		if (GameOverWidget)
+		{
+			GameOverWidget->AddToViewport();
+
+			// Set Input Mode
+			FInputModeUIOnly InputMode;
+			SetInputMode(InputMode);
+			bShowMouseCursor = true;
+
+			// We can send other info here if needed (like stats, score, etc.)
+		}
+	}
+
+	// Pause game locally?
+	// UGameplayStatics::SetGamePaused(GetWorld(), true); // But we don't want to pause the server.
+}
+
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {
 	if (!ChosenUpgrade) return;

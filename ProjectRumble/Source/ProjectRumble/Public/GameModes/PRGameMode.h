@@ -17,6 +17,8 @@ public:
 
 	APRGameMode();
 
+	virtual void Tick(float DeltaSeconds) override;
+
 	// The maximum multiplier that the Difficulty stat can provide.
 	// e.g., 6.0f means a 6x increase at 600% Difficulty or higher.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game|Difficulty")
@@ -36,15 +38,28 @@ public:
 
 	virtual void Logout(AController* Exiting) override;
 
+	/** Checks if all players are dead. If so, triggers Game Over. */
+	void CheckPlayerDeaths();
 protected:
 
 	/** The class of the Spawner Manager to spawn at the start of the game. */
-	UPROPERTY(EditDefaultsOnly, Category = "Spawning")
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Game|Spawning")
 	TSubclassOf<class APRSpawnerManager> SpawnerManagerClass;
 
 	// A reference to the spawned Spawner Manager instance.
 	UPROPERTY()
 	TObjectPtr<class APRSpawnerManager> SpawnerManagerInstance;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Game|Difficulty")
+	float ActiveDifficultyMultiplier = 0.5f;
+
+	/**
+	* [CONFIG] The game's duration in seconds.
+	* Endless mode starts when this time expires.
+	* We did this because we can make another game modes like Fast, Normal and change this value accordingly.
+	*/
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Game|Config")
+	float MatchDurationInSeconds = 600.0f;
 
 	// How many players are currently looking at the Level Up screen?
 	int32 PlayersInLevelUpMenu = 0;
@@ -74,5 +89,8 @@ protected:
 
 	// Override the PlayerState spawn to ensure we bind to new players immediately.
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+
+	/** Triggers the end of the match logic. */
+	void GameOver(bool bWon);
 
 };

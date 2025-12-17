@@ -94,6 +94,8 @@ void APRAIBase::BeginPlay()
 		}*/
 	}
 
+	OnRep_TintColor();
+
 	InitializeStats();
 }
 
@@ -210,32 +212,24 @@ void APRAIBase::OnDeath()
 {
 	Super::OnDeath(); // Run the base logic from EntityBase (disable collision etc.).
 
-	USkeletalMeshComponent* MyMesh = GetMesh();
-	if (MyMesh)
+	// Make sure it doesnt apply damage on death.
+	bCanApplyContactDamage = false; 
+	GetWorld()->GetTimerManager().ClearTimer(ContactDamageTimerHandle); 
+	GetWorld()->GetTimerManager().ClearTimer(AttackDelayTimerHandle);
+
+	if (DamageInteractionSphere)
 	{
-		// --- RAGDOLL LOGIC ---
-
-		// Detach from the controller so it no longer receives AI commands
-		if (Controller)
-		{
-			Controller->UnPossess();
-		}
-
-		// Set the collision profile to "Ragdoll" to allow it to collide with the world
-		MyMesh->SetCollisionProfileName(FName("Ragdoll"));
-
-		// Enable physics simulation on the mesh.
-		// The "true" parameter tells it to wake the physics body immediately.
-		MyMesh->SetSimulatePhysics(true);
+		DamageInteractionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		DamageInteractionSphere->SetGenerateOverlapEvents(false);
 	}
-	// Find our loot component and tell it to do its job.
+
 	if (LootComponent)
 	{
 		LootComponent->DropLoot();
 	}
 
-	// Make the AI's body disappear after 5 seconds.
-	SetLifeSpan(3.0f);
+	// We could add raggdoll but its poitnless in a game like this, so we destroy it.
+	Destroy();
 }
 
 void APRAIBase::Tick(float DeltaTime)
@@ -441,6 +435,44 @@ void APRAIBase::PerformAttack(AActor* TargetActor)
 	);
 }
 
+void APRAIBase::SetEnemyColor(FLinearColor NewColor)
+{
+	// Only Works Server
+	if (HasAuthority())
+	{
+		TintColor = NewColor;
+
+		// Update immediately on Server
+		OnRep_TintColor();
+	}
+}
+
+void APRAIBase::OnRep_TintColor()
+{
+	// This function is called automatically on the Client and manually on the Server.
+	// 
+	// Assuming our material has a Vector Parameter named "Tint" or "BodyColor".
+	// "FlashColor" was for hit feedback, let's use "Tint" for base color.
+	FName ColorParamName = TEXT("Tint"); 
+
+	// The DynamicMaterials array was being populated in BeginPlay.
+	// If this function runs before BeginPlay (which is possible), the materials may need to be created here.
+	// But generally, BeginPlay runs after DeferredSpawn and FinishSpawningActor, then the variables arrive.
+
+	// Safety
+	if (DynamicMaterials.Num() == 0 && GetMesh())
+	{
+		//@TODO: Consider moving this logic to a separate function to avoid duplication with BeginPlay.
+	}
+	for (UMaterialInstanceDynamic* MID : DynamicMaterials)
+	{
+		if (MID)
+		{
+			MID->SetVectorParameterValue(ColorParamName, TintColor);
+		}
+	}
+}
+
 void APRAIBase::ResetAttackState()
 {
 	bIsAttacking = false;
@@ -456,33 +488,22 @@ void APRAIBase::SpawnRangedProjectile()
 	// 1. Spawn Points (Above Head)
 	FVector SpawnLoc = GetActorLocation() + (GetActorUpVector() * 100.0f);
 
-	// 2. Curved Shot Calculation (Go to CachedTargetLocation!)
+	// --- NEW LOGIC: CALCULATE VELOCITY BY TIME ---
+
 	FVector TossVelocity = FVector::ZeroVector;
+	const float GravityZ = GetWorld()->GetGravityZ(); // Usually -980.0f
 	
-	// Fill Struct
-	UGameplayStatics::FSuggestProjectileVelocityParameters Params(
-		this,                 
-		SpawnLoc,             
-		CachedTargetLocation, 
-		2000.0f               
-	);
-	Params.OverrideGravityZ = 0.0f; // 0 = World Gravity 
-	Params.TraceOption = ESuggestProjVelocityTraceOption::DoNotTrace;
-	Params.bFavorHighArc = true;  // false = Low trajectory (direct fire), true = High trajectory (artillery fire)
-	// Params.CollisionRadius = 0.f;.
+	// Formula: V0 = (Target - Start - (0.5 * g * t^2)) / t
+	FVector Distance = CachedTargetLocation - SpawnLoc;
+	FVector GravityComp = FVector(0, 0, 0.5f * GravityZ * FMath::Square(ProjectileFlightTime));
 
-	bool bHaveSolution = UGameplayStatics::SuggestProjectileVelocity(Params, TossVelocity);
+	// Calculate the exact velocity needed to hit the target in 'ProjectileFlightTime' seconds.
+	TossVelocity = (Distance - GravityComp) / ProjectileFlightTime;
 
-	if (!bHaveSolution)
-	{
-		// If there's no solution (if it's too far away, etc.), just throw it there directly.
-		TossVelocity = (CachedTargetLocation - SpawnLoc).GetSafeNormal() * 1000.0f;
-	}
+	DrawDebugLine(GetWorld(), SpawnLoc, CachedTargetLocation, FColor::Red, false, 2.0f, 0, 5.0f);
 
-	// Adjust the bullet's direction according to its speed
 	FRotator SpawnRot = TossVelocity.Rotation();
 
-	// 3. Deferred Spawn
 	APRBaseAttack* Projectile = GetWorld()->SpawnActorDeferred<APRBaseAttack>(
 		RangedProjectileClass,
 		FTransform(SpawnRot, SpawnLoc),
@@ -490,7 +511,6 @@ void APRAIBase::SpawnRangedProjectile()
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn
 	);
-
 	// 4. Calculate Stats
 	float CalculatedDamage = 10.0f;
 	float CalculatedKnockback = 500.0f;
@@ -506,23 +526,7 @@ void APRAIBase::SpawnRangedProjectile()
 		if (ProjectileSpeed <= 0.f) ProjectileSpeed = 500.0f;
 	}
 
-	//Calculate flying time
-	float Distance = FVector::Dist(SpawnLoc, CachedTargetLocation);
 	ProjectileSpeed = TossVelocity.Size();
-
-	float EstimatedFlightTime = (ProjectileSpeed > 0.f) ? (Distance / ProjectileSpeed) : 1.0f;
-
-	// High-arc shots extend the path, so let's add a little extra time (e.g., x1.5 or +0.5s).
-   // Since the cactus shot is slow, +1.0s is a safe margin.
-	float RecoveryTime = EstimatedFlightTime + 0.5f;
-
-	GetWorld()->GetTimerManager().SetTimer(
-		AttackRecoveryTimerHandle,
-		this,
-		&APRAIBase::ResetAttackState,
-		RecoveryTime,
-		false
-	);
 
 	if (Projectile)
 	{
@@ -534,28 +538,54 @@ void APRAIBase::SpawnRangedProjectile()
 
 		Projectile->AttackStats = NewStats;
 
-		if (Projectile->ProjectileMovement)
+		if (UProjectileMovementComponent* PMC = Projectile->FindComponentByClass<UProjectileMovementComponent>())
 		{
+			// Gravity must be enabled for the arc to work naturally.
+			PMC->ProjectileGravityScale = 1.0f;
 
-			Projectile->ProjectileMovement->bInitialVelocityInLocalSpace = false;
+			// Ensure local space logic is OFF so our world calculation works.
+			PMC->bInitialVelocityInLocalSpace = false;
 
-			Projectile->ProjectileMovement->ProjectileGravityScale = 1.0f;
+			// Remove speed limits so it doesn't clamp our calculated velocity.
+			float CalcSpeed = TossVelocity.Size();
+			PMC->InitialSpeed = CalcSpeed;
+			PMC->MaxSpeed = 0.f; // Infinite
 
-			float DesiredSpeed = TossVelocity.Size();
+			// Apply the calculated velocity.
+			PMC->Velocity = TossVelocity;
 
-			Projectile->ProjectileMovement->InitialSpeed = DesiredSpeed;
-			Projectile->ProjectileMovement->MaxSpeed = DesiredSpeed;
+			// Update rotation to match velocity immediately.
+			Projectile->SetActorRotation(TossVelocity.Rotation());
 
-			Projectile->ProjectileMovement->Velocity = TossVelocity;
-			//Force to update
-			Projectile->ProjectileMovement->UpdateComponentVelocity();
+			PMC->UpdateComponentVelocity();
 		}
 
+		// Update Recovery Timer based on the FIXED flight time.
+		// We wait exactly flight time + small buffer before resetting state.
+		GetWorld()->GetTimerManager().SetTimer(
+			AttackRecoveryTimerHandle,
+			this,
+			&APRAIBase::ResetAttackState,
+			ProjectileFlightTime + 0.2f, // Add small buffer
+			false
+		);
+
 		UGameplayStatics::FinishSpawningActor(Projectile, FTransform(SpawnRot, SpawnLoc));
+	}
+	else
+	{
+		// If spawning failed, reset attack state immediately.
+		ResetAttackState();
 	}
 }
 
 void APRAIBase::Multicast_PlayHitFlash_Implementation()
 {
 	PlayHitFlash();
+}
+
+void APRAIBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APRAIBase, TintColor);
 }

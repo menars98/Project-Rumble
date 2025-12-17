@@ -54,6 +54,7 @@ void APRSpawnerManager::Tick(float DeltaTime)
 
 	// Don't use GetTimeSeconds(). Use the synchronized game time from GameState.
 	float GameTime = 0.f;
+	float MatchDuration = 600.0f;
 
 	// --- GET DIFFICULTY MULTIPLIER ---
 	float DifficultyMultiplier = 1.0f;
@@ -61,6 +62,7 @@ void APRSpawnerManager::Tick(float DeltaTime)
 	{
 		// Get the synced time that respects pause/gameplay flow.
 		GameTime = PRGameState->GetServerGameTime();
+		MatchDuration = PRGameState->GetMatchDuration();
 
 		// Get the difficulty multiplier while we are here.
 		DifficultyMultiplier = PRGameState->GetActiveDifficultyMultiplier();
@@ -70,23 +72,17 @@ void APRSpawnerManager::Tick(float DeltaTime)
 	ProcessBossTimeline(GameTime);
 	// --- OUR DYNAMIC MAX AI LOGIC (Endless Mode Prep) ---
 
-	// For now, let's assume Endless Mode starts after a fixed duration (e.g., 10 minutes).
-	// The GameMode is a better place to define this length.
-	const float EndlessModeStartTime = 600.0f; // 10 minutes (600 seconds)
-
-	bool bInEndlessMode = (GameTime >= EndlessModeStartTime);
+	bool bInEndlessMode = (GameTime >= MatchDuration);
 
 	// The max number of active AI is also scaled by difficulty.
 	int32 ScaledBaseMaxAI = FMath::RoundToInt(BaseMaxActiveAI * DifficultyMultiplier);
 
 	if (bInEndlessMode)
 	{
-		// Calculate time passed since the beginning of Endless Mode.
-		float EndlessTime = GameTime - EndlessModeStartTime;
-		int32 MinutesPassed = FMath::FloorToInt(EndlessTime / 60.f);
 
+		// --- ENDLESS SCALING ---
 		// Increase the max AI limit.
-		CurrentMaxActiveAI = ScaledBaseMaxAI + (MinutesPassed * MaxAIIncreasePerMinute_Endless);
+		CurrentMaxActiveAI = (ScaledBaseMaxAI + MaxAIIncreasePerMinute_Endless);
 
 		// @TODO: Add logic to spawn Endless AI types here.
 	}
@@ -275,35 +271,79 @@ void APRSpawnerManager::SpawnLoop()
 		return; // No need to spawn
 	}
 
+	float GameTime = 0.f;
+	float EndlessStartTime = 600.f;
 	// 3. GET WEIGHTED AI CLASS
-	float GameTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-	TSubclassOf<APRAIBase> AIToSpawn = GetWeightedRandomActiveAIClass(GameTime);
-
-	if (!AIToSpawn)
+	if (APRGameState* PRGameState = GetWorld()->GetGameState<APRGameState>())
 	{
-		// Log error if no AI class could be selected (e.g., if TotalWeight is 0).
-		UE_LOG(LogTemp, Warning, TEXT("SpawnLoop failed to select a weighted AI class."));
-		return;
+		GameTime = PRGameState->GetServerGameTime();
+		EndlessStartTime = PRGameState->GetMatchDuration();
+	}
+	
+	// --- ENDLESS MODE CONSTANTS ---
+
+	// Decide WHAT to spawn
+	TSubclassOf<APRAIBase> ClassToSpawn = nullptr;
+	FLinearColor SpawnColor = FLinearColor::White; // Default
+	bool bIsEndless = (GameTime >= EndlessStartTime);
+
+	if (bIsEndless)
+	{
+		// --- ENDLESS LOGIC ---
+		if (SpawnConfig && SpawnConfig->EndlessTimeline.Num() > 0)
+		{
+			float TimeInEndless = GameTime - EndlessStartTime;
+
+			// Find the active phase based on time.
+			// We loop backwards to find the latest valid phase.
+			for (int32 i = SpawnConfig->EndlessTimeline.Num() - 1; i >= 0; --i)
+			{
+				if (TimeInEndless >= SpawnConfig->EndlessTimeline[i].StartTimeOffset)
+				{
+					ClassToSpawn = SpawnConfig->EndlessTimeline[i].AIClass;
+					SpawnColor = SpawnConfig->EndlessTimeline[i].ColorTint;
+					break;
+				}
+			}
+		}
+	}
+	else
+	{
+		// --- NORMAL WAVE LOGIC ---
+		ClassToSpawn = GetWeightedRandomActiveAIClass(GameTime);
 	}
 
-	// 4. FIND PLAYER AND SPAWN
-	ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-	if (!PlayerCharacter)
+	if (ClassToSpawn)
 	{
-		return; // Cannot spawn without a player reference.
-	}
+		// 4. FIND PLAYER AND SPAWN
+		ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+		if (!PlayerCharacter) return;
 
-	FVector PlayerLocation = PlayerCharacter->GetActorLocation();
+		for (int32 i = 0; i < NumToSpawn; ++i)
+		{
+			FVector SpawnLocation = FindSafeSpawnLocation(PlayerCharacter->GetActorLocation(), SpawnRadius);
+			
+			// Use Deferred Spawn
+			APRAIBase* NewEnemy = GetWorld()->SpawnActorDeferred<APRAIBase>(
+				ClassToSpawn,
+				FTransform(FRotator::ZeroRotator, SpawnLocation),
+				nullptr, // Owner
+				nullptr, // Instigator
+				ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+			);
 
-	for (int32 i = 0; i < NumToSpawn; ++i)
-	{
-		FVector SpawnLocation = FindSafeSpawnLocation(PlayerCharacter->GetActorLocation(), SpawnRadius);
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+			if (NewEnemy)
+			{
+				// 1. Set Color if its endless
+				if (bIsEndless)
+				{
+					NewEnemy->SetEnemyColor(SpawnColor);
+				}
 
-		// @TODO: Add "camera check" (not too close to the screen) and "ground check" logic here.
-
-		// Spawn the selected AI class
-		GetWorld()->SpawnActor<APRAIBase>(AIToSpawn, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+				// 2. End Spawn
+				UGameplayStatics::FinishSpawningActor(NewEnemy, FTransform(FRotator::ZeroRotator, SpawnLocation));
+			}
+		}
 	}
 }
+

@@ -82,6 +82,8 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UUserWidget> PauseMenuInstance;
 
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> GameOverWidgetClass;
 	// -- INTERNAL LOGIC --
 
 	// Tracks if THIS controller currently has the pause menu open.
@@ -117,7 +119,6 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_PauseGameForLevelUp();
 
-
 public:
 	// --- CLIENT RPCs (UI TRIGGERS) ---
 
@@ -130,6 +131,10 @@ public:
 
 	UFUNCTION(Client, Unreliable)
 	void Client_ShowDamageEffect(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound);
+
+	/** [CLIENT] Shows the Game Over screen with stats. */
+	UFUNCTION(Client, Reliable)
+	void Client_ShowGameOverScreen(bool bWon);
 
 	// --- PUBLIC INTERFACE ---
 
@@ -146,4 +151,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game")
 	void QuitToMainMenu();
 
+	// --- PLAYER DEATH --
+
+	/** [SERVER] Called when the pawn controlled by this controller dies. */
+	UFUNCTION(Server, Reliable)
+	void Server_OnPlayerDied();
 };

@@ -59,6 +59,31 @@ struct FWaveData
     float MinimumSpawnPercentage;
 };
 
+USTRUCT(BlueprintType)
+struct FEndlessWaveData
+{
+    GENERATED_BODY()
+
+    /**
+     * When does this phase start? (Relative to Endless Mode Start)
+     * 0.0 = Starts immediately at 10 mins.
+     * 60.0 = Starts at 11 mins.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    float StartTimeOffset = 0.0f;
+
+    /** The enemy type to spawn in this phase. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TSubclassOf<class APRAIBase> AIClass;
+
+    /**
+     * The color tint to apply to the enemy to signify strength.
+     * The enemy material must have a vector parameter named "Tint" or "BodyColor".
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FLinearColor ColorTint = FLinearColor::White;
+};
+
 struct FSpawnWeight
 {
     TSubclassOf<APRAIBase> AIClass;
@@ -84,6 +109,9 @@ public:
 	// The sequence of boss encounters.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
 	TArray<FBossWaveData> Bosses;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning|Endless")
+    TArray<FEndlessWaveData> EndlessTimeline;
 
 	// Base settings can also go here
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Limits")

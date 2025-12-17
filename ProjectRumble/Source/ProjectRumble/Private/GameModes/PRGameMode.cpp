@@ -7,11 +7,21 @@
 #include "Components/PRStatsComponent.h"
 #include "Game/PRGameState.h"
 #include "AI/PRAIBase.h"
-#include <Managers/PRSpawnerManager.h>
+#include "Characters/PRCharacterBase.h"
+#include "Managers/PRSpawnerManager.h"
+#include "Player/PRPlayerController.h"
 
 APRGameMode::APRGameMode()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickInterval = 1.0f; // We dont need to tick every frame.
+}
+
+void APRGameMode::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	RecalculateActiveDifficulty();
 }
 
 void APRGameMode::RegisterPlayerInMenu()
@@ -71,6 +81,8 @@ void APRGameMode::StartPlay()
 	//After spawning, start timer.
 	if (APRGameState* GS = GetGameState<APRGameState>())
 	{
+		// Set the match duration from config.
+		GS->SetMatchDuration(MatchDurationInSeconds);
 		GS->StartGameTimer();
 	}
 }
@@ -96,6 +108,53 @@ void APRGameMode::PostLogin(APlayerController* NewPlayer)
 		}
 
 	}
+}
+
+void APRGameMode::CheckPlayerDeaths()
+{
+	// 1. Get All Player Controllers
+	// We iterate controllers because PlayerStates/Pawns might be in flux during death.
+	for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+	{
+		APlayerController* PC = Iterator->Get();
+		if (PC)
+		{
+			APawn* MyPawn = PC->GetPawn();
+			// If there is still one player alive continue
+			if (MyPawn)
+			{
+				// We can check the StatsComponent to see if the character is alive
+				// Or we can check if the Pawn is nullptr (has it been destroyed?).
+				// For now, let's simply say: If the Pawn exists, it's alive.
+				// (Note: In OnDeath, the Pawn should not be destroyed immediately; it should transition to ragdoll).
+				if (APRCharacterBase* Character = Cast<APRCharacterBase>(MyPawn))
+				{
+					// @TODO: We need to check the actual health stat here. We can create IsAlive() function for that
+					return; 
+				}
+			}
+		}
+	}
+
+	// All players died
+	GameOver(false);
+}
+
+void APRGameMode::GameOver(bool bWon)
+{
+	UE_LOG(LogTemp, Warning, TEXT("GAME OVER! Won: %s"), bWon ? TEXT("Yes") : TEXT("No"));
+
+	// Notify all players
+	for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+	{
+		if (APRPlayerController* PC = Cast<APRPlayerController>(Iterator->Get()))
+		{
+			PC->Client_ShowGameOverScreen(bWon);
+		}
+	}
+
+	// Slow motion effect. But is this affecting menus? And even networked players?
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
 }
 
 void APRGameMode::HandlePlayerReady(UPRStatsComponent* PlayerStatsComp)
@@ -146,11 +205,27 @@ void APRGameMode::RecalculateActiveDifficulty()
 		}
 	}
 
-	// --- 2. UPDATE THE GAME STATE ---
+	float TimeBonus = 0.0f;
+	float ServerTime = PR_GameState->GetServerGameTime();
+
+	const float EndlessStartTime = PR_GameState->GetMatchDuration();
+
+	// Endless 
+	if (ServerTime > EndlessStartTime)
+	{
+		// Calculate how many minutes have passed since the endless mode started.
+		float MinutesOver = (ServerTime - EndlessStartTime) / 60.0f;
+
+		// Change per minute bonus as needed.
+		TimeBonus = MinutesOver * ActiveDifficultyMultiplier;
+	}
+
+	float FinalMultiplier = HighestDifficulty + TimeBonus;
+
 	// Apply the hard cap defined in the GameMode's properties.
-	float FinalMultiplier = FMath::Min(HighestDifficulty, MaxDifficultyMultiplier);
+	FinalMultiplier = FMath::Min(HighestDifficulty, MaxDifficultyMultiplier);
 
-
+	// --- 2. UPDATE THE GAME STATE ---
 	// Only proceed if the value has actually changed.
 	if (!FMath::IsNearlyEqual(PR_GameState->GetActiveDifficultyMultiplier(), FinalMultiplier))
 	{

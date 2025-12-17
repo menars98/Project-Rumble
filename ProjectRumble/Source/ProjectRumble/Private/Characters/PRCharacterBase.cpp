@@ -15,10 +15,12 @@
 #include "AI/PRAIBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PRInventoryComponent.h"
-#include"Components/PRInteractionComponent.h"
+#include "Components/PRInteractionComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/CapsuleComponent.h" 
 #include "Actors/PRXpShard.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/PRPlayerController.h"
 
 APRCharacterBase::APRCharacterBase()
 {
@@ -372,11 +374,39 @@ void APRCharacterBase::OnDeath()
 {
 	Super::OnDeath(); // Call parent implementation to disable collision/movement.
 
+	//@TODO: When a character dies change his camera to alive one, so he can watch his friend.
+
+	// Note: Using UnPossess in multiplayer can sometimes cause camera issues. 
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCharacterMovement()->DisableMovement();
+	}
+
+	if (GetCapsuleComponent())
+	{
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	if (GetMesh())
+	{
+		GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+		GetMesh()->SetSimulatePhysics(true);
+
+		// Multiplayer Note: Since it is ragdoll physics-based, it may fall differently on each client.
+		// This is acceptable as it is “cosmetic.”
+	}
+
 	// Player-specific logic here:
 	// For example, disable input and show a "Game Over" screen.
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	if (APRPlayerController* PC = Cast<APRPlayerController>(GetController()))
 	{
 		DisableInput(PC);
+
+		if (HasAuthority())
+		{
+			PC->Server_OnPlayerDied();
+		}
 	}
 	UE_LOG(LogTemp, Warning, TEXT("PLAYER HAS DIED. GAME OVER."));
 }

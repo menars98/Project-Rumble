@@ -22,9 +22,10 @@ class PROJECTRUMBLE_API APRAIBase : public APREntityBase
 public:
 	APRAIBase();
 
-	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	/** Returns the Gameplay Tags associated with this AI. */
-	UFUNCTION(BlueprintPure, Category = "AI")
+	UFUNCTION(BlueprintPure, Category = "Rumble | AI")
 	const FGameplayTagContainer& GetAITags() const { return AITags; }
 
 	// Getter for the Controller
@@ -34,39 +35,41 @@ public:
 	* Retrieves the current Attack Range from the Stats Component.
 	* Returns a default melee range if the stat is missing.
 	*/
-	UFUNCTION(BlueprintPure, Category = "AI|Combat")
+	UFUNCTION(BlueprintPure, Category = "Rumble | AI | Combat")
 	float GetAttackRange() const;
 
 	/**
 	 * Re-applies the difficulty multiplier to all stats.
 	 * Called by the GameMode when the global difficulty changes mid-game.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "AI|Difficulty")
+	UFUNCTION(BlueprintCallable, Category = "Rumble | AI | Difficulty")
 	void UpdateDifficultyMultiplier(float NewDifficultyMultiplier);
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayHitFlash();
 
 	/** Triggers the attack logic (Spawns projectile). Called by BTTask. */
-	UFUNCTION(BlueprintCallable, Category = "AI|Combat")
+	UFUNCTION(BlueprintCallable, Category = "Rumble | AI | Combat")
 	void PerformAttack(AActor* TargetActor);
 
+	// Sets a color parameter on all dynamic materials (e.g. "Tint").
+	void SetEnemyColor(FLinearColor NewColor);
 protected:
 	// -- COMPONENTS --
 	// The AI has its own StatsComponent directly on itself.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rumble | Components")
 	TObjectPtr<UPRStatsComponent> StatsComponent_AI; // Renamed to avoid confusion with the inherited pointer name.
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rumble | Components")
 	TObjectPtr<UPRLootComponent> LootComponent;
 
 	// A slightly larger sphere designated ONLY for detecting overlap damage.
 	// This separates physics blocking from damage logic.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rumble | Components")
 	class USphereComponent* DamageInteractionSphere;
 
 	/** The specific Behavior Tree this enemy type uses. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble|AI")
 	TObjectPtr<UBehaviorTree> EnemyBehaviorTree;
 
 	// -- COMBAT --
@@ -86,6 +89,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
 	float ContactStunChance = 0.0f;
+
+	/** How long (in seconds) the projectile stays in the air. Lower = Faster/Flatter. Higher = Slower/Higher Arc. */
+	UPROPERTY(EditAnywhere, Category = "Rumble | AI | Combat")
+	float ProjectileFlightTime = 1.0f;
 
 	// How often (in seconds) to apply contact damage while overlapping.
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | Combat")
@@ -117,6 +124,13 @@ protected:
 	bool bCanApplyDamage = true;
 
 	bool bIsAttacking = false;
+
+	/** The color tint of the enemy. Replicated so clients see the endless mode changes. */
+	UPROPERTY(ReplicatedUsing = OnRep_TintColor, VisibleAnywhere, Category = "Rumble | Visuals")
+	FLinearColor TintColor = FLinearColor::White;
+
+	UFUNCTION()
+	void OnRep_TintColor();
 
 	// --- TIMERS ---
 	// The timer handle to manage the duration of the flash effect.
@@ -185,7 +199,7 @@ protected:
 	 * Allows the AI's Blueprint to react to the new stats (e.g., updating movement speed on the Blackboard).
 	 * @param DifficultyMultiplier The multiplier that was just applied, for convenience.
 	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "AI|Difficulty")
+	UFUNCTION(BlueprintImplementableEvent, Category = "Rumble | AI | Difficulty")
 	void BP_SetDifficultyStats(float DifficultyMultiplier);
 
 	UFUNCTION()

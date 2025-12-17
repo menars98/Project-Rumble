@@ -37,6 +37,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Game|Time")
 	float GetServerGameTime() const { return ServerGameTime; }
 
+	// Getter for the match duration
+	UFUNCTION(BlueprintPure, Category = "Game|Time")
+	float GetMatchDuration() const { return MatchDuration; }
+
+	// Server only setter
+	void SetMatchDuration(float InDuration);
+
 protected:
 	/** The current active difficulty multiplier for the game, replicated to all clients. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Replicated, Category = "Difficulty")
@@ -45,6 +52,10 @@ protected:
 	// The current game duration, calculated by the server and replicated to clients.
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Replicated, Category = "Game|Time")
 	float ServerGameTime = 0.0f;
+
+	// The duration of the match in seconds before Endless/Overtime starts.
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Replicated, Category = "Game|Time")
+	float MatchDuration = 600.0f; // Default 10 mins if not set
 
 	bool bIsGameActive = false;
 

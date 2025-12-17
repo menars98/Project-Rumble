@@ -16,6 +16,7 @@ void APRGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	// Replicate the ActiveDifficultyMultiplier to all clients.
 	DOREPLIFETIME(APRGameState, ActiveDifficultyMultiplier);
 	DOREPLIFETIME(APRGameState, ServerGameTime);
+	DOREPLIFETIME(APRGameState, MatchDuration);
 }
 
 void APRGameState::SetActiveDifficultyMultiplier(float NewMultiplier)
@@ -24,6 +25,14 @@ void APRGameState::SetActiveDifficultyMultiplier(float NewMultiplier)
 	if (HasAuthority())
 	{
 		ActiveDifficultyMultiplier = NewMultiplier;
+	}
+}
+
+void APRGameState::SetMatchDuration(float InDuration)
+{
+	if (HasAuthority())
+	{
+		MatchDuration = InDuration;
 	}
 }
 

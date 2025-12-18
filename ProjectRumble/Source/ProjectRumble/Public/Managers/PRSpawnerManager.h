@@ -8,6 +8,7 @@
 #include "PRSpawnerManager.generated.h"
 
 class UPRSpawnConfig;
+class APRAIBase;
 
 UCLASS()
 class PROJECTRUMBLE_API APRSpawnerManager : public AActor
@@ -22,62 +23,65 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
-	// --- CONFIGURATION ---
+    // --- CONFIG ---
+    UPROPERTY()
+    TObjectPtr<UPRSpawnConfig> SpawnConfig;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Spawning|Config")
-	TObjectPtr<UPRSpawnConfig> SpawnConfig;
+    UPROPERTY(EditDefaultsOnly, Category = "Spawning")
+    float SpawnRadius = 3000.f;
 
-	/** The radius around the player where enemies can be spawned. */
-	UPROPERTY(EditDefaultsOnly, Category = "Spawning|Location")
-	float SpawnRadius = 3000.f;
+    UPROPERTY(EditDefaultsOnly, Category = "Spawning")
+    float SpawnCheckInterval = 0.5f;
 
-	// The base maximum number of AI that can be active at once.
-	UPROPERTY(EditDefaultsOnly, Category = "Spawning|Limits")
-	int32 BaseMaxActiveAI = 200;
+    UPROPERTY(EditDefaultsOnly, Category = "Spawning|Limits")
+    int32 AbsoluteMaxAI = 600;
 
-	// In Endless Mode, how much is MaxActiveAI increased per minute?
-	UPROPERTY(EditDefaultsOnly, Category = "Spawning|Limits")
-	int32 MaxAIIncreasePerMinute_Endless = 50;
+    // Index of the next boss event to trigger.
+    int32 NextBossEventIndex = 0;
 
-	// How often (in seconds) should the spawner try to spawn new units?
-	UPROPERTY(EditDefaultsOnly, Category = "Spawning|Timing")
-	float SpawnCheckInterval = 0.5f;
+    // --- RUNTIME STATE ---
 
-	// --- RUNTIME STATE ---
+    // The "Deck" of enemies selected for THIS specific game run.
+    // Key: Tier Tag (e.g., Tier 1), Value: List of Classes (e.g., Goblin, Skeleton)
+    TMap<FGameplayTag, TArray<TSubclassOf<APRAIBase>>> CurrentRunDeck;
 
-	// The current target number of AI in the world.
-	int32 TargetAICount;
+    // A cache of ALL possible enemies mapped by their Specific Type Tag.
+    // Used for O(1) lookup when the timeline demands a specific enemy.
+    // Key: Enemy Type Tag (e.g., "Enemy.Type.Goblin"), Value: The Class.
+    TMap<FGameplayTag, TSubclassOf<APRAIBase>> SpecificEnemyCache;
 
-	// The current maximum number of AI allowed. Can increase in endless mode.
-	int32 CurrentMaxActiveAI;
+    // Current limits
+    int32 TargetAICount = 0;
+    int32 CurrentMaxActiveAI = 0;
 
-	// Timer for checking when to spawn.
-	FTimerHandle SpawnTimerHandle;
+    FTimerHandle SpawnTimerHandle;
 
-	// Index of the next wave in the timeline to process.
-	int32 NextWaveIndex;
+    // --- FUNCTIONS ---
 
-	// Index of the next boss wave to process.
-	int32 NextBossIndex;
+    /**
+     * Builds the "CurrentRunDeck" by filtering the catalog based on Biome
+     * and picking random enemies based on RunDeckSelectionCounts.
+     */
+    void BuildRunDeck();
 
-	// --- FUNCTIONS ---
+    void SpawnLoop();
 
-	// The main spawn loop, called by the SpawnTimerHandle.
-	void SpawnLoop();
+    // Helper to process boss spawning
+    void CheckBossEvents(float GameTime, ACharacter* Player);
 
-	// Processes the wave timeline based on the current game time.
-	void ProcessWaveTimeline(float GameTime, float DifficultyMultiplier);
-	// Processes the boss timeline based on the current game time.
-	void ProcessBossTimeline(float GameTime);
-private:
-	// Gets a random AI class from all currently active waves.
-	TSubclassOf<class APRAIBase> GetWeightedRandomActiveAIClass(float GameTime) const;
+    FVector FindSafeSpawnLocation(const FVector& CenterLocation, float Radius) const;
 
-	/**
-	 * Finds a valid spawn location by line-tracing down to the ground from a point around the player.
-	 * @param CenterLocation The player's location.
-	 * @param Radius The radius around the player to check for a spawn location.
-	 * @return A point on the ground (Z-coordinate snapped to the terrain) or FVector::ZeroVector if failed.
-	 */
-	FVector FindSafeSpawnLocation(const FVector& CenterLocation, float Radius) const;
+    /**
+     * Decides which enemy class to spawn based on the current Game Time.
+     * 1. Finds the active Segment.
+     * 2. Rolls a Tier based on weights.
+     * 3. Picks a random class from that Tier in the Run Deck.
+     */
+    TSubclassOf<APRAIBase> GetEnemyToSpawn(float GameTime);
+
+    /**
+   * Resolves a GameplayTag into an actual Enemy Class.
+   * Checks if the tag is a Tier (picks from Deck) or a Specific Type (picks from Cache).
+   */
+    TSubclassOf<APRAIBase> ResolveSpawnTag(FGameplayTag Tag);
 };

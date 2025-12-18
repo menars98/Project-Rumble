@@ -40,7 +40,18 @@ public:
 
 	/** Checks if all players are dead. If so, triggers Game Over. */
 	void CheckPlayerDeaths();
+
+	// Getter for the Spawner Manager to access
+	UFUNCTION(BlueprintPure, Category = "Game|Config")
+	class UPRSpawnConfig* GetLevelSpawnConfig() const { return LevelSpawnConfig; }
 protected:
+
+	/**
+	* The Spawn Configuration for the current level (Timeline, Enemies, Biome).
+	* Assign "DA_ForestConfig" here in BP_GameMode_Forest.
+	*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble|Game|Config")
+	TObjectPtr<class UPRSpawnConfig> LevelSpawnConfig;
 
 	/** The class of the Spawner Manager to spawn at the start of the game. */
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Game|Spawning")

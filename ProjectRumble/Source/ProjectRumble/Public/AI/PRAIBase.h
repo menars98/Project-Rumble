@@ -101,6 +101,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Combat")
 	float KnockbackStrengthToPlayer = 50.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | AI | Movement")
+	bool bIsFlyingEnemy = false;
+
 	// The Data Table that defines all possible stats and their default values.
 	// This should be assigned in the Blueprint derived from this component.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Config")
@@ -211,6 +214,5 @@ protected:
 	void SpawnRangedProjectile();
 
 	FVector CachedTargetLocation;
-
 };
 

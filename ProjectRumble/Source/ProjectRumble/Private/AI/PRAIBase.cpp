@@ -18,7 +18,7 @@
 #include "Components/SphereComponent.h"
 #include "Actors/PRBaseAttack.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-
+#include "BehaviorTree/BlackboardComponent.h" 
 
 APRAIBase::APRAIBase()
 {
@@ -92,6 +92,15 @@ void APRAIBase::BeginPlay()
 			DynamicMaterial = UMaterialInstanceDynamic::Create(OriginalMaterial, this);
 			GetMesh()->SetMaterial(0, DynamicMaterial);
 		}*/
+	}
+
+	if (bIsFlyingEnemy)
+	{
+		if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+		{
+			MoveComp->SetMovementMode(MOVE_Flying); 
+			MoveComp->BrakingDecelerationFlying = 1000.f;
+		}
 	}
 
 	OnRep_TintColor();
@@ -235,7 +244,6 @@ void APRAIBase::OnDeath()
 void APRAIBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 void APRAIBase::OnDamageSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

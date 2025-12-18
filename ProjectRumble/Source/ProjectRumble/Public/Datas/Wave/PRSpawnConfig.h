@@ -8,55 +8,74 @@
 #include "PRSpawnConfig.generated.h"
 
 class APRAIBase;
-// --- Waves ---
+class UCurveFloat;
+
+// --- 1. THE CATALOG ENTRY (Database) ---
+// Defines a single enemy type available in the game.
 USTRUCT(BlueprintType)
-struct FBossWaveData
+struct FEnemyCatalogEntry
 {
     GENERATED_BODY()
 
-    /** The Boss/Elite AI class to spawn (must be APRAIBase derivative). */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    TSubclassOf<APRAIBase> BossAIClass;
-
-    /** Game time (in seconds) when this boss should spawn. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    float TimeToSpawn;
-};
-
-USTRUCT(BlueprintType)
-struct FWaveData
-{
-    GENERATED_BODY()
-
-    // What type of AI to spawn.
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TSubclassOf<APRAIBase> AIClass;
 
-    // How many of this AI should be added to the target population?
+    // Is it Tier 1 (Weak), Tier 2, or Boss?
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    int32 PopulationIncrease;
+    FGameplayTag TierTag;
 
-    // When does this wave start, in seconds from the beginning of the match?
+    // Where does this enemy live? (e.g., Forest, Desert, or Global)
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    float TimeToStart;
+    FGameplayTagContainer BiomeTags;
+};
+
+// --- 2. THE TIMELINE SEGMENT (When do they spawn?) ---
+// Instead of "Wave 1", we define rules for time periods.
+USTRUCT(BlueprintType)
+struct FSpawnSegment
+{
+    GENERATED_BODY()
+
+    // When does this rule start? (Seconds)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    float StartTime = 0.0f;
 
     /**
-    * The initial percentage of this AI type in the active pool (at TimeToStart).
-    * e.g., 0.5f means this AI will make up 50% of all spawned units when its wave starts.
+    * Mapping of GameplayTag to Weight.
+    * The Tag can be EITHER a Tier Tag (e.g., "Enemy.Tier.1")
+    * OR a Specific Enemy Type Tag (e.g., "Enemy.Type.Goblin").
+    *
+    * Example Horde Wave:
+    * - "Enemy.Type.Goblin" : 100.0 (Only Goblins will spawn)
+    *
+    * Example Mixed Wave:
+    * - "Enemy.Tier.1" : 50.0 (Random Tier 1s)
+    * - "Enemy.Type.Cactus" : 50.0 (Specific Cactus)
     */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wave|Distribution")
-    float InitialSpawnPercentage;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TMap<FGameplayTag, float> SpawnWeights;
+};
 
-    /**
-    * The rate at which this AI's spawn percentage DECAYS over time (per minute).
-    * e.g., 0.05f means it loses 5% of its contribution per minute.
-    */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wave|Distribution")
-    float PercentageDecayPerMinute;
+USTRUCT(BlueprintType)
+struct FBossSpawnEvent
+{
+    GENERATED_BODY()
 
-    /** The minimum percentage this AI can contribute to the spawn pool, even after decay. (e.g., 0.05f for 5% minimum chance). */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wave|Distribution")
-    float MinimumSpawnPercentage;
+    // At what second of the game should it appear? (e.g., 240.0 = 4th minute)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    float TriggerTime = 0.0f;
+
+    // Which Boss?
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TSubclassOf<APRAIBase> BossClass;
+
+    // Should text appear on the screen when the boss appears? (Optional)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FText WarningMessage;
+
+    // Should normal spawning stop when the boss appears? (False if we want Horde logic, True if we want Duel)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    bool bPauseNormalSpawns = false;
 };
 
 USTRUCT(BlueprintType)
@@ -92,8 +111,8 @@ struct FSpawnWeight
 // --- END ----
 
 /**
- * A Data Asset to hold the entire spawn configuration for a level.
- * This allows designers to create different spawn profiles (Easy, Hard, ForestMap, etc.)
+ * The Master Configuration Asset.
+ * Contains both the "Database" of all enemies and the "Rules" for the current level.
  */
 UCLASS()
 class PROJECTRUMBLE_API UPRSpawnConfig : public UDataAsset
@@ -101,20 +120,34 @@ class PROJECTRUMBLE_API UPRSpawnConfig : public UDataAsset
 	GENERATED_BODY()
 	
 public:
+    // List of specific Boss Events (Independent of the continuous spawn waves)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pacing")
+    TArray<FBossSpawnEvent> BossEvents;
 
-	// The sequence of normal enemy waves.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
-	TArray<FWaveData> Waves;
+    // --- DATABASE ---
+    // List of ALL enemies in the entire game.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Database")
+    TArray<FEnemyCatalogEntry> EnemyCatalog;
 
-	// The sequence of boss encounters.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
-	TArray<FBossWaveData> Bosses;
+    // --- LEVEL SETTINGS ---
+    // Which biome is this config for? (Used to filter the catalog)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Level Settings")
+    FGameplayTag LevelBiomeTag;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning|Endless")
-    TArray<FEndlessWaveData> EndlessTimeline;
+    // How many distinct enemy types from each Tier should be selected for this run?
+    // e.g., "Pick 3 random enemies from Tier 1", "Pick 2 from Tier 2".
+    // This creates the "Roguelike Deck".
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Level Settings")
+    TMap<FGameplayTag, int32> RunDeckSelectionCounts;
 
-	// Base settings can also go here
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Limits")
-	int32 BaseMaxActiveAI = 200;
+    // --- PACING ---
+    // Controls the TOTAL NUMBER of enemies alive over time.
+    // X: Time (Seconds), Y: Max Active AI Count.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pacing")
+    TObjectPtr<UCurveFloat> SpawnCapCurve;
+
+    // Defines the rules (weights) for different time periods.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pacing")
+    TArray<FSpawnSegment> Timeline;
 
 };

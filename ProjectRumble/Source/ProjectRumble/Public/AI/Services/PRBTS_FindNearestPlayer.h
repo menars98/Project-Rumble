@@ -26,9 +26,12 @@ protected:
 	FBlackboardKeySelector AttackConditionKey;
 
 	UPROPERTY(EditAnywhere, Category = "AI", meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float AttackProbability = 0.1f;
+	float AttackProbability = 0.05f;
 
 	// Blackboard Key to set (TargetActor)
 	UPROPERTY(EditAnywhere, Category = "AI")
 	FBlackboardKeySelector TargetActorKey;
+
+	UPROPERTY(EditAnywhere, Category = "AI")
+	FBlackboardKeySelector TargetLocationKey;
 };

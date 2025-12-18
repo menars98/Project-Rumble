@@ -64,6 +64,9 @@ void UPRBTS_FindNearestPlayer::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 			// OwnerComp.RestartTree(); 
 		}
 
+		// This is what the DoN "Fly To" task needs.
+		BB->SetValueAsVector(TargetLocationKey.SelectedKeyName, ClosestPlayer->GetActorLocation());
+
 		float AttackRange = AIPawn->GetAttackRange();
 		float RangeSq = FMath::Square(AttackRange); // + ErrorMargin maybe
 
@@ -84,6 +87,7 @@ void UPRBTS_FindNearestPlayer::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 	else
 	{
 		BB->ClearValue(TargetActorKey.SelectedKeyName);
+		BB->ClearValue(TargetLocationKey.SelectedKeyName);
 		BB->SetValueAsBool(AttackConditionKey.SelectedKeyName, false);
 	}
 }

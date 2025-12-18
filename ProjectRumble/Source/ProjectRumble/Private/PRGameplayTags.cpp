@@ -103,7 +103,7 @@ namespace NativeGameplayTags
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Effect_StunDuration, "Stat.Effect.StunDuration");
 	}
 
-	namespace Enemy
+	namespace Enemies
 	{
 		namespace Type
 		{
@@ -112,8 +112,19 @@ namespace NativeGameplayTags
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Neuron, "Enemies.Type.Neuron");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Cactus, "Enemies.Type.Cactus");
 		}
+		namespace Tier
+		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Tier_1, "Enemies.Tier.1");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Tier_2, "Enemies.Tier.2");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Tier_3, "Enemies.Tier.3");
+		}
+		namespace Biome
+		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Biome_Forest, "Enemies.Biome.Forest");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Biome_Desert, "Enemies.Biome.Desert");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Biome_Global, "Enemies.Biome.Global");
+		}
 	}
-
 	namespace Destructible
 	{
 		namespace Type

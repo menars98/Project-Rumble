@@ -111,6 +111,18 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Neuron);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Cactus);
 		}
+		namespace Tier
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_1); // Fodder (Goblin, Skeleton)
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_2); // Medium (Cactus)
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_3); // Elite
+		}
+		namespace Biome
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Biome_Forest);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Biome_Desert);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Biome_Global); // Appears everywhere
+		}
 	}
 	namespace Destructible
 	{

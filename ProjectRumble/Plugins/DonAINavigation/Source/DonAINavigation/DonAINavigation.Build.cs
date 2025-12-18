@@ -1,0 +1,115 @@
+// Copyright 1998-2015 Epic Games, Inc. All Rights Reserved.
+
+using UnrealBuildTool;
+
+public class DonAINavigation : ModuleRules
+{
+    public DonAINavigation(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
+        // Bu eski ayar UE5'te kalktý, siliyoruz:
+        // bEnableShadowVariableWarnings = false; 
+
+        PublicIncludePaths.AddRange(
+            new string[] {
+				// "DonAINavigation/Public"
+				// ... add public include paths required here ...
+			}
+            );
+
+
+        PrivateIncludePaths.AddRange(
+            new string[] {
+                "DonAINavigation/Private",
+                "DonAINavigation/Private/Multithreading",
+            }
+            );
+
+
+        PublicDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "Core",
+                "CoreUObject",
+                "Engine",
+                "InputCore",
+                "AIModule",
+                "GameplayTasks",
+                "NavigationSystem" 
+				// ... add other public dependencies that you statically link with here ...
+			}
+            );
+
+
+        PrivateDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "CoreUObject",
+                "Engine",
+                "Slate",
+                "SlateCore",
+				// ... add private dependencies that you statically link with here ...	
+			}
+            );
+
+
+        DynamicallyLoadedModuleNames.AddRange(
+            new string[]
+            {
+				// ... add any modules that your module loads dynamically here ...
+			}
+            );
+    }
+}
+
+//namespace UnrealBuildTool.Rules
+//{
+//	public class DonAINavigation : ModuleRules
+//	{
+//		public DonAINavigation(TargetInfo Target)
+//		{
+//            bEnableShadowVariableWarnings = false;
+
+//            PublicIncludePaths.AddRange(
+//				new string[] {
+//					// ... add public include paths required here ...
+//				}
+//				);
+
+//			PrivateIncludePaths.AddRange(
+//				new string[] {
+//					"DonAINavigation/Private",
+//                    "DonAINavigation/Private/Multithreading",
+//					// ... add other private include paths required here ...                    
+//                }
+//				);
+
+//			PublicDependencyModuleNames.AddRange(
+//				new string[]
+//				{
+//					"Core",
+//					"CoreUObject",
+//					// ... add other public dependencies that you statically link with here ...                    
+//                    "AIModule",
+//                    "GameplayTasks",
+//                    "Engine",
+//                }
+//				);
+
+//            PrivateDependencyModuleNames.AddRange(
+//				new string[]
+//				{
+//					// ... add private dependencies that you statically link with here ...
+//				}
+//				);
+
+//			DynamicallyLoadedModuleNames.AddRange(
+//				new string[]
+//				{
+//					// ... add any modules that your module loads dynamically here ...
+//				}
+//				);
+//		}
+//	}
+//}

@@ -38,6 +38,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Rumble | AI | Combat")
 	float GetAttackRange() const;
 
+	UFUNCTION(BlueprintPure, Category = "Rumble | AI")
+	FText GetEnemyName() const { return EnemyName; }
 	/**
 	 * Re-applies the difficulty multiplier to all stats.
 	 * Called by the GameMode when the global difficulty changes mid-game.
@@ -54,6 +56,9 @@ public:
 
 	// Sets a color parameter on all dynamic materials (e.g. "Tint").
 	void SetEnemyColor(FLinearColor NewColor);
+
+	void SetEndlessBuffs(float InMultiplier, FLinearColor InColor);
+
 protected:
 	// -- COMPONENTS --
 	// The AI has its own StatsComponent directly on itself.
@@ -104,6 +109,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | AI | Movement")
 	bool bIsFlyingEnemy = false;
 
+	// The specific multiplier calculated for this unit based on spawn time.
+	float EndlessMultiplier = 1.0f;
+
 	// The Data Table that defines all possible stats and their default values.
 	// This should be assigned in the Blueprint derived from this component.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rumble | Config")
@@ -114,6 +122,9 @@ protected:
 	// The player we are currently in contact with.
 	UPROPERTY()
 	TObjectPtr<APRCharacterBase> ContactTarget;
+
+	UPROPERTY(VisibleAnywhere, Category = "UI")
+	FText EnemyName;
 
 	// A pointer to the dynamic material instance for hit flash effects.
 	UPROPERTY()
@@ -214,5 +225,9 @@ protected:
 	void SpawnRangedProjectile();
 
 	FVector CachedTargetLocation;
+
+private:
+
+	TWeakObjectPtr<AController> LastAttackerController;
 };
 

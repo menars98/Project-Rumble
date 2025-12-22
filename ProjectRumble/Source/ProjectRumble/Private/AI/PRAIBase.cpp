@@ -19,6 +19,8 @@
 #include "Actors/PRBaseAttack.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "BehaviorTree/BlackboardComponent.h" 
+#include <Player/PRPlayerState.h>
+#include "Components/PRSessionTrackerComponent.h"
 
 APRAIBase::APRAIBase()
 {
@@ -131,26 +133,33 @@ void APRAIBase::InitializeStats()
 		return;
 	}
 
+	EnemyName = AIStatsRow->DisplayName;
+
 	// 2. GET MULTIPLIER: Get the global difficulty multiplier from the GameState.
-	float DifficultyMultiplier = 1.0f; // Default safety value.
+	float GlobalDifficulty = 1.0f; // Default safety value.
 	if (APRGameState* PRGameState = GetWorld()->GetGameState<APRGameState>())
 	{
-		DifficultyMultiplier = PRGameState->GetActiveDifficultyMultiplier();
+		GlobalDifficulty = PRGameState->GetActiveDifficultyMultiplier();
 	}
+	
+	// 2. COMBINE MULTIPLIERS
+    // Global Difficulty * Endless Multiplier
+    // e.g., 6.0 (Max Difficulty) * 1.5 (Endless Min 5) = 9.0x Stats
+	float FinalMultiplier = GlobalDifficulty * EndlessMultiplier;
 
 	// 3. INITIALIZE COMPONENT: Pass the base stats and multiplier to the StatsComponent.
 	if (UPRStatsComponent* StatsComp = GetStatsComponent())
 	{
 		// The StatsComponent will handle applying the multiplier internally.
 		// We pass the RAW BaseStats array from the Data Table.
-		StatsComp->InitializeForAI(AIStatsRow->BaseStats, DifficultyMultiplier);
+		StatsComp->InitializeForAI(AIStatsRow->BaseStats, FinalMultiplier);
 	}
 
 	// 4. UPDATE AI CONTROLLER (e.g., Movement Speed)
 	// The StatsComponent now has the correct, difficulty-modified speed.
 	// We call this Blueprint Event to allow the AI's Blueprint to read the new speed 
 	// from its StatsComponent and set it on the Blackboard or Movement Component.
-	BP_SetDifficultyStats(DifficultyMultiplier);
+	BP_SetDifficultyStats(FinalMultiplier);
 
 	// We set Movement Speed After Difficulty, because it will read the updated stat value.
 	UpdateMovementSpeed();
@@ -166,6 +175,12 @@ float APRAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 	{
 		// Play the flash effect whenever damage is taken.
 		Multicast_PlayHitFlash();
+	}
+
+	// Store the last attacker controller for kill credit etc.
+	if (EventInstigator)
+	{
+		LastAttackerController = EventInstigator;
 	}
 
 	return ActualDamage;
@@ -235,6 +250,17 @@ void APRAIBase::OnDeath()
 	if (LootComponent)
 	{
 		LootComponent->DropLoot();
+	}
+
+	if (LastAttackerController.IsValid())
+	{
+		if (APRPlayerState* KillerPS = LastAttackerController->GetPlayerState<APRPlayerState>())
+		{
+			if (KillerPS->TrackerComponent)
+			{
+				KillerPS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Combat_Kills, 1.0f);
+			}
+		}
 	}
 
 	// We could add raggdoll but its poitnless in a game like this, so we destroy it.
@@ -453,6 +479,16 @@ void APRAIBase::SetEnemyColor(FLinearColor NewColor)
 		// Update immediately on Server
 		OnRep_TintColor();
 	}
+}
+
+void APRAIBase::SetEndlessBuffs(float InMultiplier, FLinearColor InColor)
+{
+	if (!HasAuthority()) return;
+
+	EndlessMultiplier = InMultiplier;
+
+	// Apply Color immediately
+	SetEnemyColor(InColor);
 }
 
 void APRAIBase::OnRep_TintColor()

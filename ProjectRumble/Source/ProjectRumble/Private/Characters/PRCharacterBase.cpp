@@ -21,6 +21,8 @@
 #include "Actors/PRXpShard.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/PRPlayerController.h"
+#include <Game/PRGameState.h>
+#include "Components/PRSessionTrackerComponent.h"
 
 APRCharacterBase::APRCharacterBase()
 {
@@ -99,6 +101,13 @@ void APRCharacterBase::BeginPlay()
 		else
 		{
 			UE_LOG(LogTemp, Error, TEXT("[%s] %s BeginPlay: I am locally controlled/server but NO CONTROLLER!"), *RoleString, *GetName());
+		}
+	}
+	if (HasAuthority())
+	{
+		if (APRGameState* GS = GetWorld()->GetGameState<APRGameState>())
+		{
+			SpawnTime = GS->GetServerGameTime();
 		}
 	}
 
@@ -375,7 +384,23 @@ void APRCharacterBase::OnDeath()
 	Super::OnDeath(); // Call parent implementation to disable collision/movement.
 
 	//@TODO: When a character dies change his camera to alive one, so he can watch his friend.
+	if (HasAuthority())
+	{
+		SetLastDamageCauser();
+		if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+		{
+			if (APRGameState* GS = GetWorld()->GetGameState<APRGameState>())
+			{
+				float DeathTime = GS->GetServerGameTime();
+				float TimeAlive = DeathTime - SpawnTime;
 
+				if (PS->TrackerComponent)
+				{
+					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_TimeAlive, TimeAlive);
+				}
+			}
+		}
+	}
 	// Note: Using UnPossess in multiplayer can sometimes cause camera issues. 
 	if (GetCharacterMovement())
 	{
@@ -490,11 +515,63 @@ void APRCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+float APRCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	// 1. First, perform the Base Class (EntityBase) operations (Armor, Evasion, Shield, etc.)
+	// This function returns the “actual amount of health lost.”
+	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	// 2. If damage is taken, process it in Tracker
+	if (ActualDamage > 0.f && HasAuthority())
+	{
+		// Since we are a player, PlayerState definitely exists
+		if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+		{
+			if (PS->TrackerComponent)
+			{
+				PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Combat_DamageTaken, ActualDamage);
+			}
+		}
+	}
+
+	return ActualDamage;
+}
+
 void APRCharacterBase::ReEnableInput()
 {
 	if (Controller)
 	{
 		Controller->SetIgnoreMoveInput(false);
+	}
+}
+
+void APRCharacterBase::SetLastDamageCauser()
+{
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		// 
+		if (LastDamageCauser.IsValid())
+		{
+			// Is the last damage causer an AI?
+			if (APRAIBase* KillerAI = Cast<APRAIBase>(LastDamageCauser.Get()))
+			{
+				FText Name = KillerAI->GetEnemyName();
+
+				// Get the tag (e.g., Enemy.Type.Goblin)
+				FGameplayTag Tag = FGameplayTag::EmptyTag;
+				if (KillerAI->GetAITags().IsValid())
+				{
+					// Get the first tag or Type tag
+					Tag = KillerAI->GetAITags().GetByIndex(0);
+				}
+				PS->SetKillerInfo(Name, Tag);
+			}
+		}
+		else
+		{
+			// If there is no murderer (Environment, Poison, etc.)
+			PS->SetKillerInfo(FText::FromString("Unknown Force"), FGameplayTag::EmptyTag);
+		}
 	}
 }
 
@@ -525,4 +602,6 @@ void APRCharacterBase::OnKnockbackReceived()
 
 	}
 }
+
+
 

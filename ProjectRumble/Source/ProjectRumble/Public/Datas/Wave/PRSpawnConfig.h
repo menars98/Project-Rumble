@@ -150,4 +150,22 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pacing")
     TArray<FSpawnSegment> Timeline;
 
+    // --- ENDLESS SCALING ---
+
+   /**
+    * How much extra stat multiplier to add per minute in Endless Mode.
+    * e.g., 0.1 means +10% stats every minute.
+    * 5 mins in endless = +50% stats.
+    */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Endless")
+    float EndlessStatMultiplierPerMinute = 0.2f;
+
+    /**
+     * Defines the color tint of enemies over time in Endless Mode.
+     * X Axis: Minutes passed in Endless Mode.
+     * Y Axis: The Color (RGB).
+     * You can set this curve to loop (e.g. Red -> Purple -> Black -> Red).
+     */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Endless")
+    TObjectPtr<UCurveLinearColor> EndlessColorCurve;
 };

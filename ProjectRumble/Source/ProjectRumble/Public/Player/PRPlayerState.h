@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
+#include "GameplayTagContainer.h"
 #include "PRPlayerState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStatsComponentReady, UPRStatsComponent*, StatsComponent);
@@ -11,6 +12,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStatsComponentReady, UPRStatsComp
 
 class UPRStatsComponent;
 class UPRInventoryComponent;
+class UPRSessionTrackerComponent;
 
 UCLASS()
 class PROJECTRUMBLE_API APRPlayerState : public APlayerState
@@ -32,12 +34,24 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnStatsComponentReady OnStatsComponentReady;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UPRSessionTrackerComponent> TrackerComponent;
+
 	UFUNCTION(BlueprintCallable, Category = "Lobby")
 	void SetIsReady(bool bReady);
+
+	// Server-side setter
+	void SetKillerInfo(FText Name, FGameplayTag Tag);
 
 	UFUNCTION(BlueprintPure, Category = "Lobby")
 	bool GetIsReady() const { return bIsReady; }
 
+	// Replicated properties to store killer info
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Game|Stats")
+	FText KillerName;
+
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Game|Stats")
+	FGameplayTag KillerTag;
 protected:
 
 	virtual void BeginPlay() override;

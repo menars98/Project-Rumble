@@ -5,11 +5,13 @@
 #include "Components/PRStatsComponent.h"
 #include "Components/PRInventoryComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Components/PRSessionTrackerComponent.h"
 
 APRPlayerState::APRPlayerState()
 {
     StatsComponent = CreateDefaultSubobject<UPRStatsComponent>(TEXT("StatsComponent"));
     InventoryComponent = CreateDefaultSubobject<UPRInventoryComponent>(TEXT("InventoryComponent"));
+	TrackerComponent = CreateDefaultSubobject<UPRSessionTrackerComponent>(TEXT("TrackerComponent"));
 
 	SetReplicates(true);
 	SetNetUpdateFrequency(10.0f);
@@ -25,6 +27,17 @@ void APRPlayerState::SetIsReady(bool bReady)
 	{
 		// If not the server, send a request to the server to change the ready status.
 		Server_SetIsReady(bReady);
+	}
+}
+
+void APRPlayerState::SetKillerInfo(FText Name, FGameplayTag Tag)
+{
+	if (HasAuthority())
+	{
+		KillerName = Name;
+		KillerTag = Tag;
+
+		UE_LOG(LogTemp, Warning, TEXT("Player killed by: %s"), *Name.ToString());
 	}
 }
 
@@ -49,6 +62,8 @@ void APRPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(APRPlayerState, StatsComponent);
 	DOREPLIFETIME(APRPlayerState, InventoryComponent);
 	DOREPLIFETIME(APRPlayerState, bIsReady);
+	DOREPLIFETIME(APRPlayerState, KillerName);
+	DOREPLIFETIME(APRPlayerState, KillerTag);
 }
 
 void APRPlayerState::OnRep_StatsComponent()

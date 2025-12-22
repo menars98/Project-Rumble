@@ -13,6 +13,8 @@
 #include "Game/PRGameInstance.h"
 #include "Interfaces/PRBPIDamageNumber.h"
 #include <Player/PRPlayerController.h>
+#include <Player/PRPlayerState.h>
+#include "Components/PRSessionTrackerComponent.h"
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -136,6 +138,16 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 					{
 						AttackerStats->Heal(RoundedHealth);
 						UE_LOG(LogTemp, Log, TEXT("%s lifesteals %d health."), *Attacker->GetName(), RoundedHealth);
+						if (AActor* OwnerActor = AttackerStats->GetOwner())
+						{
+							if (APRPlayerState* AttackerPS = Cast<APRPlayerState>(OwnerActor))
+							{
+								if (AttackerPS->TrackerComponent)
+								{
+									AttackerPS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Healing_Lifesteal, (float)RoundedHealth);
+								}
+							}
+						}
 					}
 				}
 			}
@@ -152,6 +164,21 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 		{
 			// Send the visual/audio cue ONLY to the player who dealt the damage.
 			PC->Client_ShowDamageEffect(DamagedActor, ActualDamage, DamageResult.bWasCriticalHit, HitSound);
+		}
+	}
+
+	// --- 5. TRACK DAMAGE DEALT STATISTIC ---
+	if (ActualDamage > 0.f)
+	{
+		if (APRCharacterBase* PlayerChar = Cast<APRCharacterBase>(DamageCauser))
+		{
+			if (APRPlayerState* PS = PlayerChar->GetPlayerState<APRPlayerState>())
+			{
+				if (PS->TrackerComponent)
+				{
+					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Combat_DamageDealt, ActualDamage);
+				}
+			}
 		}
 	}
 	return ActualDamage;

@@ -33,12 +33,15 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 	/**
 	 * Called when the character takes significant damage/knockback.
 	 * Stops movement and briefly disables input to sell the impact.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void OnKnockbackReceived();
+
 protected:
 	// -- INPUT --
 	// This is the main Input Mapping Context that will be loaded for gameplay.
@@ -150,16 +153,22 @@ protected:
 
 	float BaseGravityScale = 1.0f;
 
+	float SpawnTime = 0.0f;
 	// Knockback Functions & Properties
 	void ReEnableInput();
 
 	FTimerHandle KnockbackTimerHandle;
+
+	void SetLastDamageCauser();
 private:
 	// The cached pointer for performance now lives here, where it's needed.
 	UPROPERTY()
 	mutable TObjectPtr<UPRStatsComponent> CachedStatsComponent;
 
 	void InitializeCharacter();
+
+	// The actor that caused us the most damage (Using a weak pointer is safe; if the actor no longer exists, it becomes null)
+	TWeakObjectPtr<AActor> LastDamageCauser;
 };
 
 

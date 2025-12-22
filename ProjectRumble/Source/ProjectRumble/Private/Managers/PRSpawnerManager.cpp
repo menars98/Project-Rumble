@@ -9,7 +9,7 @@
 #include "Datas/Wave/PRSpawnConfig.h" 
 #include "PRGameplayTags.h"
 #include "Curves/CurveFloat.h"
-
+#include "Curves/CurveLinearColor.h"
 
 APRSpawnerManager::APRSpawnerManager()
 {
@@ -352,9 +352,37 @@ void APRSpawnerManager::SpawnLoop()
 	if (NumToSpawn <= 0) return;
 
 	float GameTime = 0.f;
+	float MatchDuration = 0.0f;
 	if (APRGameState* GS = GetWorld()->GetGameState<APRGameState>())
 	{
 		GameTime = GS->GetServerGameTime();
+		MatchDuration = GS->GetMatchDuration();
+	}
+
+	// 1. Calculate Endless Metrics
+	float EndlessMultiplier = 1.0f;
+	FLinearColor EndlessColor = FLinearColor::White;
+	bool bInEndless = false;
+
+	if (GameTime > MatchDuration)
+	{
+		bInEndless = true;
+		float TimeInEndless = GameTime - MatchDuration;
+		float MinutesInEndless = TimeInEndless / 60.0f;
+
+		// A. Stat Multiplier (Linear Growth)
+		// Base 1.0 + (Minutes * 0.2) -> Min 1: 1.2x, Min 5: 2.0x
+		if (SpawnConfig)
+		{
+			EndlessMultiplier = 1.0f + (MinutesInEndless * SpawnConfig->EndlessStatMultiplierPerMinute);
+
+			// B. Color Curve (Visuals)
+			if (SpawnConfig->EndlessColorCurve)
+			{
+				// Sample the color from the curve based on minutes
+				EndlessColor = SpawnConfig->EndlessColorCurve->GetLinearColorValue(MinutesInEndless);
+			}
+		}
 	}
 
 	ACharacter* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
@@ -376,6 +404,14 @@ void APRSpawnerManager::SpawnLoop()
 
 		if (NewEnemy)
 		{
+			// APPLY ENDLESS BUFFS BEFORE INITIALIZATION
+			if (bInEndless)
+			{
+				NewEnemy->SetEndlessBuffs(EndlessMultiplier, EndlessColor);
+			}
+			// If regular tint logic exists from WaveConfig, handle priority here.
+			// Endless Color usually overrides everything.
+
 			UGameplayStatics::FinishSpawningActor(NewEnemy, FTransform(FRotator::ZeroRotator, Loc));
 		}
 	}

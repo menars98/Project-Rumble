@@ -5,6 +5,8 @@
 #include "PRGameplayTags.h"
 #include "GameModes/PRGameMode.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/PRPlayerState.h"
+#include "Components/PRSessionTrackerComponent.h"
 
 UPRStatsComponent::UPRStatsComponent()
 {
@@ -550,8 +552,19 @@ void UPRStatsComponent::ProcessHealthRegen()
 
 	if (NewHealth > CurrentHealth) // Only update if there was an actual change
 	{
+		float AmountHealed = NewHealth - CurrentHealth;
+
 		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health, NewHealth);
 		BroadcastHealth(); // Notify the UI
+
+		if (APRPlayerState* PS = Cast<APRPlayerState>(GetOwner())) // Owner PlayerState ise (Veya karakterden PS'ye ulaþ)
+		{
+			// Not: StatsComponent PlayerState üzerinde duruyor olabilir, direkt Owner'a cast et.
+			if (PS->TrackerComponent)
+			{
+				PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Healing_Regen, AmountHealed);
+			}
+		}
 	}
 }
 

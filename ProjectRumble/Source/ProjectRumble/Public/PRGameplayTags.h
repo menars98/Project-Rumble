@@ -97,11 +97,13 @@ namespace NativeGameplayTags
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_IsStunned);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_IsDead);
 	}
+
 	namespace StatusEffect
 	{
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Effect_StunChance);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Effect_StunDuration);
 	}
+
 	namespace Enemies
 	{
 		namespace Type
@@ -110,12 +112,14 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Skeleton);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Neuron);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Cactus);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_VoidWalker);
 		}
 		namespace Tier
 		{
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_1); // Fodder (Goblin, Skeleton)
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_2); // Medium (Cactus)
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_3); // Elite
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_Endless);
 		}
 		namespace Biome
 		{
@@ -124,11 +128,26 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Biome_Global); // Appears everywhere
 		}
 	}
+
 	namespace Destructible
 	{
 		namespace Type
 		{
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Destructible_Type_Vase);
 		}
+	}
+
+	namespace Tracker
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_Kills);				// Total Kill
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_DamageDealt);			// Total Damage
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_DamageTaken);			// Total Damage Taken
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_DiedTo);				// Died To
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Healing_Regen);     // Regen
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_TimeAlive);			// Alive Time(sec)
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Healing_Lifesteal);	// Lifesteal
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Economy_GoldEarned);			// Gold Earned
+		
+		
 	}
 }

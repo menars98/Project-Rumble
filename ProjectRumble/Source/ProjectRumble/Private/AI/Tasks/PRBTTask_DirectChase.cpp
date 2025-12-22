@@ -42,20 +42,31 @@ void UPRBTTask_DirectChase::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 	// Calculate Direction
 	FVector MyLoc = Pawn->GetActorLocation();
 	FVector TargetLoc = TargetActor->GetActorLocation();
+
+	float HoverOffset = 60.0f; // How high above the ground should they fly? (cm)
+
+	// Even if the enemy is above, it will turn its nose down and descend because the target point is below.
+	TargetLoc.Z += HoverOffset;
+
+	FVector Direction = (TargetLoc - MyLoc);
+	//float Distance = Direction.Size(); // We won't stop just because of the distance anymore!
+
 	float DistanceSq = FVector::DistSquared(MyLoc, TargetLoc);
 
-	// Check if reached
-	if (DistanceSq <= (AcceptanceRadius * AcceptanceRadius))
-	{
-		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-		return;
-	}
+	// 3. MOVEMENT (Keep Pushing)
+	// REMOVING the AcceptanceRadius control. 
+	// Keep pushing until it enters the enemy player.
+	// The physics engine (Collision) will already prevent it from entering the player.
+	FVector NormalizedDir = Direction.GetSafeNormal();
+	Pawn->AddMovementInput(NormalizedDir, 1.0f);
 
-	// Move Directly
-	FVector Direction = (TargetLoc - MyLoc).GetSafeNormal();
-	Pawn->AddMovementInput(Direction, 1.0f);
+	// 4. Rotation
+	FRotator CurrentRot = Pawn->GetActorRotation();
+	FRotator TargetRot = NormalizedDir.Rotation();
+	FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaSeconds, 10.0f);
+	Pawn->SetActorRotation(NewRot);
 
-	// Face Target
-	FRotator TargetRot = Direction.Rotation();
-	Pawn->SetActorRotation(FMath::RInterpTo(Pawn->GetActorRotation(), TargetRot, DeltaSeconds, 10.0f));
+	// Debug Line
+	 DrawDebugLine(GetWorld(), MyLoc, TargetLoc, FColor::Red, false, -1.0f, 0, 2.0f);
+
 }

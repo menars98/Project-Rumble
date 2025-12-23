@@ -10,6 +10,8 @@
 #include "EnhancedInputComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "UI/PRHUD.h"
+#include "UI/Widgets/PRPrimaryGameLayout.h" 
+#include "CommonActivatableWidget.h"
 #include "Interfaces/PRBPIPlayerHUD.h"
 #include "Interfaces/PRBPIRewardScreen.h"
 #include <Kismet/GameplayStatics.h>
@@ -18,7 +20,8 @@
 #include "Engine/ActorChannel.h"
 #include "Engine/TimerHandle.h"
 #include "FunctionLibrary/PRGameplayStatics.h"
-#include <GameModes/PRGameMode.h>
+#include "GameModes/PRGameMode.h"
+#include "Components/PRSessionTrackerComponent.h"
 
 APRPlayerController::APRPlayerController()
 {
@@ -248,26 +251,37 @@ void APRPlayerController::OnRep_OfferedRewards()
 		}
 	}
 
-	if (LevelUpWidgetClass)
-	{
-		if (LevelUpWidgetInstance)
-		{
-			LevelUpWidgetInstance->RemoveFromParent();
-			LevelUpWidgetInstance = nullptr;
-		}
-		// Create Widget
-		LevelUpWidgetInstance = CreateWidget<UUserWidget>(this, LevelUpWidgetClass);
+	// --- Common UI Part ---
 
-		if (LevelUpWidgetInstance)
+	APRHUD* CurrentHUD = Cast<APRHUD>(GetHUD());
+	if (CurrentHUD && LevelUpWidgetClass)
+	{
+		UPRPrimaryGameLayout* RootLayout = CurrentHUD->GetMainLayout();
+		if (RootLayout)
 		{
-			// Send data to widget via interface
-			if (LevelUpWidgetInstance->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
+			// 1. Push the widget to the Menu layer (It will automatically activate -> Play sound)
+			FGameplayTag MenuLayerTag = NativeGameplayTags::UI_Layers::TAG_UI_Layer_Menu;
+
+			// Note: We'll need to modify the PushWidget function slightly because 
+			// we need the widget instance (to send the data).
+
+			// We'll write a function that pushes through RootLayout and returns the Widget
+			// OR let's do it manually for now:
+
+			// Our current PushWidgetToLayer function returns void.
+			// So first, let's find the stack and add it manually, or update the function.
+			// The cleanest solution: Update PRPrimaryGameLayout. (Explained below)
+
+			// For now, conceptually:
+			UCommonActivatableWidget* CreatedWidget = RootLayout->PushWidgetToLayer(MenuLayerTag, LevelUpWidgetClass);
+
+			// 2. Send data to the widget
+			if (CreatedWidget && CreatedWidget->Implements<UPRBPIRewardScreen>())
 			{
-				IPRBPIRewardScreen::Execute_InitializeScreen(LevelUpWidgetInstance, OfferedRewards);
+				IPRBPIRewardScreen::Execute_InitializeScreen(CreatedWidget, OfferedRewards);
 			}
 
-			LevelUpWidgetInstance->AddToViewport();
-
+			// 3. Change Input Mode
 			FInputModeUIOnly InputMode;
 			SetInputMode(InputMode);
 			bShowMouseCursor = true;
@@ -329,17 +343,31 @@ void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {
 	if (!ChosenUpgrade) return;
 
-	// --- CLEAN UP LEVEL UP WIDGET ---
-	if (LevelUpWidgetInstance)
+	// --- COMMON UI KAPATMA MANTIÐI ---
+	APRHUD* CurrentHUD = Cast<APRHUD>(GetHUD());
+	if (CurrentHUD)
 	{
-		LevelUpWidgetInstance->RemoveFromParent();
-		LevelUpWidgetInstance = nullptr;
+		UPRPrimaryGameLayout* RootLayout = CurrentHUD->GetMainLayout();
+		if (RootLayout)
+		{
+			// Menu katmanýndaki aktif widget'ý bul (Level Up ekraný oradadýr)
+			FGameplayTag MenuLayerTag = NativeGameplayTags::UI_Layers::TAG_UI_Layer_Menu;
+			UCommonActivatableWidget* ActiveMenu = RootLayout->GetActiveWidgetInLayer(MenuLayerTag);
+
+			// Eðer bulduðun þey bizim LevelUp widget'ý ise kapat
+			if (ActiveMenu && ActiveMenu->IsA(LevelUpWidgetClass))
+			{
+				ActiveMenu->DeactivateWidget();
+			}
+		}
 	}
 
+	// Input modunu geri al
 	FInputModeGameOnly InputMode;
 	SetInputMode(InputMode);
 	bShowMouseCursor = false;
 
+	// Server'a iþle
 	Server_ApplyReward(ChosenUpgrade);
 }
 
@@ -485,54 +513,28 @@ void APRPlayerController::Client_ShowDamageEffect_Implementation(AActor* TargetA
 
 void APRPlayerController::ToggleInventoryScreen()
 {
-	// Get our custom HUD from the controller.
 	APRHUD* CurrentHUD = Cast<APRHUD>(GetHUD());
-	if (!CurrentHUD)
-	{
-		// If we don't have our custom HUD for some reason, we can't do anything.
-		return;
-	}
+    if (!CurrentHUD || !InventoryScreenWidgetClass) return;
 
-	// Get the main player HUD widget instance from our HUD class.
-	UUserWidget* PlayerHUDWidget = CurrentHUD->GetPlayerHUDWidget();
-	if (!PlayerHUDWidget)
-	{
-		// If the main HUD widget hasn't been created yet, we can't do anything.
-		return;
-	}
+    UPRPrimaryGameLayout* RootLayout = CurrentHUD->GetMainLayout();
+    if (!RootLayout) return;
 
-	// --- THIS IS THE INTERFACE LOGIC ---
-	// Check if the main HUD widget implements our interface.
-	if (PlayerHUDWidget->GetClass()->ImplementsInterface(UPRBPIPlayerHUD::StaticClass()))
-	{
-		// If it does, we can safely call the interface function on it.
-		// We use Execute_FunctionName for BlueprintImplementableEvents.
-		IPRBPIPlayerHUD::Execute_ToggleInventory(PlayerHUDWidget);
-	}
+    FGameplayTag MenuLayerTag = NativeGameplayTags::UI_Layers::TAG_UI_Layer_Menu;
 
+	// 1. Find the currently active widget on that layer
+    UCommonActivatableWidget* ActiveWidget = RootLayout->GetActiveWidgetInLayer(MenuLayerTag);
 
-	// --- INPUT MODE & MOUSE CURSOR LOGIC ---
-	// This logic is independent of the widget and handles player input.
-	// Let's assume the UI will tell us if it's now open or closed.
-	// For a simpler approach, we can check the widget's visibility, but that creates a dependency.
-	// A better way is to just toggle the state.
-
-	const bool bIsInventoryOpen = bShowMouseCursor; // A simple way to check the current state
-
-	if (bIsInventoryOpen)
-	{
-		// If it was open, we are closing it. Return to Game Only mode.
-		FInputModeGameOnly InputMode;
-		SetInputMode(InputMode);
-		bShowMouseCursor = false;
-	}
-	else
-	{
-		// If it was closed, we are opening it. Switch to Game and UI mode.
-		FInputModeGameAndUI InputMode;
-		SetInputMode(InputMode);
-		bShowMouseCursor = true;
-	}
+	// 2. CHECK: Is the active widget our Inventory?
+    if (ActiveWidget && ActiveWidget->IsA(InventoryScreenWidgetClass))
+    {
+        // (Deactivate)
+        ActiveWidget->DeactivateWidget();
+    }
+    else
+    {
+		// Closed or another menu is present -> OPEN (Push)
+        RootLayout->PushWidgetToLayer(MenuLayerTag, InventoryScreenWidgetClass);
+    }
 }
 
 void APRPlayerController::QuitToMainMenu()
@@ -544,3 +546,18 @@ void APRPlayerController::QuitToMainMenu()
 	UGameplayStatics::OpenLevel(this, FName("MainMenu_L"), true);
 }
 
+void APRPlayerController::PrintStats()
+{
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		if (PS->TrackerComponent)
+		{
+			// If we are client, we might not have the "InternalMap", 
+			// but we can iterate the "ReplicatedStats" array if we want client-side logs.
+			// However, Server log is usually more accurate during dev.
+
+			// Since DebugLogAllStats uses InternalMap, it works best on Server.
+			PS->TrackerComponent->DebugLogAllStats();
+		}
+	}
+}

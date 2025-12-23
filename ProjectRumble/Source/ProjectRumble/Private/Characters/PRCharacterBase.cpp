@@ -397,6 +397,7 @@ void APRCharacterBase::OnDeath()
 				if (PS->TrackerComponent)
 				{
 					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_TimeAlive, TimeAlive);
+					PS->TrackerComponent->DebugLogAllStats();
 				}
 			}
 		}

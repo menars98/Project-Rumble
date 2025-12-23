@@ -11,7 +11,8 @@ public class ProjectRumble : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { 
 			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "GameplayTags", "AIModule", "NavigationSystem",
-            "OnlineSubsystem", "OnlineSubsystemUtils"
+            "OnlineSubsystem", "OnlineSubsystemUtils",
+            "CommonUI", "CommonInput", "Slate", "SlateCore"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "CommonUserWidget.h"
 #include "PRWorldUserWidget.generated.h"
 
 class USizeBox;
@@ -15,7 +15,7 @@ class USceneComponent;
  */
 
 UCLASS()
-class PROJECTRUMBLE_API UPRWorldUserWidget : public UUserWidget
+class PROJECTRUMBLE_API UPRWorldUserWidget : public UCommonUserWidget
 {
 	GENERATED_BODY()
 	

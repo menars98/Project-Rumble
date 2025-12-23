@@ -60,6 +60,12 @@ public:
     UFUNCTION(BlueprintPure, Category = "Tracker")
     TArray<FReplicatedTrackerData> GetAllStats() const { return ReplicatedStats; }
 
+    /**
+     * Prints all current stats to the Output Log.
+     * Useful for debugging without UI.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Tracker|Debug")
+    void DebugLogAllStats();
 protected:
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

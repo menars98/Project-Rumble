@@ -12,6 +12,7 @@ class UPRUpgradeData;
 class UPRItemDefinition;
 class UInputAction;
 class UPRWorldUserWidget;
+class UCommonActivatableWidget;
 
 UCLASS()
 class PROJECTRUMBLE_API APRPlayerController : public APlayerController
@@ -56,11 +57,11 @@ protected:
 	// -- UI CLASSES --
 	// The Level Up screen widget class. Assigned in the BP_PlayerController Blueprint.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UUserWidget> LevelUpWidgetClass;
+	TSubclassOf<class UCommonActivatableWidget> LevelUpWidgetClass;
 
 	// The Inventory screen widget class.
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UUserWidget> InventoryScreenWidgetClass;
+	TSubclassOf<UCommonActivatableWidget> InventoryScreenWidgetClass;
 
 	// The Stat screen widget class.
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
@@ -156,4 +157,9 @@ public:
 	/** [SERVER] Called when the pawn controlled by this controller dies. */
 	UFUNCTION(Server, Reliable)
 	void Server_OnPlayerDied();
+
+	// --- DEBUG ---
+
+	UFUNCTION(Exec)
+	void PrintStats();
 };

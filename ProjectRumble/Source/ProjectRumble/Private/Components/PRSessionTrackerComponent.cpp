@@ -11,6 +11,34 @@ UPRSessionTrackerComponent::UPRSessionTrackerComponent()
 	SetIsReplicatedByDefault(true);
 }
 
+void UPRSessionTrackerComponent::DebugLogAllStats()
+{
+    // Ensure we have an owner
+    AActor* Owner = GetOwner();
+    FString OwnerName = Owner ? Owner->GetName() : TEXT("Unknown");
+
+    UE_LOG(LogTemp, Warning, TEXT("========================================="));
+    UE_LOG(LogTemp, Warning, TEXT("   SESSION STATS REPORT: %s"), *OwnerName);
+    UE_LOG(LogTemp, Warning, TEXT("========================================="));
+
+    if (InternalMap.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("   No stats recorded yet."));
+    }
+    else
+    {
+        for (const TPair<FGameplayTag, float>& Pair : InternalMap)
+        {
+            // Clean up the Tag string for better readability (optional)
+            FString TagName = Pair.Key.ToString();
+            float Value = Pair.Value;
+
+            UE_LOG(LogTemp, Warning, TEXT("   %s :  %.1f"), *TagName, Value);
+        }
+    }
+    UE_LOG(LogTemp, Warning, TEXT("========================================="));
+}
+
 void UPRSessionTrackerComponent::BeginPlay()
 {
 	Super::BeginPlay();

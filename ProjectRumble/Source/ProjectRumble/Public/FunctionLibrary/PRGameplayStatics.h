@@ -57,6 +57,7 @@ public:
 		AActor* DamagedActor,
 		float BaseDamage,
 		const FDamageCalculationResult& DamageResult,
+		FGameplayTag DamageSourceTag,
 		AController* EventInstigator,
 		AActor* DamageCauser,
 		TSubclassOf<class UDamageType> DamageTypeClass,

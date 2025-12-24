@@ -54,7 +54,9 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 	return Result;
 }
 
-float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor* DamagedActor, float BaseDamage, const FDamageCalculationResult& DamageResult, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration, USoundBase* HitSound)
+float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor* DamagedActor, float BaseDamage, const FDamageCalculationResult& DamageResult, 
+	FGameplayTag DamageSourceTag,AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, 
+	const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration, USoundBase* HitSound)
 {
 	
 	// --- 1. APPLY KNOCKBACK FIRST (OR INDEPENDENTLY) ---
@@ -144,7 +146,7 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 							{
 								if (AttackerPS->TrackerComponent)
 								{
-									AttackerPS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Healing_Lifesteal, (float)RoundedHealth);
+									AttackerPS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Health_Healing_Lifesteal, (float)RoundedHealth);
 								}
 							}
 						}
@@ -176,7 +178,16 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 			{
 				if (PS->TrackerComponent)
 				{
-					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Combat_DamageDealt, ActualDamage);
+					// Total Damage
+					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Main_Combat_DamageDealt, ActualDamage);
+
+					// For damage breakdown
+					if (DamageSourceTag.IsValid())
+					{
+						// Example: Add damage to "Item.Weapon.Axe" tag
+						// Dont forget we need to set the DamageSourceTag when calling this function!
+						PS->TrackerComponent->AddStat(DamageSourceTag, ActualDamage);
+					}
 				}
 			}
 		}

@@ -318,4 +318,21 @@ public:
     TArray<FStatDefinition> BaseStats;
 
 };
+// ---
 
+USTRUCT(BlueprintType)
+struct FTrackerUIConfig : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FText DisplayName;
+
+    // Seconds? (If its true 120 -> 02:00 )
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    bool bIsTime = false;
+
+    // If we want special sorting we can change its value
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    int32 SortPriority = 0;
+};

@@ -139,15 +139,15 @@ namespace NativeGameplayTags
 
 	namespace Tracker
 	{
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_Kills);				// Total Kill
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_DamageDealt);			// Total Damage
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_DamageTaken);			// Total Damage Taken
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_DiedTo);				// Died To
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Healing_Regen);     // Regen
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_TimeAlive);			// Alive Time(sec)
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Healing_Lifesteal);	// Lifesteal
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Economy_GoldEarned);			// Gold Earned
-		
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Combat_Kills);				// Total Kill
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Combat_DamageDealt);			// Total Damage
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Combat_DamageTaken);			// Total Damage Taken
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Combat_DiedTo);				// Died To
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Health_Healing_Regen);     // Regen
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Time_TimeAlive);			// Alive Time(sec)
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Health_Healing_Lifesteal);	// Lifesteal
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Economy_GoldEarned);			// Gold Earned
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_Damage_DamageDealt);
 		
 	}
 
@@ -156,5 +156,11 @@ namespace NativeGameplayTags
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_UI_Layer_Game);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_UI_Layer_Menu);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_UI_Layer_Modal);
+	}
+
+	namespace ItemTypes
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Type_Weapon); // "Item.Weapon"
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Type_Passive); // "Item.Passive"
 	}
 }

@@ -52,6 +52,12 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
     FDamageCalculationResult DamageResult;
     DamageResult.FinalDamage = FinalDamage;
 
+	FGameplayTag MyTag = FGameplayTag::EmptyTag;
+	if (SourceItemDef)
+	{
+		MyTag = SourceItemDef->ItemIdentityTag;
+	}
+
 
     AController* InstigatorController = nullptr;
     AActor* DamageCauser = GetOwner();
@@ -91,6 +97,7 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 		TargetActor,
 		FinalDamage,
 		DamageResult,
+		MyTag,
 		InstigatorController,
 		DamageCauser,
 		UDamageType::StaticClass(),

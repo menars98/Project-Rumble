@@ -258,7 +258,7 @@ void APRAIBase::OnDeath()
 		{
 			if (KillerPS->TrackerComponent)
 			{
-				KillerPS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Combat_Kills, 1.0f);
+				KillerPS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Main_Combat_Kills, 1.0f);
 			}
 		}
 	}
@@ -318,6 +318,7 @@ void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 		TargetPlayer,
 		ContactDamage,
 		DamageResult,
+		FGameplayTag::EmptyTag,
 		GetController(),
 		this,
 		nullptr,

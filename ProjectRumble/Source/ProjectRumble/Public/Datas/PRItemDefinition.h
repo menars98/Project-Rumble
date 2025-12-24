@@ -57,6 +57,9 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Weapon Data", meta = (EditCondition = "ItemType == EItemType::Weapon"))
     FWeaponStats WeaponStats;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Identity")
+    FGameplayTag ItemIdentityTag;
+
 	// -- FUNCTIONS --
 	// Override to indicate that this Data Asset supports networking.
     virtual bool IsSupportedForNetworking() const override { return true; }

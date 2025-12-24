@@ -55,36 +55,26 @@ protected:
 	TObjectPtr<UDataTable> StatsInfoDataTable;
 
 	// -- UI CLASSES --
-	// The Level Up screen widget class. Assigned in the BP_PlayerController Blueprint.
+
+	// Level Up Screen
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class UCommonActivatableWidget> LevelUpWidgetClass;
 
-	// The Inventory screen widget class.
+	// Inventory Screen
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UCommonActivatableWidget> InventoryScreenWidgetClass;
+	TSubclassOf<class UCommonActivatableWidget> InventoryScreenWidgetClass;
 
-	// The Stat screen widget class.
+	// Item Found Popup (Bunu da güncelledik)
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UUserWidget> ItemFoundPopupWidgetClass;
+	TSubclassOf<class UCommonActivatableWidget> ItemFoundPopupWidgetClass;
 
+	// Pause Menu
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UUserWidget> PauseMenuWidgetClass;
+	TSubclassOf<class UCommonActivatableWidget> PauseMenuWidgetClass;
 
-	// -- UI INSTANCES --
-	UPROPERTY()
-	TObjectPtr<UUserWidget> LevelUpWidgetInstance;
-
-	UPROPERTY()
-	TObjectPtr<UUserWidget> InventoryScreenInstance;
-
-	UPROPERTY()
-	TObjectPtr<UUserWidget> StatScreenInstance;
-
-	UPROPERTY()
-	TObjectPtr<UUserWidget> PauseMenuInstance;
-
+	// Game Over
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UUserWidget> GameOverWidgetClass;
+	TSubclassOf<class UCommonActivatableWidget> GameOverWidgetClass;
 	// -- INTERNAL LOGIC --
 
 	// Tracks if THIS controller currently has the pause menu open.

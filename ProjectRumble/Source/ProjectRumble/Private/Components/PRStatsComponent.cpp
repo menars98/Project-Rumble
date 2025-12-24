@@ -562,7 +562,7 @@ void UPRStatsComponent::ProcessHealthRegen()
 			// Not: StatsComponent PlayerState üzerinde duruyor olabilir, direkt Owner'a cast et.
 			if (PS->TrackerComponent)
 			{
-				PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Healing_Regen, AmountHealed);
+				PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Health_Healing_Regen, AmountHealed);
 			}
 		}
 	}

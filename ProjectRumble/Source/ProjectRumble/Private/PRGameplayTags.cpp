@@ -138,15 +138,15 @@ namespace NativeGameplayTags
 	
 	namespace Tracker
 	{
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Combat_Kills, "Tracker.Combat.Kills");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Combat_DamageDealt, "Tracker.Combat.DamageDealt");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Combat_DamageTaken, "Tracker.Combat.DamageTaken");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Combat_DiedTo, "Tracker.Combat.DiedTo");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Healing_Regen, "Tracker.Survival.Regen");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Healing_Lifesteal, "Tracker.Survival.Lifesteal");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_TimeAlive, "Tracker.Survival.TimeAlive");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Economy_GoldEarned, "Tracker.Economy.GoldEarned");
-		
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_Kills, "Tracker.Combat.Kills");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DamageDealt, "Tracker.Combat.DamageDealt");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DamageTaken, "Tracker.Combat.DamageTaken");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DiedTo, "Tracker.Combat.DiedTo");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Health_Healing_Regen, "Tracker.Survival.Regen");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Health_Healing_Lifesteal, "Tracker.Survival.Lifesteal");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Time_TimeAlive, "Tracker.Survival.TimeAlive");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Economy_GoldEarned, "Tracker.Economy.GoldEarned");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Combat_Damage_DamageDealt, "Tracker.Combat.Damage.DamageDealt");
 	}
 
 	namespace UI_Layers
@@ -154,5 +154,12 @@ namespace NativeGameplayTags
 		UE_DEFINE_GAMEPLAY_TAG(TAG_UI_Layer_Game, "UI.Layer.Game");
 		UE_DEFINE_GAMEPLAY_TAG(TAG_UI_Layer_Menu, "UI.Layer.Menu");
 		UE_DEFINE_GAMEPLAY_TAG(TAG_UI_Layer_Modal, "UI.Layer.Modal");
+	}
+
+	namespace ItemTypes
+	{
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Type_Weapon, "Item.Type.Weapon");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Type_Passive, "Item.Type.Passive");
+		
 	}
 }

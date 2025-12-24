@@ -42,6 +42,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack|Stats", meta = (ExposeOnSpawn = "true"))
 	FPRWeaponAttackStats AttackStats;
 
+	/**
+	* The definition of the item (Weapon) that spawned this attack.
+	* Used to retrieve the ItemIdentityTag for stat tracking.
+	*/
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Rumble|Stats", meta = (ExposeOnSpawn = "true"))
+	TObjectPtr<UPRItemDefinition> SourceItemDef;
+
 	// --- AUDIO PROPERTIES ---
 
 	/** Sound to play when the attack is spawned (e.g., Axe Throw, Arrow release). */

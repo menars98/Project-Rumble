@@ -396,7 +396,7 @@ void APRCharacterBase::OnDeath()
 
 				if (PS->TrackerComponent)
 				{
-					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_TimeAlive, TimeAlive);
+					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Time_TimeAlive, TimeAlive);
 					PS->TrackerComponent->DebugLogAllStats();
 				}
 			}
@@ -530,7 +530,7 @@ float APRCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 		{
 			if (PS->TrackerComponent)
 			{
-				PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Combat_DamageTaken, ActualDamage);
+				PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Main_Combat_DamageTaken, ActualDamage);
 			}
 		}
 	}

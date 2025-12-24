@@ -61,7 +61,7 @@ bool APRPlayerController::ReplicateSubobjects(UActorChannel* Channel, FOutBunch*
 void APRPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-// Server-side Setup
+	// Server-side Setup
 	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
 	{
 		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
@@ -172,32 +172,28 @@ void APRPlayerController::Server_SetPauseMenuState_Implementation(bool bIsOpen)
 
 void APRPlayerController::Client_TogglePauseMenuUI_Implementation(bool bOpen)
 {
-	// Update Local State
-	bIsPauseMenuOpen = bOpen;
+	APRHUD* CurrentHUD = Cast<APRHUD>(GetHUD());
+	if (!CurrentHUD || !PauseMenuWidgetClass) return;
+
+	UPRPrimaryGameLayout* RootLayout = CurrentHUD->GetMainLayout();
+	if (!RootLayout) return;
+
+	FGameplayTag MenuLayerTag = NativeGameplayTags::UI_Layers::TAG_UI_Layer_Menu;
 
 	if (bOpen)
 	{
-		// Open Menu
-		if (PauseMenuWidgetClass && !PauseMenuInstance)
-		{
-			PauseMenuInstance = CreateWidget(this, PauseMenuWidgetClass);
-			PauseMenuInstance->AddToViewport();
-		}
-		FInputModeGameAndUI InputMode;
-		SetInputMode(InputMode);
-		bShowMouseCursor = true;
+		// Open the Pause Menu (Push)
+		// The widget's “Auto Pause Game” setting must be TRUE.
+		RootLayout->PushWidgetToLayer(MenuLayerTag, PauseMenuWidgetClass);
 	}
 	else
 	{
-		// Close Menu
-		if (PauseMenuInstance)
+		// (Deactivate)
+		UCommonActivatableWidget* ActiveWidget = RootLayout->GetActiveWidgetInLayer(MenuLayerTag);
+		if (ActiveWidget && ActiveWidget->IsA(PauseMenuWidgetClass))
 		{
-			PauseMenuInstance->RemoveFromParent();
-			PauseMenuInstance = nullptr;
+			ActiveWidget->DeactivateWidget();
 		}
-		FInputModeGameOnly InputMode;
-		SetInputMode(InputMode);
-		bShowMouseCursor = false;
 	}
 }
 
@@ -311,50 +307,37 @@ void APRPlayerController::Server_OnPlayerDied_Implementation()
 
 void APRPlayerController::Client_ShowGameOverScreen_Implementation(bool bWon)
 {
-	if (GameOverWidgetClass)
-	{
-		// Clean UI
-		if (LevelUpWidgetInstance) LevelUpWidgetInstance->RemoveFromParent();
-		// Hide HUD if needed?
-		if (APRHUD* PRHUD = Cast<APRHUD>(GetHUD()))
-		{
-			// PRHUD->HideHUD(); // @TODO: We need to add HideHUD function to the HUD interface.
-		}
+	APRHUD* CurrentHUD = Cast<APRHUD>(GetHUD());
+	if (!CurrentHUD || !GameOverWidgetClass) return;
 
-		UUserWidget* GameOverWidget = CreateWidget(this, GameOverWidgetClass);
-		if (GameOverWidget)
-		{
-			GameOverWidget->AddToViewport();
+	UPRPrimaryGameLayout* RootLayout = CurrentHUD->GetMainLayout();
+	if (!RootLayout) return;
 
-			// Set Input Mode
-			FInputModeUIOnly InputMode;
-			SetInputMode(InputMode);
-			bShowMouseCursor = true;
+	// 1. Push the Game Over screen to the Menu Layer (or Modal)
+	FGameplayTag MenuLayerTag = NativeGameplayTags::UI_Layers::TAG_UI_Layer_Menu;
+	UCommonActivatableWidget* GameOverWidget = RootLayout->PushWidgetToLayer(MenuLayerTag, GameOverWidgetClass);
 
-			// We can send other info here if needed (like stats, score, etc.)
-		}
-	}
-
-	// Pause game locally?
-	// UGameplayStatics::SetGamePaused(GetWorld(), true); // But we don't want to pause the server.
+	// 2. Send the “Won/Lost” information to the Widget
+	// (We can use an Interface for this or it can be a function within the Widget)
+	// @TODO: Example: IPRBPIGameOverScreen::Execute_SetupScreen(GameOverWidget, bWon, GetPlayerState<APRPlayerState>());
 }
 
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {
 	if (!ChosenUpgrade) return;
 
-	// --- COMMON UI KAPATMA MANTIÐI ---
+	// --- CLOSE THE LEVEL UP SCREEN ---
 	APRHUD* CurrentHUD = Cast<APRHUD>(GetHUD());
 	if (CurrentHUD)
 	{
 		UPRPrimaryGameLayout* RootLayout = CurrentHUD->GetMainLayout();
 		if (RootLayout)
 		{
-			// Menu katmanýndaki aktif widget'ý bul (Level Up ekraný oradadýr)
+			// Find the active widget in the Menu layer
 			FGameplayTag MenuLayerTag = NativeGameplayTags::UI_Layers::TAG_UI_Layer_Menu;
 			UCommonActivatableWidget* ActiveMenu = RootLayout->GetActiveWidgetInLayer(MenuLayerTag);
 
-			// Eðer bulduðun þey bizim LevelUp widget'ý ise kapat
+			// If it's the Level Up widget, close it
 			if (ActiveMenu && ActiveMenu->IsA(LevelUpWidgetClass))
 			{
 				ActiveMenu->DeactivateWidget();
@@ -362,12 +345,12 @@ void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 		}
 	}
 
-	// Input modunu geri al
+	// Reset Input Mode to Game Only
 	FInputModeGameOnly InputMode;
 	SetInputMode(InputMode);
 	bShowMouseCursor = false;
 
-	// Server'a iþle
+	// --- TELL SERVER TO APPLY THE REWARD ---
 	Server_ApplyReward(ChosenUpgrade);
 }
 
@@ -468,30 +451,27 @@ void APRPlayerController::RequestRewards(UDataTable* LootPool, int32 NumToOffer,
 
 void APRPlayerController::Client_ShowRewardPopup_Implementation(UPRUpgradeData* RewardToDisplay)
 {
-	// --- VALIDATION ---
-	if (ItemFoundPopupWidgetClass)
+	// 1. Validation
+	APRHUD* CurrentHUD = Cast<APRHUD>(GetHUD());
+	if (!CurrentHUD || !ItemFoundPopupWidgetClass) return;
+
+	UPRPrimaryGameLayout* RootLayout = CurrentHUD->GetMainLayout();
+	if (!RootLayout) return;
+
+	// 2. Which layer?(Menu for now)
+	FGameplayTag MenuLayerTag = NativeGameplayTags::UI_Layers::TAG_UI_Layer_Menu;
+
+	// 3. Push the widget to the layer
+	UCommonActivatableWidget* CreatedWidget = RootLayout->PushWidgetToLayer(MenuLayerTag, ItemFoundPopupWidgetClass);
+
+	if (CreatedWidget)
 	{
-		// --- CREATE WIDGET ---
-		UUserWidget* PopupWidget = CreateWidget(this, ItemFoundPopupWidgetClass);
-
-		if (PopupWidget)
+		// 4. Send the reward data to the widget
+		if (CreatedWidget->Implements<UPRBPIRewardScreen>())
 		{
-			// --- STORE REFERENCE ---
-			LevelUpWidgetInstance = PopupWidget;
-
-			// --- INITIALIZE WITH DATA ---
-			if (PopupWidget->GetClass()->ImplementsInterface(UPRBPIRewardScreen::StaticClass()))
-			{
-				TArray<UPRUpgradeData*> SingleRewardArray;
-				SingleRewardArray.Add(RewardToDisplay);
-				IPRBPIRewardScreen::Execute_InitializeScreen(PopupWidget, SingleRewardArray);
-			}
-
-			PopupWidget->AddToViewport();
-
-			FInputModeUIOnly InputMode;
-			SetInputMode(InputMode);
-			bShowMouseCursor = true;
+			TArray<UPRUpgradeData*> SingleRewardArray;
+			SingleRewardArray.Add(RewardToDisplay);
+			IPRBPIRewardScreen::Execute_InitializeScreen(CreatedWidget, SingleRewardArray);
 		}
 	}
 }

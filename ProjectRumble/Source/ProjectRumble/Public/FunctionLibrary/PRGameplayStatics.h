@@ -11,6 +11,13 @@ class APRAIBase;
 class UPRStatsComponent;
 class USoundBase;
 
+UENUM(BlueprintType)
+enum class ERowResult : uint8
+{
+	Found,
+	NotFound
+};
+
 UCLASS()
 class PROJECTRUMBLE_API UPRGameplayStatics : public UBlueprintFunctionLibrary
 {
@@ -86,4 +93,16 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	static void SpawnDamageNumber(UObject* WorldContextObject, float Damage, bool bIsCrit, AActor* TargetActor);
+
+	/**
+	* Searches for a tag in the Data Table and returns the Row data directly.
+	* @param DataTable The table to be scanned.
+	* @param TagToFind The tag to be searched for.
+	* @param OutRow (Wildcard) The found row data is copied here.
+	*/
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "Rumble|Data", meta = (CustomStructureParam = "OutRow", ExpandEnumAsExecs = "OutResult"))
+	static void GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, int32& OutRow, ERowResult& OutResult);
+
+	// We are defining the “exec” function required for CustomThunk.
+	DECLARE_FUNCTION(execGetDataTableRowByTag);
 };

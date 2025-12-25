@@ -147,6 +147,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PR | Stats")
 	void AddXP(float XPAmount);
 
+	// Shuts down all stat-related timers and processes (e.g., regeneration).
+	void ShutdownStats();
+
 	// --- SHIELD REGEN ---
 	/**
 	 * Called from outside (e.g., TakeDamage) to signal that damage was taken.

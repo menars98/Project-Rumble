@@ -61,6 +61,8 @@ public:
 	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void ShutdownInventory();
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

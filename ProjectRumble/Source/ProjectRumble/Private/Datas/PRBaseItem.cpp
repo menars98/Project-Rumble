@@ -47,3 +47,7 @@ UWorld* UPRBaseItem::GetWorld() const
 	}
 	return nullptr;
 }
+
+void UPRBaseItem::Deactivate()
+{
+}

@@ -241,3 +241,26 @@ void UPRInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(UPRInventoryComponent, OwnedRelics);
 	DOREPLIFETIME(UPRInventoryComponent, OwnedItems);
 }
+
+void UPRInventoryComponent::ShutdownInventory()
+{
+	// 1. Stop weapons
+	for (TObjectPtr<UPRBaseItem> Item : OwnedWeapons)
+	{
+		if (Item) Item->Deactivate();
+	}
+
+	// 2. Stop tomes
+	for (TObjectPtr<UPRBaseItem> Item : OwnedTomes)
+	{
+		if (Item) Item->Deactivate();
+	}
+
+	// 3. Stop other items
+	for (TObjectPtr<UPRBaseItem> Item : OwnedItems)
+	{
+		if (Item) Item->Deactivate();
+	}
+
+	// We dont have relics yet @TODO: When we have relics deactivate them here too
+}

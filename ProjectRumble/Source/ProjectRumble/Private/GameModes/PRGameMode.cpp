@@ -112,32 +112,35 @@ void APRGameMode::PostLogin(APlayerController* NewPlayer)
 
 void APRGameMode::CheckPlayerDeaths()
 {
-	// 1. Get All Player Controllers
-	// We iterate controllers because PlayerStates/Pawns might be in flux during death.
+	// Iterate through all player controllers to check their status
+	bool bIsAnyPlayerAlive = false;
+
 	for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
 	{
 		APlayerController* PC = Iterator->Get();
-		if (PC)
+		if (PC && PC->GetPawn())
 		{
-			APawn* MyPawn = PC->GetPawn();
-			// If there is still one player alive continue
-			if (MyPawn)
+			// If we have a Pawn, check its health via StatsComponent
+			if (APRCharacterBase* Character = Cast<APRCharacterBase>(PC->GetPawn()))
 			{
-				// We can check the StatsComponent to see if the character is alive
-				// Or we can check if the Pawn is nullptr (has it been destroyed?).
-				// For now, let's simply say: If the Pawn exists, it's alive.
-				// (Note: In OnDeath, the Pawn should not be destroyed immediately; it should transition to ragdoll).
-				if (APRCharacterBase* Character = Cast<APRCharacterBase>(MyPawn))
+				if (UPRStatsComponent* Stats = Character->GetStatsComponent())
 				{
-					// @TODO: We need to check the actual health stat here. We can create IsAlive() function for that
-					return; 
+					float CurrentHealth = Stats->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+					if (CurrentHealth > 0.0f)
+					{
+						bIsAnyPlayerAlive = true;
+						break; // Found a survivor, game continues
+					}
 				}
 			}
 		}
 	}
 
-	// All players died
-	GameOver(false);
+	// If no one is alive, trigger Game Over
+	if (!bIsAnyPlayerAlive)
+	{
+		GameOver(false); // false = Lost
+	}
 }
 
 void APRGameMode::GameOver(bool bWon)
@@ -154,7 +157,7 @@ void APRGameMode::GameOver(bool bWon)
 	}
 
 	// Slow motion effect. But is this affecting menus? And even networked players?
-	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.1f);
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.25f);
 }
 
 void APRGameMode::HandlePlayerReady(UPRStatsComponent* PlayerStatsComp)

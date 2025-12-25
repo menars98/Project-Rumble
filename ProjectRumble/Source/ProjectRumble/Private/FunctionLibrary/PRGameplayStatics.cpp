@@ -15,6 +15,7 @@
 #include <Player/PRPlayerController.h>
 #include <Player/PRPlayerState.h>
 #include "Components/PRSessionTrackerComponent.h"
+#include "GameplayTagContainer.h"
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -250,3 +251,85 @@ void UPRGameplayStatics::SpawnDamageNumber(UObject* WorldContextObject, float Da
 		DamageWidget->AddToViewport();
 	}
 }
+
+void Generic_GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, void* OutRowPtr, FProperty* OutRowProp, ERowResult& OutResult)
+{
+	OutResult = ERowResult::NotFound;
+
+	if (!DataTable || !OutRowPtr || !OutRowProp) return;
+
+	// 1. Get the Struct type used by the Data Table
+	const UScriptStruct* TableStruct = DataTable->GetRowStruct();
+
+	// 2. Is the Struct connected to the output pin the same as the table's Struct? (Security)
+	const FStructProperty* StructProp = CastField<FStructProperty>(OutRowProp);
+	if (!StructProp || StructProp->Struct != TableStruct)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GetDataTableRowByTag: Output Struct type does not match DataTable Struct type!"));
+		return;
+	}
+
+	// 3. Search for a variable of type “GameplayTag” in the Struct (Automatic Detection)
+	FStructProperty* TagProperty = nullptr;
+
+	for (TFieldIterator<FProperty> It(TableStruct); It; ++It)
+	{
+		if (FStructProperty* StructPropInRow = CastField<FStructProperty>(*It))
+		{
+			if (StructPropInRow->Struct->GetFName() == FName("GameplayTag"))
+			{
+				TagProperty = StructPropInRow;
+				break; // Use the first Tag variable you find (usually the first ID), the problem with that you need to set id tag first. If you use multiple tags, you need to be careful.
+			}
+		}
+	}
+
+	if (!TagProperty)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GetDataTableRowByTag: No 'GameplayTag' property found in struct '%s'"), *TableStruct->GetName());
+		return;
+	}
+
+	// 4. Scan the table
+	for (auto It : DataTable->GetRowMap())
+	{
+		uint8* RowData = It.Value;
+
+		//  Read the tag value
+		FGameplayTag* ValuePtr = TagProperty->ContainerPtrToValuePtr<FGameplayTag>(RowData);
+
+		// Compare
+		if (ValuePtr && *ValuePtr == TagToFind)
+		{
+			// FOUND IT! 
+			// Copy the row data (RowData) to the output pin (OutRowPtr).
+			TableStruct->CopyScriptStruct(OutRowPtr, RowData);
+
+			OutResult = ERowResult::Found;
+			return;
+		}
+	}
+}
+
+// This function is called by the Unreal VM. It resolves the parameters and passes them to the function above.
+DEFINE_FUNCTION(UPRGameplayStatics::execGetDataTableRowByTag)
+{
+	// 1. Read Parameters
+	P_GET_OBJECT(UDataTable, DataTable);
+	P_GET_STRUCT(FGameplayTag, TagToFind);
+
+	// 2. Resolve the Wildcard (OutRow) parameter
+	Stack.StepCompiledIn<FProperty>(NULL);
+	void* OutRowPtr = Stack.MostRecentPropertyAddress;
+	FProperty* OutRowProp = Stack.MostRecentProperty;
+
+	// 3. Read the Enum (Execs) parameter
+	P_GET_ENUM_REF(ERowResult, OutResult);
+
+	P_FINISH;
+
+	// 4. Do the real work
+	Generic_GetDataTableRowByTag(DataTable, TagToFind, OutRowPtr, OutRowProp, OutResult);
+}
+
+

@@ -55,6 +55,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item")
 	UPRItemDefinition* GetItemDefinition() const { return ItemDefinition; }
 
+	/** Called when the owner dies. Stops timers and logic. */
+	virtual void Deactivate();
+
 protected:
 	// The tags this specific item instance has acquired.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")

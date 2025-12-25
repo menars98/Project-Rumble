@@ -322,6 +322,7 @@ void UPRStatsComponent::InitializeWithDataTable(UDataTable* DataTableToUse)
 
 void UPRStatsComponent::Die()
 {
+	ShutdownStats();
 	// Broadcast the death event.
 	// The owner of this component (e.g., the character) should listen to this and handle its own death logic
 	// (playing animations, enabling ragdoll, etc.).
@@ -501,6 +502,19 @@ void UPRStatsComponent::AddXP(float XPAmount)
 
 	// Broadcast the XP change
 	OnXPChangedDelegate.Broadcast(CurrentXP, MaxXP);
+}
+
+void UPRStatsComponent::ShutdownStats()
+{
+	// Clear all timers related to stats
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(HealthRegenTimerHandle);
+		World->GetTimerManager().ClearTimer(ShieldRegenDelayTimerHandle);
+		World->GetTimerManager().ClearTimer(ShieldRegenTickTimerHandle);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Stats Component Shutdown for %s"), *GetOwner()->GetName());
 }
 
 void UPRStatsComponent::Heal(float HealAmount)

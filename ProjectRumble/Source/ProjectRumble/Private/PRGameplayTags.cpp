@@ -138,15 +138,15 @@ namespace NativeGameplayTags
 	
 	namespace Tracker
 	{
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_Kills, "Tracker.Combat.Kills");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DamageDealt, "Tracker.Combat.DamageDealt");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DamageTaken, "Tracker.Combat.DamageTaken");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DiedTo, "Tracker.Combat.DiedTo");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_Kills, "Tracker.Main.Combat.Kills");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DamageDealt, "Tracker.Main.Combat.DamageDealt");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DamageTaken, "Tracker.Main.Combat.DamageTaken");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DiedTo, "Tracker.Main.Combat.DiedTo");
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Health_Healing_Regen, "Tracker.Survival.Regen");
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Health_Healing_Lifesteal, "Tracker.Survival.Lifesteal");
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Time_TimeAlive, "Tracker.Survival.TimeAlive");
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Economy_GoldEarned, "Tracker.Economy.GoldEarned");
-		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Combat_Damage_DamageDealt, "Tracker.Combat.Damage.DamageDealt");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Combat_Damage_DamageDealt, "Tracker.Combat.DamageDealt");
 	}
 
 	namespace UI_Layers

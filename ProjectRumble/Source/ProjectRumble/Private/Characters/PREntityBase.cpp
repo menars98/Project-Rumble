@@ -60,6 +60,14 @@ float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 		return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	}
 
+	const float CurrentHP = MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+
+	// If already dead, ignore further damage.
+	if (CurrentHP <= 0.0f)
+	{
+		return 0.0f;
+	}
+
 	// --- 1. EVASION ---
 	if (CheckForEvasion(MyStatsComponent))
 	{

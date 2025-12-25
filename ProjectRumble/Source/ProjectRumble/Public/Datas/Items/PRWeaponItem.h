@@ -41,6 +41,8 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	virtual void Deactivate() override;
+
 	UPROPERTY(BlueprintAssignable)
 	FOnDamageDealtSignature OnDamageDealt;
 

@@ -497,3 +497,18 @@ void UPRWeaponItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 
 	DOREPLIFETIME(UPRWeaponItem, AppliedEffects);
 }
+
+void UPRWeaponItem::Deactivate()
+{
+	Super::Deactivate();
+
+	if (UWorld* World = GetWorld())
+	{
+		// 1. Stop timer
+		World->GetTimerManager().ClearTimer(AttackTimerHandle);
+	}
+
+	// 2. Clear any active effects like Aura
+	// If the weapon spawned an Aura (Actor) and we are holding a reference to it, we must also destroy it.
+	// Example: if (SpawnedAuraActor) SpawnedAuraActor->Destroy();
+}

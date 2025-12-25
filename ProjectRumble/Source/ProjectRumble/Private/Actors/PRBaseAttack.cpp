@@ -6,8 +6,10 @@
 #include "Characters/PRCharacterBase.h"
 #include "AI/PRAIBase.h"
 #include "Components/AudioComponent.h"
+#include "Components/PRStatsComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "PRGameplayTags.h"
 
 APRBaseAttack::APRBaseAttack()
 {
@@ -61,6 +63,25 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 
     AController* InstigatorController = nullptr;
     AActor* DamageCauser = GetOwner();
+	APawn* MyInstigator = GetInstigator();
+
+	// Check if the instigator is still alive
+	if (MyInstigator)
+	{
+		if (APRCharacterBase* MyChar = Cast<APRCharacterBase>(MyInstigator))
+		{
+			if (UPRStatsComponent* Stats = MyChar->GetStatsComponent())
+			{
+				float CurrentHP = Stats->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+
+				if (CurrentHP <= 0.0f)
+				{
+					Destroy();
+					return;
+				}
+			}
+		}
+	}
 
 	// --- (PLAYER) ---
 	if (APRCharacterBase* PlayerOwner = Cast<APRCharacterBase>(GetOwner()))

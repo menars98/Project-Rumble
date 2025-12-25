@@ -326,6 +326,9 @@ struct FTrackerUIConfig : public FTableRowBase
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FGameplayTag StatTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
     FText DisplayName;
 
     // Seconds? (If its true 120 -> 02:00 )

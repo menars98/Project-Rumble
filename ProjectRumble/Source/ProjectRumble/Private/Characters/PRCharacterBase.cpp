@@ -35,6 +35,7 @@ APRCharacterBase::APRCharacterBase()
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
 	SpringArmComp->SetupAttachment(RootComponent);
 	SpringArmComp->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	SpringArmComp->PrimaryComponentTick.TickGroup = TG_PostPhysics;
 
 	// Create a follow camera
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
@@ -400,8 +401,24 @@ void APRCharacterBase::OnDeath()
 					PS->TrackerComponent->DebugLogAllStats();
 				}
 			}
+			if (UPRInventoryComponent* InvComp = PS->InventoryComponent)
+			{
+				InvComp->ShutdownInventory();
+			}
 		}
 	}
+
+	// We want to call again the ShutdownStats to ensure no further stat changes occur.
+	if (GetStatsComponent())
+	{
+		GetStatsComponent()->ShutdownStats();
+	}
+
+	if (InteractionComp)
+	{
+		InteractionComp->Deactivate();
+	}
+
 	// Note: Using UnPossess in multiplayer can sometimes cause camera issues. 
 	if (GetCharacterMovement())
 	{

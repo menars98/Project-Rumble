@@ -61,6 +61,11 @@ protected:
 	UPROPERTY()
 	TObjectPtr<class APRSpawnerManager> SpawnerManagerInstance;
 
+	// --- DIFFICULTY MANAGEMENT ---
+	/**
+	 * The currently active Difficulty multiplier based on the highest Difficulty stat among all players.
+	 * Used by the Spawner Manager to scale enemy stats and spawn rates.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Game|Difficulty")
 	float ActiveDifficultyMultiplier = 0.5f;
 

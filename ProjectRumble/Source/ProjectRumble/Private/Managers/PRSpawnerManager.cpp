@@ -140,18 +140,14 @@ void APRSpawnerManager::Tick(float DeltaTime)
 	if (!HasAuthority() || !SpawnConfig) return;
 
 	float GameTime = 0.f;
+	float MatchDuration = 0.0f;
 	float DifficultyMultiplier = 1.0f;
 
 	if (APRGameState* GS = GetWorld()->GetGameState<APRGameState>())
 	{
 		GameTime = GS->GetServerGameTime();
+		MatchDuration = GS->GetMatchDuration();
 		DifficultyMultiplier = GS->GetActiveDifficultyMultiplier();
-	}
-
-	ACharacter* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-	if (Player)
-	{
-		CheckBossEvents(GameTime, Player);
 	}
 
 	// --- 1. CALCULATE TARGET COUNT (FROM CURVE) ---
@@ -162,12 +158,29 @@ void APRSpawnerManager::Tick(float DeltaTime)
 		BaseTarget = SpawnConfig->SpawnCapCurve->GetFloatValue(GameTime);
 	}
 
-	// Apply Difficulty Multiplier
-	int32 CalculatedTarget = FMath::RoundToInt(BaseTarget * DifficultyMultiplier);
+	int32 EndlessBonus = 0;
 
-	// Apply Hard Cap
+	if (GameTime > MatchDuration)
+	{
+		float TimeInEndless = GameTime - MatchDuration;
+		float MinutesInEndless = TimeInEndless / 60.0f;
+
+		// Each minute in endless adds a flat amount to the target.
+		EndlessBonus = FMath::FloorToInt(MinutesInEndless * EndlessCountGrowthPerMinute);
+	}
+
+	// --- 3. FINAL TARGET & CAP ---
+	// Ex: (100 + 50) * 1.0 = 150
+	int32 CalculatedTarget = FMath::RoundToInt((BaseTarget + EndlessBonus) * DifficultyMultiplier);
+
 	TargetAICount = FMath::Min(CalculatedTarget, AbsoluteMaxAI);
-	CurrentMaxActiveAI = TargetAICount; // In this system, Target IS the Cap.
+	CurrentMaxActiveAI = TargetAICount;
+
+	ACharacter* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+	if (Player)
+	{
+		CheckBossEvents(GameTime, Player);
+	}
 }
 
 TSubclassOf<APRAIBase> APRSpawnerManager::GetEnemyToSpawn(float GameTime)

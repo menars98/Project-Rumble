@@ -105,4 +105,11 @@ public:
 
 	// We are defining the “exec” function required for CustomThunk.
 	DECLARE_FUNCTION(execGetDataTableRowByTag);
+
+	/**
+	* Checks if a specific Key is mapped to a specific Input Action for the given Player.
+	* Useful for UI to detect "Action" presses dynamically.
+	*/
+	UFUNCTION(BlueprintPure, Category = "Rumble|Input", meta = (WorldContext = "WorldContextObject"))
+	static bool IsKeyMappedToAction(UObject* WorldContextObject, FKey Key, const UInputAction* Action);
 };

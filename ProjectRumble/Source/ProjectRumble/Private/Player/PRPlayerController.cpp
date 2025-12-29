@@ -337,8 +337,8 @@ void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 			FGameplayTag MenuLayerTag = NativeGameplayTags::UI_Layers::TAG_UI_Layer_Menu;
 			UCommonActivatableWidget* ActiveMenu = RootLayout->GetActiveWidgetInLayer(MenuLayerTag);
 
-			// If it's the Level Up widget, close it
-			if (ActiveMenu && ActiveMenu->IsA(LevelUpWidgetClass))
+			// Is this an Reward Screen?
+			if (ActiveMenu && ActiveMenu->Implements<UPRBPIRewardScreen>())
 			{
 				ActiveMenu->DeactivateWidget();
 			}

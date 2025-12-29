@@ -13,7 +13,7 @@ void UPRPassiveItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InO
 	Super::Initialize(InItemDefinition, InOwningActor, InitialEffects);
 	// Store and apply the INITIAL effects
 	AppliedEffects = InitialEffects;
-	ApplyBonuses(AppliedEffects);
+	RecalculateAndApplyStats();
 }
 
 void UPRPassiveItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
@@ -21,12 +21,12 @@ void UPRPassiveItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffec
 	Super::LevelUp(UpgradeEffects);
 
 	AppliedEffects.Append(UpgradeEffects);
-	ApplyBonuses(UpgradeEffects);
+	RecalculateAndApplyStats();
 }
 
-void UPRPassiveItem::ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply)
+void UPRPassiveItem::RecalculateAndApplyStats()
 {
-	if (!OwningActor || !ItemDefinition) return;
+	if (!OwningActor) return;
 
 	APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor);
 	if (!Player) return;
@@ -34,29 +34,75 @@ void UPRPassiveItem::ApplyBonuses(const TArray<FPotentialUpgradeEffect>& Effects
 	UPRStatsComponent* StatsComp = Player->GetStatsComponent();
 	if (!StatsComp) return;
 
-	for (const FPotentialUpgradeEffect& Effect : EffectsToApply)
+	// --- STEP 1: DELETE OLD BONUSES ---
+	// If this item previously provided stats, let's retrieve them first.
+	// This way, we avoid the “Level 1 bonus + Level 2 bonus” error.
+	for (const TPair<FGameplayTag, float>& Pair : GrantedBonusesMap)
 	{
-		// The value to add is now in BaseMinMagnitude/BaseMaxMagnitude
-		// because the RewardManager already "cooked" it for us.
-		float ValueToAdd = Effect.BaseMinMagnitude;
+		float CurrentVal = StatsComp->GetStatValue(Pair.Key);
+		StatsComp->SetStatValue(Pair.Key, CurrentVal - Pair.Value);
+	}
 
-		float CurrentValue = StatsComp->GetStatValue(Effect.TargetStat);
+	
+	//Clear the map; 
+	GrantedBonusesMap.Empty();
 
-		StatsComp->SetStatValue(Effect.TargetStat, CurrentValue + ValueToAdd);
-		UE_LOG(LogTemp, Warning, TEXT("TOME/ITEM APPLIED: Stat '%s' is now %f"), *Effect.TargetStat.ToString(), CurrentValue + ValueToAdd);
+
+	// --- STEP 2: CALCULATE NEW TOTALS ---
+	// Add up ALL cards in the AppliedEffects array.
+	// (Add the +10 from Level 1, the +5 from Level 2... Add them all up).
+	for (const FPotentialUpgradeEffect& Effect : AppliedEffects)
+	{
+		// Note: We assume that “Rolled Value” (the rolled value) is stored in BaseMinMagnitude.
+		// RewardManager was setting this.
+		float& TotalBonus = GrantedBonusesMap.FindOrAdd(Effect.TargetStat);
+		TotalBonus += Effect.BaseMinMagnitude;
+	}
+
+
+	// --- STEP 3: APPLY NEW BONUSES ---
+	for (const TPair<FGameplayTag, float>& Pair : GrantedBonusesMap)
+	{
+		FGameplayTag StatTag = Pair.Key;
+		float NewBonusAmount = Pair.Value;
+
+		float CurrentVal = StatsComp->GetStatValue(StatTag);
+		StatsComp->SetStatValue(StatTag, CurrentVal + NewBonusAmount);
+
+		UE_LOG(LogTemp, Log, TEXT("Passive Update: %s grants TOTAL %.1f to %s"), *GetName(), NewBonusAmount, *StatTag.ToString());
 	}
 }
 
-void UPRPassiveItem::Uninitialize()
+
+
+void UPRPassiveItem::Deactivate()
 {
-	// TODO: Implement logic to REMOVE the bonuses this tome granted.
-	// This requires storing the applied bonuses or having a more advanced stat modification system.
+	// Clean up when we die or when items are deleted
+	if (!OwningActor) return;
+
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// We are taking back all the bonuses we gave out.
+			for (const TPair<FGameplayTag, float>& Pair : GrantedBonusesMap)
+			{
+				float CurrentVal = StatsComp->GetStatValue(Pair.Key);
+				StatsComp->SetStatValue(Pair.Key, CurrentVal - Pair.Value);
+			}
+		}
+	}
+
+	// Clear the memory
+	GrantedBonusesMap.Empty();
+
+	Super::Deactivate();
 }
 
 void UPRPassiveItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// Diziyi istemciye gönder
+	// Send the series to the client
 	DOREPLIFETIME(UPRPassiveItem, AppliedEffects);
 }

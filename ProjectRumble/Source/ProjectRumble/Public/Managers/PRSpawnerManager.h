@@ -36,6 +36,13 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Spawning|Limits")
     int32 AbsoluteMaxAI = 600;
 
+    /**
+    * In Endless Mode, how much extra Max AI Capacity is added per minute?
+    * e.g. 50 means: Minute 4=100, Minute 5=150, Minute 6=200.
+    */
+    UPROPERTY(EditDefaultsOnly, Category = "Spawning|Limits")
+    int32 EndlessCountGrowthPerMinute = 50;
+
     // Index of the next boss event to trigger.
     int32 NextBossEventIndex = 0;
 

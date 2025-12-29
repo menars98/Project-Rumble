@@ -22,13 +22,21 @@ public:
 	virtual void LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects) override;
 
 	// Called by the InventoryComponent when the item is removed (for future use).
-	void Uninitialize();
+	virtual void Deactivate() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
+
+	// Scans all history, deletes the old, adds the new.
+	void RecalculateAndApplyStats();
+
 	// Helper function to apply this item's bonuses to the StatsComponent.
-	void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
+	//void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
+
+	// The TOTAL bonuses this item currently provides to the player.
+	// Key: StatTag, Value: Value Provided (e.g., +15.0)
+	TMap<FGameplayTag, float> GrantedBonusesMap;
 
 	UPROPERTY(Replicated)
 	TArray<FPotentialUpgradeEffect> AppliedEffects;

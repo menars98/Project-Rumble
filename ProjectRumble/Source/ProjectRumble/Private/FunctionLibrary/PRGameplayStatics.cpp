@@ -16,6 +16,7 @@
 #include <Player/PRPlayerState.h>
 #include "Components/PRSessionTrackerComponent.h"
 #include "GameplayTagContainer.h"
+#include <EnhancedInputSubsystems.h>
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -250,6 +251,25 @@ void UPRGameplayStatics::SpawnDamageNumber(UObject* WorldContextObject, float Da
 		// 6. Add the initialized widget to the screen
 		DamageWidget->AddToViewport();
 	}
+}
+
+bool UPRGameplayStatics::IsKeyMappedToAction(UObject* WorldContextObject, FKey Key, const UInputAction* Action)
+{
+	if (!Action || !WorldContextObject) return false;
+
+	APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0);
+	if (!PC) return false;
+
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+	{
+		// Oyuncunun þu anki tuþ atamalarýný sorguluyoruz
+		TArray<FKey> MappedKeys = Subsystem->QueryKeysMappedToAction(Action);
+
+		// Basýlan tuþ (Key), bu listenin içinde var mý?
+		return MappedKeys.Contains(Key);
+	}
+
+	return false;
 }
 
 void Generic_GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, void* OutRowPtr, FProperty* OutRowProp, ERowResult& OutResult)

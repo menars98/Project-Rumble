@@ -181,37 +181,28 @@ void APRGameMode::OnPlayerDifficultyChanged(float NewDifficultyValue)
 void APRGameMode::RecalculateActiveDifficulty()
 {
 	// --- GUARD CLAUSE: Ensure GameState is valid before proceeding ---
-	APRGameState* PR_GameState = GetGameState<APRGameState>();
-	if (!PR_GameState)
-	{
-		return;
-	}
+	APRGameState* GS = GetGameState<APRGameState>();
+	if (!GS) return;
 
-	// 1. FIND THE HIGHEST DIFFICULTY BONUS
 	float HighestDifficulty = 1.0f;
-
-	TArray<AActor*> PlayerStates;
-	// 1. Find all active player states in the world (handles co-op).
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRPlayerState::StaticClass(), PlayerStates);
-
-	for (AActor* PlayerStateActor : PlayerStates)
+	
+	// --- 1. CALCULATE THE NEW DIFFICULTY MULTIPLIER ---
+	for (APlayerState* PS : GS->PlayerArray)
 	{
-		if (APRPlayerState* PR_PlayerState = Cast<APRPlayerState>(PlayerStateActor))
+		if (APRPlayerState* PR_PS = Cast<APRPlayerState>(PS))
 		{
-			if (UPRStatsComponent* StatsComp = PR_PlayerState->StatsComponent)
+			if (PR_PS->StatsComponent)
 			{
-				float PlayerDifficulty = StatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty);
-				// Keep track of the highest value found among all players.
+				float PlayerDifficulty = PR_PS->StatsComponent->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty);
 				HighestDifficulty = FMath::Max(HighestDifficulty, PlayerDifficulty);
-
 			}
 		}
 	}
 
 	float TimeBonus = 0.0f;
-	float ServerTime = PR_GameState->GetServerGameTime();
+	float ServerTime = GS->GetServerGameTime();
 
-	const float EndlessStartTime = PR_GameState->GetMatchDuration();
+	const float EndlessStartTime = GS->GetMatchDuration();
 
 	// Endless 
 	if (ServerTime > EndlessStartTime)
@@ -230,10 +221,10 @@ void APRGameMode::RecalculateActiveDifficulty()
 
 	// --- 2. UPDATE THE GAME STATE ---
 	// Only proceed if the value has actually changed.
-	if (!FMath::IsNearlyEqual(PR_GameState->GetActiveDifficultyMultiplier(), FinalMultiplier))
+	if (!FMath::IsNearlyEqual(GS->GetActiveDifficultyMultiplier(), FinalMultiplier))
 	{
 		// Set the value on the GameState. The GameState will handle replicating this to clients.
-		PR_GameState->SetActiveDifficultyMultiplier(FinalMultiplier);
+		GS->SetActiveDifficultyMultiplier(FinalMultiplier);
 
 		// Update all existing AI actors in the world with the new multiplier.
 		TArray<AActor*> FoundAIs;

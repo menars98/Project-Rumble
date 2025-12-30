@@ -108,6 +108,12 @@ void APRAIBase::BeginPlay()
 	OnRep_TintColor();
 
 	InitializeStats();
+
+	// Start the distance culling timer only on the server.
+	if (HasAuthority())
+	{
+		GetWorld()->GetTimerManager().SetTimer(CullingTimerHandle, this, &APRAIBase::CheckDistanceCulling, 2.0f, true, FMath::RandRange(0.0f, 2.0f));
+	}
 }
 
 void APRAIBase::InitializeStats()
@@ -184,6 +190,39 @@ float APRAIBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 	}
 
 	return ActualDamage;
+}
+
+void APRAIBase::CheckDistanceCulling()
+{
+	// Find the closest player character.
+	AActor* Target = nullptr;
+
+	// If we have a blackboard target, use that first (Fast).
+	if (AAIController* AIC = Cast<AAIController>(GetController()))
+	{
+		if (AIC->GetBlackboardComponent())
+		{
+			Target = Cast<AActor>(AIC->GetBlackboardComponent()->GetValueAsObject(FName("TargetActor")));
+		}
+	}
+
+	// If no blackboard target, fallback to player 0.
+	if (!Target)
+	{
+		Target = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+	}
+
+	if (Target)
+	{
+		float DistSq = FVector::DistSquared(GetActorLocation(), Target->GetActorLocation());
+		if (DistSq > (CullingDistance * CullingDistance))
+		{
+			PlayCullingEffect();
+
+			// Security: We can stop the timer in case BP didn't implement it or forgot, but it's best to trust BP.
+			GetWorld()->GetTimerManager().ClearTimer(CullingTimerHandle);
+		}
+	}
 }
 
 void APRAIBase::PlayHitFlash()
@@ -264,7 +303,7 @@ void APRAIBase::OnDeath()
 	}
 
 	// We could add raggdoll but its poitnless in a game like this, so we destroy it.
-	Destroy();
+	PlayCullingEffect();
 }
 
 void APRAIBase::Tick(float DeltaTime)

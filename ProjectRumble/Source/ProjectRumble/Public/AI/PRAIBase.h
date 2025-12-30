@@ -161,6 +161,20 @@ protected:
 	// Flag to check if we are currently able to apply contact damage.
 	bool bCanApplyContactDamage = true;
 
+	// -- OPTIMIZATION: DISTANCE CULLING --
+	FTimerHandle CullingTimerHandle;
+
+	// The distance beyond which the AI will be culled (deactivated).
+	UPROPERTY(EditDefaultsOnly, Category = "Optimization")
+	float CullingDistance = 4500.0f; // Spawn Radius + buffer.
+
+	void CheckDistanceCulling();
+
+	// Blueprint should implement the visual effect (fade out/sink) here.
+    // Call Destroy() at the end of the effect in Blueprint!
+	UFUNCTION(BlueprintImplementableEvent, Category = "AI|Optimization")
+	void PlayCullingEffect();
+
 	// -- AI TAGS --
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | AI")
 	FGameplayTagContainer AITags;

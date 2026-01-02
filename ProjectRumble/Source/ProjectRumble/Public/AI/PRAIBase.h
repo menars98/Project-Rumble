@@ -172,8 +172,10 @@ protected:
 
 	// Blueprint should implement the visual effect (fade out/sink) here.
     // Call Destroy() at the end of the effect in Blueprint!
-	UFUNCTION(BlueprintImplementableEvent, Category = "AI|Optimization")
+	UFUNCTION(BlueprintNativeEvent, Category = "AI|Optimization")
 	void PlayCullingEffect();
+
+	virtual void PlayCullingEffect_Implementation();
 
 	// -- AI TAGS --
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble | AI")

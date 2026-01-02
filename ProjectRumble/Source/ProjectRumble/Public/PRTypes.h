@@ -148,6 +148,9 @@ struct FWeaponStats
     int32 BaseProjectileBounce = 1;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    int32 BasePierceCount = 1;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     float BaseStunChance = 0.0f; // 0.0 to 1.0
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -238,6 +241,7 @@ struct PROJECTRUMBLE_API FPRWeaponAttackStats
         , ProjectileSpeed(0.0f)
         , ProjectileBounce(0)
         , TickRate(0.0f)
+		, PierceCount(1)
     { }
 
     // 1. Core Combat Properties (Used by most/all attacks)
@@ -286,6 +290,10 @@ struct PROJECTRUMBLE_API FPRWeaponAttackStats
     // For DOT/Aura attacks, the frequency of damage application (in seconds).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|AuraDOT")
     float TickRate;
+
+	// How many enemies the projectile can pierce through.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Projectile")
+    int32 PierceCount;
 };
 
 // --- FOR AI ---

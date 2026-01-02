@@ -25,6 +25,7 @@ namespace NativeGameplayTags
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_ProjectileBounce, "Stat.Offense.ProjectileBounce");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_Size, "Stat.Offense.Size");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_Damage_Elites, "Stat.Offense.Damage.Elites");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_PierceCount, "Stat.Offense.PierceCount");
 			
 		}
 		namespace Defense

@@ -320,6 +320,30 @@ int32 UPRWeaponItem::GetCalculatedProjectileCount() const
 	return BaseCount + static_cast<int32>(LocalBonus) + static_cast<int32>(GlobalBonus);
 }
 
+int32 UPRWeaponItem::GetCalculatedPierceCount() const
+{
+	if (!ItemDefinition || !OwningActor) return 1;
+
+	// 1. Base Pierce
+	int32 BasePierce = ItemDefinition->WeaponStats.BasePierceCount;
+
+	// 2. Local Bonus (Weapon Upgrades)
+	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_PierceCount);
+
+	// 3. Global Bonus (Player Stats)
+	float GlobalBonus = 0.0f;
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			GlobalBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_PierceCount);
+		}
+	}
+
+	// Final Pierce = Base + Local + Global
+	return BasePierce + FMath::RoundToInt(LocalBonus + GlobalBonus);
+}
+
 float UPRWeaponItem::GetCalculatedProjectileSpeed() const
 {
 	if (!ItemDefinition) return 0.f;
@@ -484,6 +508,7 @@ FPRWeaponAttackStats UPRWeaponItem::GetCalculatedAttackStats() const
 	FinalStats.ProjectileCount = GetCalculatedProjectileCount();
 	FinalStats.ProjectileSpeed = GetCalculatedProjectileSpeed();
 	FinalStats.ProjectileBounce = GetCalculatedProjectileBounce();
+	FinalStats.PierceCount = GetCalculatedPierceCount();
 
 	// Note: TickRate (for DOT) must come from ItemDefinition.
 	//For example, FinalStats.TickRate = ItemDefinition->WeaponStats.BaseTickRate;

@@ -27,6 +27,7 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_ProjectileBounce); // Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_Size); // Multiplicative
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_Damage_Elites); // Multiplicative vs Elites
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_PierceCount); // Flat 
 		}
 		namespace Defense
 		{

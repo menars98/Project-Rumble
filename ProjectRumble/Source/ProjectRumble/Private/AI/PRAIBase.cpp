@@ -217,12 +217,25 @@ void APRAIBase::CheckDistanceCulling()
 		float DistSq = FVector::DistSquared(GetActorLocation(), Target->GetActorLocation());
 		if (DistSq > (CullingDistance * CullingDistance))
 		{
+			SetActorTickEnabled(false);
+			if (GetController()) GetController()->StopMovement();
+
+			SetLifeSpan(2.0f);
+
 			PlayCullingEffect();
 
 			// Security: We can stop the timer in case BP didn't implement it or forgot, but it's best to trust BP.
 			GetWorld()->GetTimerManager().ClearTimer(CullingTimerHandle);
 		}
 	}
+
+
+}
+
+void APRAIBase::PlayCullingEffect_Implementation()
+{
+	//If we dont use culling effects, just destroy the actor.
+	Destroy();
 }
 
 void APRAIBase::PlayHitFlash()

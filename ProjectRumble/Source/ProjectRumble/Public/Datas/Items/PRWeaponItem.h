@@ -106,6 +106,9 @@ protected:
 	int32 GetCalculatedProjectileCount() const;
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	int32 GetCalculatedPierceCount() const;
+
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedProjectileSpeed() const;
 
 	// Stun chance and duration calculations

@@ -285,7 +285,6 @@ int32 UPRWeaponItem::GetCalculatedProjectileBounce() const
 	{
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
-			// Assuming the tag is "Stat.Weapon.ProjectileBounce"
 			GlobalBonus = static_cast<int32>(StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileBounce));
 		}
 	}

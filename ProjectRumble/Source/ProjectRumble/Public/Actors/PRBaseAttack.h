@@ -79,6 +79,22 @@ protected:
 	void OnAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	virtual void OnAttackOverlap_Implementation(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	UFUNCTION(BlueprintCallable, Category = "Rumble|Combat")
+	void HandleOverlap(AActor* OtherActor);
+
+	/**
+	 * Attempts to find a new target nearby and redirect the projectile.
+	 * @param HitActor The actor we just hit (to ignore).
+	 * @return True if a valid bounce target was found.
+	 */
+	bool TryBounce(AActor* HitActor);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Combat")
+	float BounceSearchRadius = 1000.0f;
+
+	UPROPERTY()
+	TArray<AActor*> HitHistory;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

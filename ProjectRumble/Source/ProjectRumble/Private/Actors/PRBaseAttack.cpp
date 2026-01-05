@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "PRGameplayTags.h"
+#include "ProjectRumble/ProjectRumble.h"
 
 APRBaseAttack::APRBaseAttack()
 {
@@ -132,12 +133,141 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 
 void APRBaseAttack::OnAttackOverlap_Implementation(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor == GetOwner() || OtherActor == this)
+	// 1. Basic Validations
+	if (!OtherActor || OtherActor == GetOwner() || OtherActor == this) return;
+	if (!HasAuthority()) return;
+
+	// 2. Apply Damage
+	ApplyDamageToTarget(OtherActor);
+}
+
+void APRBaseAttack::HandleOverlap(AActor* OtherActor)
+{
+	// 1. Validations
+	if (!OtherActor || OtherActor == GetOwner() || OtherActor == this) return;
+	if (!HasAuthority()) return;
+
+	if (HitHistory.Contains(OtherActor))
 	{
 		return;
 	}
 
+	HitHistory.Add(OtherActor);
+
+	// 2. Apply Damage
 	ApplyDamageToTarget(OtherActor);
+
+	// --- 3. BOUNCE LOGIC ---
+	if (AttackStats.ProjectileBounce > 0)
+	{
+		if (TryBounce(OtherActor))
+		{
+			AttackStats.ProjectileBounce--;
+
+			return;
+		}
+	}
+
+	// --- 4. PIERCE LOGIC ---
+
+	// If PierceCount is -1, it means infinite pierce.
+	if (AttackStats.PierceCount == -1)
+	{
+		return;
+	}
+
+	if (AttackStats.PierceCount <= 0)
+	{
+		Destroy();
+	}
+	else
+	{
+		AttackStats.PierceCount--;
+	}
+}
+
+bool APRBaseAttack::TryBounce(AActor* HitActor)
+{
+	// 1. Find Actors in Radius
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+	IgnoreActors.Add(GetOwner());
+
+	IgnoreActors.Append(HitHistory);
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Enemy)); // Only look for Enemies
+
+	TArray<AActor*> OutActors;
+	bool bFound = UKismetSystemLibrary::SphereOverlapActors(
+		this,
+		GetActorLocation(),
+		BounceSearchRadius,
+		ObjectTypes,
+		APRAIBase::StaticClass(), // Only look for Enemies
+		IgnoreActors,
+		OutActors
+	);
+
+	if (!bFound || OutActors.Num() == 0) return false;
+
+	// 2. Find the CLOSEST valid target
+	AActor* ClosestTarget = nullptr;
+	float MinDistSq = FLT_MAX;
+
+	for (AActor* Candidate : OutActors)
+	{
+		if (Candidate && !Candidate->IsPendingKillPending())
+		{
+			// Check if alive (using StatsComponent)
+			bool bIsAlive = true;
+			if (APRAIBase* AI = Cast<APRAIBase>(Candidate))
+			{
+				if (UPRStatsComponent* Stats = AI->GetStatsComponent())
+				{
+					if (Stats->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health) <= 0)
+						bIsAlive = false;
+				}
+			}
+
+			if (bIsAlive)
+			{
+				float DistSq = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+				if (DistSq < MinDistSq)
+				{
+					MinDistSq = DistSq;
+					ClosestTarget = Candidate;
+				}
+			}
+		}
+	}
+
+	// 3. Redirect the Projectile
+	if (ClosestTarget)
+	{
+		FVector Direction = (ClosestTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
+		// Update Velocity
+		if (ProjectileMovement)
+		{
+			float CurrentSpeed = ProjectileMovement->Velocity.Size();
+			
+			// If the current speed is very low, reset to default projectile speed
+			if (CurrentSpeed < 500.f) CurrentSpeed = AttackStats.ProjectileSpeed;
+			if (CurrentSpeed <= 0.f) CurrentSpeed = 1000.f;
+			// Keep the same speed, just change direction
+			ProjectileMovement->Velocity = Direction * CurrentSpeed;
+
+			// Force update rotation
+			SetActorRotation(Direction.Rotation());
+		}
+
+		DrawDebugLine(GetWorld(), GetActorLocation(), ClosestTarget->GetActorLocation(), FColor::Green, false, 1.0f, 0, 2.0f);
+
+		return true; // Bounced!
+	}
+
+	return false; // No valid target found
 }
 
 void APRBaseAttack::Tick(float DeltaTime)

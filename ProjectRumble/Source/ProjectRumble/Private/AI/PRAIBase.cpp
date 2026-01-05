@@ -220,7 +220,7 @@ void APRAIBase::CheckDistanceCulling()
 			SetActorTickEnabled(false);
 			if (GetController()) GetController()->StopMovement();
 
-			SetLifeSpan(2.0f);
+			SetLifeSpan(5.0f);
 
 			PlayCullingEffect();
 
@@ -288,6 +288,29 @@ void APRAIBase::OnDeath()
 {
 	Super::OnDeath(); // Run the base logic from EntityBase (disable collision etc.).
 
+	// Handle Physics (Ragdoll)
+	if (USkeletalMeshComponent* MyMesh = GetMesh())
+	{
+		// Detach controller to stop AI logic
+		if (Controller)
+		{
+			Controller->UnPossess();
+		}
+
+		// Disable capsule collision so player can walk through
+		if (GetCapsuleComponent())
+		{
+			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+
+		// Enable Ragdoll on Mesh
+		MyMesh->SetCollisionProfileName(FName("Ragdoll"));
+		MyMesh->SetSimulatePhysics(true);
+
+		// Optional: Add a little impulse to push the body back (Hit reaction)
+		// MyMesh->AddImpulse(GetActorForwardVector() * -500.0f, NAME_None, true);
+	}
+
 	// Make sure it doesnt apply damage on death.
 	bCanApplyContactDamage = false; 
 	GetWorld()->GetTimerManager().ClearTimer(ContactDamageTimerHandle); 
@@ -315,8 +338,19 @@ void APRAIBase::OnDeath()
 		}
 	}
 
-	// We could add raggdoll but its poitnless in a game like this, so we destroy it.
-	PlayCullingEffect();
+	FTimerHandle DeathCleanupTimer;
+	float CorpseLifeTime = 1.5f; // Body stays for 1.5 seconds
+
+	GetWorld()->GetTimerManager().SetTimer(
+		DeathCleanupTimer,
+		this,
+		&APRAIBase::PlayCullingEffect, // Trigger the dissolve/sink logic
+		CorpseLifeTime,
+		false
+	);
+
+	// Safety: Set absolute lifespan to ensure it gets destroyed even if BP fails
+	SetLifeSpan(CorpseLifeTime + 2); // 1.5s wait + ~2s animation buffer
 }
 
 void APRAIBase::Tick(float DeltaTime)

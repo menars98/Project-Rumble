@@ -59,6 +59,9 @@ public:
 
 	void SetEndlessBuffs(float InMultiplier, FLinearColor InColor);
 
+	// We override GetStatsComponent to return our own component.
+	virtual UPRStatsComponent* GetStatsComponent() const override;
+
 protected:
 	// -- COMPONENTS --
 	// The AI has its own StatsComponent directly on itself.
@@ -191,8 +194,7 @@ protected:
 	void InitializeStats();
 
 	// -- OVERRIDDEN FUNCTIONS --
-	// We override GetStatsComponent to return our own component.
-	virtual UPRStatsComponent* GetStatsComponent() const override;
+
 
 	// We override OnDeath to add our "drop XP" logic.
 	virtual void OnDeath() override;

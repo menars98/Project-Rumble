@@ -29,12 +29,22 @@ APRBaseAttack::APRBaseAttack()
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	// Default Settings(For straight-flying bullets)
 
-	ProjectileMovement->UpdatedComponent = RootCollision;
-	ProjectileMovement->InitialSpeed = 0.f;
-	ProjectileMovement->MaxSpeed = 0.f;
-	ProjectileMovement->bRotationFollowsVelocity = true;
-	ProjectileMovement->bShouldBounce = false;
-	ProjectileMovement->ProjectileGravityScale = 0.f;
+	if (ProjectileMovement)
+	{
+		if (AttackStats.ProjectileSpeed > 0.f)
+		{
+			ProjectileMovement->InitialSpeed = AttackStats.ProjectileSpeed;
+			ProjectileMovement->MaxSpeed = AttackStats.ProjectileSpeed;
+			ProjectileMovement->UpdatedComponent = RootCollision;
+			ProjectileMovement->bRotationFollowsVelocity = true;
+			ProjectileMovement->bShouldBounce = false;
+			ProjectileMovement->ProjectileGravityScale = 0.f;
+
+			// If the bullet is fired at spawn, update its velocity
+			ProjectileMovement->Velocity = ProjectileMovement->Velocity.GetSafeNormal() * AttackStats.ProjectileSpeed;
+		}
+	}
+	
 }
 
 void APRBaseAttack::BeginPlay()

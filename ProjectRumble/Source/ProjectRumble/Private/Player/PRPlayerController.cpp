@@ -22,10 +22,14 @@
 #include "FunctionLibrary/PRGameplayStatics.h"
 #include "GameModes/PRGameMode.h"
 #include "Components/PRSessionTrackerComponent.h"
+#include <Components/ApplicationLifecycleComponent.h>
 
 APRPlayerController::APRPlayerController()
 {
-	bReplicates = true; 
+	bReplicates = true;
+
+	AppLifecycleComponent = CreateDefaultSubobject<UApplicationLifecycleComponent>(TEXT("AppLifecycleComponent"));
+
 }
 
 void APRPlayerController::BeginPlay()
@@ -34,6 +38,19 @@ void APRPlayerController::BeginPlay()
 	 // Determine if we are on the server or client
     FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
 	UE_LOG(LogTemp, Warning, TEXT("[%s] PlayerController BeginPlay for %s."), *RoleString, *GetName());
+
+	// We should only implement this logic for the Local Player.
+	// The game should not pause when AI or other players on the Server use Alt-Tab.
+	if (IsLocalPlayerController())
+	{
+		if (AppLifecycleComponent)
+		{ 
+		
+			AppLifecycleComponent->ApplicationWillDeactivateDelegate.AddDynamic(this, &APRPlayerController::OnAppDeactivated);
+
+			// AppLifecycleComponent->ApplicationHasReactivatedDelegate.AddDynamic(this, &APRPlayerController::OnAppReactivated);
+		}
+	}
 }
 
 void APRPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -540,4 +557,28 @@ void APRPlayerController::PrintStats()
 			PS->TrackerComponent->DebugLogAllStats();
 		}
 	}
+}
+
+void APRPlayerController::OnAppDeactivated()
+{
+	ENetMode NetMode = GetNetMode();
+
+	// If you are a ListenServer (Host) or Client, STOP.
+	if (NetMode == NM_Standalone)
+	{
+		// If it is not already paused
+		if (!IsPaused())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Alt-Tab detected! Auto-Pausing Game."));
+
+			// 1. Open the Pause Menu
+			TogglePauseMenu();
+		}
+	}
+	
+}
+
+void APRPlayerController::OnAppReactivated()
+{
+	//Optional
 }

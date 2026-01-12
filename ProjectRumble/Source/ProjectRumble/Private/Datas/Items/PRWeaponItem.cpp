@@ -10,6 +10,7 @@
 #include "PRGameplayTags.h"
 #include "TimerManager.h" 
 #include "Net/UnrealNetwork.h"
+#include <Game/PRGameState.h>
 
 void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwningActor, const TArray<FPotentialUpgradeEffect>& InitialEffects)
 {
@@ -19,16 +20,27 @@ void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOw
 	AppliedEffects = InitialEffects;
 	RecalculateLocalStats();
 
-	// Only the server should start the attack timer
-	if (OwningActor && OwningActor->HasAuthority() && GetWorld())
+	if (OwningActor && OwningActor->HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[SERVER] Starting attack timer for %s"),
-			*ItemDefinition->DisplayName.ToString());
-		Attack();
-	}
-	else if (OwningActor)
-	{
-		UE_LOG(LogTemp, Log, TEXT("[CLIENT] Weapon initialized but timer not started (client)"));
+		if (UWorld* World = GetWorld())
+		{
+			if (APRGameState* GS = World->GetGameState<APRGameState>())
+			{
+				// CASE 1: The game has already started (e.g., you leveled up, you got a new weapon)
+				if (GS->IsGameActive())
+				{
+					Attack();
+				}
+				// CASE 2: The game has not started yet (Lobby or Loading)
+				else
+				{
+					UE_LOG(LogTemp, Log, TEXT("Weapon %s waiting for Game Start..."), *GetName());
+
+					// Subscribe to the event. When the game starts, “HandleGameStarted” will run.
+					GS->OnGameStarted.AddDynamic(this, &UPRWeaponItem::HandleGameStarted);
+				}
+			}
+		}
 	}
 }
 
@@ -86,6 +98,23 @@ void UPRWeaponItem::Attack()
 	// Set the timer to call this function again after the cooldown.
 	const float Cooldown = GetCalculatedCooldown();
 	GetWorld()->GetTimerManager().SetTimer(AttackTimerHandle, this, &UPRWeaponItem::Attack, Cooldown, false);
+}
+
+void UPRWeaponItem::HandleGameStarted()
+{
+	// Now the game has started, we can go on the offensive.
+	UE_LOG(LogTemp, Warning, TEXT("Weapon %s starting attack via GameStart Event!"), *GetName());
+
+	// Let's exit the event (Clean up, don't call it again)
+	if (UWorld* World = GetWorld())
+	{
+		if (APRGameState* GS = World->GetGameState<APRGameState>())
+		{
+			GS->OnGameStarted.RemoveDynamic(this, &UPRWeaponItem::HandleGameStarted);
+		}
+	}
+
+	Attack();
 }
 
 float UPRWeaponItem::GetCalculatedCooldown() const

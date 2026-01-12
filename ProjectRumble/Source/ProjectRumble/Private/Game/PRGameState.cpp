@@ -17,6 +17,8 @@ void APRGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(APRGameState, ActiveDifficultyMultiplier);
 	DOREPLIFETIME(APRGameState, ServerGameTime);
 	DOREPLIFETIME(APRGameState, MatchDuration);
+	DOREPLIFETIME(APRGameState, bIsGameActive);
+
 }
 
 void APRGameState::SetActiveDifficultyMultiplier(float NewMultiplier)
@@ -33,6 +35,18 @@ void APRGameState::SetMatchDuration(float InDuration)
 	if (HasAuthority())
 	{
 		MatchDuration = InDuration;
+	}
+}
+
+void APRGameState::StartGameTimer()
+{
+	if (HasAuthority())
+	{
+		bIsGameActive = true;
+
+		OnGameStarted.Broadcast();
+
+		UE_LOG(LogTemp, Warning, TEXT("GameState: GAME STARTED! Broadcast sent."));
 	}
 }
 

@@ -69,6 +69,9 @@ protected:
 	UFUNCTION()
 	void Attack();
 
+	UFUNCTION()
+	void HandleGameStarted();
+
 	// -- Helper Functions for Calculations --
 	// A helper function to get the final, calculated cooldown for this weapon.
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")

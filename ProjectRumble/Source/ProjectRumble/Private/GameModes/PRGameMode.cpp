@@ -83,8 +83,9 @@ void APRGameMode::StartPlay()
 	{
 		// Set the match duration from config.
 		GS->SetMatchDuration(MatchDurationInSeconds);
-		GS->StartGameTimer();
 	}
+	FTimerHandle WaitHandle;
+	GetWorld()->GetTimerManager().SetTimer(WaitHandle, this, &APRGameMode::StartGameDelayed, 1.0f, false);
 }
 
 void APRGameMode::PostLogin(APlayerController* NewPlayer)
@@ -107,6 +108,15 @@ void APRGameMode::PostLogin(APlayerController* NewPlayer)
 			UE_LOG(LogTemp, Warning, TEXT("[SERVER] Late joiner %s forced to spawn."), *NewPlayer->GetName());
 		}
 
+	}
+}
+
+void APRGameMode::StartGameDelayed()
+{
+	if (APRGameState* GS = GetGameState<APRGameState>())
+	{
+		GS->StartGameTimer();
+		UE_LOG(LogTemp, Warning, TEXT("Game Mode: Match Started after delay."));
 	}
 }
 

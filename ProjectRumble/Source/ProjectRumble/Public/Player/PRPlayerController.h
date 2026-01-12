@@ -110,6 +110,17 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_PauseGameForLevelUp();
 
+	// Function to run when the application loses focus (Alt-Tab)
+	UFUNCTION()
+	void OnAppDeactivated();
+
+	// Function to run when the application returns (Optional)
+	UFUNCTION()
+	void OnAppReactivated();
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Components")
+	TObjectPtr<UApplicationLifecycleComponent> AppLifecycleComponent;
+
 public:
 	// --- CLIENT RPCs (UI TRIGGERS) ---
 

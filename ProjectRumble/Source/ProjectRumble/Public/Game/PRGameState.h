@@ -6,7 +6,7 @@
 #include "GameFramework/GameState.h"
 #include "PRGameState.generated.h"
 
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnGameStartedSignature);
 
 UCLASS()
 class PROJECTRUMBLE_API APRGameState : public AGameState
@@ -21,6 +21,9 @@ public:
 
 	// This function is required for replication.
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(BlueprintAssignable, Category = "Game|Events")
+	FOnGameStartedSignature OnGameStarted;
 
 	// --- DIFFICULTY ---
 	/**
@@ -41,6 +44,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Game|Time")
 	float GetMatchDuration() const { return MatchDuration; }
 
+	UFUNCTION(BlueprintPure, Category = "Game|State")
+	bool IsGameActive() const { return bIsGameActive; }
+
 	// Server only setter
 	void SetMatchDuration(float InDuration);
 
@@ -57,9 +63,10 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Replicated, Category = "Game|Time")
 	float MatchDuration = 600.0f; // Default 10 mins if not set
 
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Replicated, Category = "Game|State")
 	bool bIsGameActive = false;
 
 public:
 
-	void StartGameTimer() { bIsGameActive = true; }
+	void StartGameTimer();
 };

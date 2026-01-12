@@ -38,6 +38,7 @@ APRBaseAttack::APRBaseAttack()
 			ProjectileMovement->UpdatedComponent = RootCollision;
 			ProjectileMovement->bRotationFollowsVelocity = true;
 			ProjectileMovement->bShouldBounce = false;
+			ProjectileMovement->bSweepCollision = true;
 			ProjectileMovement->ProjectileGravityScale = 0.f;
 
 			// If the bullet is fired at spawn, update its velocity

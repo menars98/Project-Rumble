@@ -106,6 +106,8 @@ protected:
 	// Override the PlayerState spawn to ensure we bind to new players immediately.
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 
+	void StartGameDelayed();
+
 	/** Triggers the end of the match logic. */
 	void GameOver(bool bWon);
 

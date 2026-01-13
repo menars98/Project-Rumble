@@ -156,6 +156,8 @@ struct FWeaponStats
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     float BaseStunDuration = 0.5f;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseTickRate = 0.0f;
 };
 
 USTRUCT(BlueprintType)
@@ -240,7 +242,7 @@ struct PROJECTRUMBLE_API FPRWeaponAttackStats
         , ProjectileCount(1)
         , ProjectileSpeed(0.0f)
         , ProjectileBounce(0)
-        , TickRate(0.0f)
+        , TickRate(1.0f)
 		, PierceCount(1)
     { }
 

@@ -22,13 +22,11 @@
 #include "FunctionLibrary/PRGameplayStatics.h"
 #include "GameModes/PRGameMode.h"
 #include "Components/PRSessionTrackerComponent.h"
-#include <Components/ApplicationLifecycleComponent.h>
 
 APRPlayerController::APRPlayerController()
 {
 	bReplicates = true;
 
-	AppLifecycleComponent = CreateDefaultSubobject<UApplicationLifecycleComponent>(TEXT("AppLifecycleComponent"));
 
 }
 
@@ -39,18 +37,27 @@ void APRPlayerController::BeginPlay()
     FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
 	UE_LOG(LogTemp, Warning, TEXT("[%s] PlayerController BeginPlay for %s."), *RoleString, *GetName());
 
-	// We should only implement this logic for the Local Player.
-	// The game should not pause when AI or other players on the Server use Alt-Tab.
 	if (IsLocalPlayerController())
 	{
-		if (AppLifecycleComponent)
-		{ 
-		
-			AppLifecycleComponent->ApplicationWillDeactivateDelegate.AddDynamic(this, &APRPlayerController::OnAppDeactivated);
-
-			// AppLifecycleComponent->ApplicationHasReactivatedDelegate.AddDynamic(this, &APRPlayerController::OnAppReactivated);
+		// We are subscribing to the Slate Application: “Notify me if the focus changes”
+		if (FSlateApplication::IsInitialized())
+		{
+			FSlateApplication::Get().OnApplicationActivationStateChanged()
+				.AddUObject(this, &APRPlayerController::OnWindowFocusChanged);
 		}
 	}
+}
+
+void APRPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// We must never forget to clean up the delegate, otherwise the game will crash when closing.
+	if (FSlateApplication::IsInitialized())
+	{
+		FSlateApplication::Get().OnApplicationActivationStateChanged()
+			.RemoveAll(this);
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void APRPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -559,26 +566,23 @@ void APRPlayerController::PrintStats()
 	}
 }
 
-void APRPlayerController::OnAppDeactivated()
+void APRPlayerController::OnWindowFocusChanged(bool bIsFocused)
 {
-	ENetMode NetMode = GetNetMode();
-
-	// If you are a ListenServer (Host) or Client, STOP.
-	if (NetMode == NM_Standalone)
+	// Only Singleplayer (Standalone) then stop
+	if (GetNetMode() == NM_Standalone)
 	{
-		// If it is not already paused
-		if (!IsPaused())
+		if (!bIsFocused) // Focus Lost (Alt-Tab)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Alt-Tab detected! Auto-Pausing Game."));
-
-			// 1. Open the Pause Menu
-			TogglePauseMenu();
+			if (!IsPaused())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Window Focus Lost! Auto-Pausing."));
+				TogglePauseMenu();
+			}
+		}
+		else 
+		{
+			//We can unpause here, but it's not necessary.
+			UE_LOG(LogTemp, Warning, TEXT("Window Focus Gained!"));
 		}
 	}
-	
-}
-
-void APRPlayerController::OnAppReactivated()
-{
-	//Optional
 }

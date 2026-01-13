@@ -537,6 +537,7 @@ FPRWeaponAttackStats UPRWeaponItem::GetCalculatedAttackStats() const
 	FinalStats.ProjectileSpeed = GetCalculatedProjectileSpeed();
 	FinalStats.ProjectileBounce = GetCalculatedProjectileBounce();
 	FinalStats.PierceCount = GetCalculatedPierceCount();
+	FinalStats.TickRate = GetCalculatedTickRate();
 
 	// Note: TickRate (for DOT) must come from ItemDefinition.
 	//For example, FinalStats.TickRate = ItemDefinition->WeaponStats.BaseTickRate;
@@ -564,4 +565,15 @@ void UPRWeaponItem::Deactivate()
 	// 2. Clear any active effects like Aura
 	// If the weapon spawned an Aura (Actor) and we are holding a reference to it, we must also destroy it.
 	// Example: if (SpawnedAuraActor) SpawnedAuraActor->Destroy();
+}
+
+float UPRWeaponItem::GetCalculatedTickRate() const
+{
+	if (!ItemDefinition) return 0.0f;
+
+	// For now, we're only returning the Base value.
+	// If we want the “Attack Speed” stat to also increase the Tick Rate in the future, we'll add a formula here.
+	// E.g.: BaseTickRate / AttackSpeedMultiplier
+
+	return ItemDefinition->WeaponStats.BaseTickRate;
 }

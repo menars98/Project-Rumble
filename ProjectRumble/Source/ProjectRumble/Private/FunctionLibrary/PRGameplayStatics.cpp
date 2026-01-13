@@ -272,6 +272,15 @@ bool UPRGameplayStatics::IsKeyMappedToAction(UObject* WorldContextObject, FKey K
 	return false;
 }
 
+bool UPRGameplayStatics::IsGameWindowFocused()
+{
+	if (GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport)
+	{
+		return GEngine->GameViewport->Viewport->IsForegroundWindow();
+	}
+	return false;
+}
+
 void Generic_GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, void* OutRowPtr, FProperty* OutRowProp, ERowResult& OutResult)
 {
 	OutResult = ERowResult::NotFound;

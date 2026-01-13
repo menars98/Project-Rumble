@@ -23,6 +23,7 @@ public:
 	APRPlayerController();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	// -- CORE REPLICATION  --
@@ -110,16 +111,8 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_PauseGameForLevelUp();
 
-	// Function to run when the application loses focus (Alt-Tab)
-	UFUNCTION()
-	void OnAppDeactivated();
-
-	// Function to run when the application returns (Optional)
-	UFUNCTION()
-	void OnAppReactivated();
-
-	UPROPERTY(VisibleDefaultsOnly, Category = "Components")
-	TObjectPtr<UApplicationLifecycleComponent> AppLifecycleComponent;
+	// Function to capture the signal coming from Slate
+	void OnWindowFocusChanged(bool bIsFocused);
 
 public:
 	// --- CLIENT RPCs (UI TRIGGERS) ---

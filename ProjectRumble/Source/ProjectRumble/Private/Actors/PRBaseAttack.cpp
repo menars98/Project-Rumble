@@ -163,6 +163,28 @@ void APRBaseAttack::HandleOverlap(AActor* OtherActor)
 		return;
 	}
 
+	// --- TICK RATE LOGIC ---
+	// If TickRate is 0, it fires every frame (Dangerous).
+	// If TickRate > 0, check it.
+	if (AttackStats.TickRate > 0.0f)
+	{
+		double CurrentTime = GetWorld()->GetTimeSeconds();
+
+		// Have we hit this actor before?
+		if (double* LastHitTime = DamageCooldownMap.Find(OtherActor))
+		{
+			// If we did hit it, has enough time passed?
+			if ((CurrentTime - *LastHitTime) < AttackStats.TickRate)
+			{
+				// The cooldown hasn't ended yet, DON'T ATTACK.
+				return;
+			}
+		}
+
+		// Update the list (or add a new one)
+		DamageCooldownMap.Add(OtherActor, CurrentTime);
+	}
+
 	HitHistory.Add(OtherActor);
 
 	// 2. Apply Damage

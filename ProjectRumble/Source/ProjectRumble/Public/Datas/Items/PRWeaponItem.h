@@ -121,6 +121,9 @@ protected:
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedStunDuration() const;
 
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedTickRate() const;
+
 	// This function will now be the central point for all damage calculations.
 	// It can be called from Blueprint.
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Calculations")

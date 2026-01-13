@@ -112,4 +112,11 @@ public:
 	*/
 	UFUNCTION(BlueprintPure, Category = "Rumble|Input", meta = (WorldContext = "WorldContextObject"))
 	static bool IsKeyMappedToAction(UObject* WorldContextObject, FKey Key, const UInputAction* Action);
+
+	/**
+    * Checks if the game viewport currently has operating system focus.
+    * Useful for detecting Alt-Tab.
+    */
+	UFUNCTION(BlueprintPure, Category = "Rumble|System")
+	static bool IsGameWindowFocused();
 };

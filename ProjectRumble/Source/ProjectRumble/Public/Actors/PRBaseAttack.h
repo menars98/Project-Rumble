@@ -11,6 +11,7 @@ class UAudioComponent;
 class USoundBase;
 class USphereComponent;
 class UProjectileMovementComponent;
+class UPRItemDefinition;
 
 UCLASS()
 class PROJECTRUMBLE_API APRBaseAttack : public AActor
@@ -94,6 +95,9 @@ protected:
 
 	UPROPERTY()
 	TArray<AActor*> HitHistory;
+
+	UPROPERTY()
+	TMap<AActor*, double> DamageCooldownMap;
 
 public:	
 	// Called every frame

@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Datas/Items/PRWeaponItem.h"
+#include "AssetRegistry/AssetRegistryModule.h" 
+#include "PRTypes.h" 
 #include "PRGameplayStatics.generated.h"
 
 class APRAIBase;
@@ -119,4 +121,17 @@ public:
     */
 	UFUNCTION(BlueprintPure, Category = "Rumble|System")
 	static bool IsGameWindowFocused();
+
+	/**
+	* Finds all Data Assets derived from a specific class in the project.
+	* Example: Get all UPRPassiveItemDefinition instances.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Editor Tools")
+	static TArray<FAssetData> FindAllAssetsOfClass(UClass* BaseClass);
+
+	/**
+	 * Editor Only: Adds a new row to the Loot Table for the given item.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Editor Tools")
+	static void AddMissingItemToLootTable(UDataTable* DataTable, UPRItemDefinition* ItemDef, float DefaultWeight = 1.0f);
 };

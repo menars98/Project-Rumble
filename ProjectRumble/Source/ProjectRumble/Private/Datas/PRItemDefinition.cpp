@@ -17,5 +17,5 @@ void UPRItemDefinition::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(UPRItemDefinition, NumEffects_Legendary);
 	DOREPLIFETIME(UPRItemDefinition, PotentialUpgradeEffects);
 	DOREPLIFETIME(UPRItemDefinition, ItemClass);
-	DOREPLIFETIME(UPRItemDefinition, WeaponStats);
+	
 }

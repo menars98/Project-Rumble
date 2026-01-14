@@ -7,6 +7,7 @@
 #include "Components/PRStatsComponent.h"
 #include "AI/PRAIBase.h"
 #include "Datas/PRItemDefinition.h"
+#include "Datas/PRWeaponDefinition.h"
 #include "PRGameplayTags.h"
 #include "TimerManager.h" 
 #include "Net/UnrealNetwork.h"
@@ -19,6 +20,9 @@ void UPRWeaponItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOw
 	// Store and apply the initial effects for this weapon
 	AppliedEffects = InitialEffects;
 	RecalculateLocalStats();
+
+	// Cache the weapon definition for easy access later
+	CachedWeaponDef = Cast<UPRWeaponDefinition>(InItemDefinition);
 
 	if (OwningActor && OwningActor->HasAuthority())
 	{
@@ -121,7 +125,7 @@ float UPRWeaponItem::GetCalculatedCooldown() const
 {
 	if (!ItemDefinition) return 1.0f;
 
-	float WeaponBaseCooldown = ItemDefinition->WeaponStats.BaseCooldown;
+	float WeaponBaseCooldown = CachedWeaponDef->WeaponStats.BaseCooldown;
 
 	// Local Bonus: Assuming weapon upgrades provide Attack Speed % (Multiplicative denominator)
 	float LocalAttackSpeedBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
@@ -163,7 +167,7 @@ float UPRWeaponItem::GetCalculatedDamage() const
 	if (!ItemDefinition) return 0.f;
 
 	// 1. Get the weapon's own base damage
-	float BaseDamage = ItemDefinition->WeaponStats.BaseDamage;
+	float BaseDamage = CachedWeaponDef->WeaponStats.BaseDamage;
 
 	// 1.a Get any local stat modifiers from this weapon item instance
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Damage_Additive);
@@ -192,7 +196,7 @@ float UPRWeaponItem::GetCalculatedDamage() const
 float UPRWeaponItem::GetCalculatedCritChance() const
 {
 	if (!ItemDefinition) return 0.f;
-	float BaseChance = ItemDefinition->WeaponStats.BaseCritChance;
+	float BaseChance = CachedWeaponDef->WeaponStats.BaseCritChance;
 	
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_CritChance);
 		
@@ -239,7 +243,7 @@ float UPRWeaponItem::GetCalculatedSize() const
 {
 	if (!ItemDefinition || !OwningActor) return 1.0f;
 
-	float BaseSize = ItemDefinition->WeaponStats.BaseSize;
+	float BaseSize = CachedWeaponDef->WeaponStats.BaseSize;
 
 	// Size is usually a multiplier (1.0 base). 
 	// Bonuses are additive to the multiplier (e.g. +0.5 means 1.5x size).
@@ -263,7 +267,7 @@ float UPRWeaponItem::GetCalculatedKnockback() const
 {
 	if (!ItemDefinition || !OwningActor) return 0.f;
 
-	float BaseKnockback = ItemDefinition->WeaponStats.BaseKnockback;
+	float BaseKnockback = CachedWeaponDef->WeaponStats.BaseKnockback;
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Physics::TAG_Stat_Physics_Knockback);
 	float GlobalBonus = 1.0f;
 
@@ -284,7 +288,7 @@ float UPRWeaponItem::GetCalculatedDuration() const
 {
 	if (!ItemDefinition || !OwningActor) return 0.f;
 
-	float BaseDuration = ItemDefinition->WeaponStats.BaseDuration;
+	float BaseDuration = CachedWeaponDef->WeaponStats.BaseDuration;
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Duration);
 	float GlobalBonus = 1.0f;
 
@@ -306,7 +310,7 @@ int32 UPRWeaponItem::GetCalculatedProjectileBounce() const
 {
 	if (!ItemDefinition || !OwningActor) return 0;
 
-	int32 BaseBounce = ItemDefinition->WeaponStats.BaseProjectileBounce;
+	int32 BaseBounce = CachedWeaponDef->WeaponStats.BaseProjectileBounce;
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileBounce);
 	float GlobalBonus = 0.0f;
 
@@ -327,7 +331,7 @@ int32 UPRWeaponItem::GetCalculatedProjectileCount() const
 {
 	if (!ItemDefinition || !OwningActor) return 1;
 
-	int32 BaseCount = ItemDefinition->WeaponStats.BaseProjectileCount;
+	int32 BaseCount = CachedWeaponDef->WeaponStats.BaseProjectileCount;
 	
 	// Retrieve as float, cast to int
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileCount);
@@ -353,7 +357,7 @@ int32 UPRWeaponItem::GetCalculatedPierceCount() const
 	if (!ItemDefinition || !OwningActor) return 1;
 
 	// 1. Base Pierce
-	int32 BasePierce = ItemDefinition->WeaponStats.BasePierceCount;
+	int32 BasePierce = CachedWeaponDef->WeaponStats.BasePierceCount;
 
 	// 2. Local Bonus (Weapon Upgrades)
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_PierceCount);
@@ -377,7 +381,7 @@ float UPRWeaponItem::GetCalculatedProjectileSpeed() const
 	if (!ItemDefinition) return 0.f;
 
 	// 1. Get the base projectile speed from the weapon's definition
-	float BaseSpeed = ItemDefinition->WeaponStats.BaseProjectileSpeed;
+	float BaseSpeed = CachedWeaponDef->WeaponStats.BaseProjectileSpeed;
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_ProjectileSpeed);
 	float GlobalBonus = 1.0f;
 
@@ -401,7 +405,7 @@ float UPRWeaponItem::GetCalculatedStunChance() const
 
 	// 1. Get the weapon's base stun chance (e.g., a heavy mace might have a high base chance).
 	// This value should be in the 0-1 range.
-	float BaseChance = ItemDefinition->WeaponStats.BaseStunChance;
+	float BaseChance = CachedWeaponDef->WeaponStats.BaseStunChance;
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::StatusEffect::TAG_Stat_Effect_StunChance);
 	float GlobalBonus = 0.0f;
 
@@ -424,7 +428,7 @@ float UPRWeaponItem::GetCalculatedStunDuration() const
 	if (!ItemDefinition) return 0.0f;
 
 	// 1. Get the weapon's base stun duration.
-	float BaseDuration = ItemDefinition->WeaponStats.BaseStunDuration;
+	float BaseDuration = CachedWeaponDef->WeaponStats.BaseStunDuration;
 	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::StatusEffect::TAG_Stat_Effect_StunDuration);
 	float GlobalBonus = 1.0f;
 
@@ -441,6 +445,17 @@ float UPRWeaponItem::GetCalculatedStunDuration() const
 	}
 
 	return BaseDuration * (LocalBonus + GlobalBonus);
+}
+
+float UPRWeaponItem::GetCalculatedTickRate() const
+{
+	if (!ItemDefinition) return 0.0f;
+
+	// For now, we're only returning the Base value.
+	// If we want the “Attack Speed” stat to also increase the Tick Rate in the future, we'll add a formula here.
+	// E.g.: BaseTickRate / AttackSpeedMultiplier
+
+	return CachedWeaponDef->WeaponStats.BaseTickRate;
 }
 
 FDamageCalculationResult UPRWeaponItem::CalculateFinalDamage(const APRAIBase* Target)
@@ -567,13 +582,4 @@ void UPRWeaponItem::Deactivate()
 	// Example: if (SpawnedAuraActor) SpawnedAuraActor->Destroy();
 }
 
-float UPRWeaponItem::GetCalculatedTickRate() const
-{
-	if (!ItemDefinition) return 0.0f;
 
-	// For now, we're only returning the Base value.
-	// If we want the “Attack Speed” stat to also increase the Tick Rate in the future, we'll add a formula here.
-	// E.g.: BaseTickRate / AttackSpeedMultiplier
-
-	return ItemDefinition->WeaponStats.BaseTickRate;
-}

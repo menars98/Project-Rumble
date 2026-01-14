@@ -5,12 +5,14 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "PRTypes.h"
+#include "PRUpgradeData.h"
 #include "PRItemDefinition.generated.h"
+
 
 
 class UPRBaseItem;
 
-UCLASS()
+UCLASS(BlueprintType)
 class PROJECTRUMBLE_API UPRItemDefinition : public UDataAsset
 {
 	GENERATED_BODY()
@@ -27,6 +29,9 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Identity")
     EItemType ItemType;
    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rarity", meta = (EditCondition = "bHasStaticRarity"))
+    EUpgradeRarity StaticRarity = EUpgradeRarity::Common;
+
     // -- UPGRADE LOGIC --
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Upgrades|Effect Count")
     int32 NumEffects_Common = 1;
@@ -52,10 +57,6 @@ public:
     */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Item Logic")
     TSubclassOf<UPRBaseItem> ItemClass;
-
-    // This will only be visible in the editor if ItemType is 'Weapon'
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Weapon Data", meta = (EditCondition = "ItemType == EItemType::Weapon"))
-    FWeaponStats WeaponStats;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Identity")
     FGameplayTag ItemIdentityTag;

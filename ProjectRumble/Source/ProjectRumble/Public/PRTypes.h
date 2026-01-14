@@ -172,6 +172,7 @@ struct FDamageCalculationResult
     bool bWasCriticalHit = false;
 };
 
+// General Loot Accepts Everything
 USTRUCT(BlueprintType)
 struct FLootTableRow : public FTableRowBase
 {
@@ -187,6 +188,32 @@ public:
     float Weight = 1.0f;
 
     // (Optional) Minimum/Maximum quantity if we want stacks of items later.
+};
+
+// 2. Passive Loot
+USTRUCT(BlueprintType)
+struct FPassiveLootTableRow : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    TObjectPtr<class UPRPassiveItemDefinition> ItemDefinition; 
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    float Weight = 1.0f;
+};
+
+// 3. Weapon Loot (Sadece Silahlarý gösterir - Yeni)
+USTRUCT(BlueprintType)
+struct FWeaponLootTableRow : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    TObjectPtr<class UPRWeaponDefinition> ItemDefinition; 
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    float Weight = 1.0f;
 };
 
 // Defines a single type of loot that can be dropped (e.g., 15 XP).

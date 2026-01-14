@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Datas/PRBaseItem.h"
+#include <Datas/PRWeaponDefinition.h>
 #include "PRWeaponItem.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageDealtSignature, float, DamageDealt, AActor*, DamagedActor);
@@ -55,6 +56,10 @@ protected:
 
 	// The timer handle that manages the attack loop.
 	FTimerHandle AttackTimerHandle;
+
+	// Cached reference to the weapon definition for easy access.
+	UPROPERTY(Transient)
+	const UPRWeaponDefinition* CachedWeaponDef = nullptr;
 
 	// Local stat modifiers specific to this weapon instance.
 	UPROPERTY()

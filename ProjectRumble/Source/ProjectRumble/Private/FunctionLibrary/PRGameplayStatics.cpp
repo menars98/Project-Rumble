@@ -17,6 +17,7 @@
 #include "Components/PRSessionTrackerComponent.h"
 #include "GameplayTagContainer.h"
 #include <EnhancedInputSubsystems.h>
+#include "AssetRegistry/AssetRegistryModule.h"
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -279,6 +280,58 @@ bool UPRGameplayStatics::IsGameWindowFocused()
 		return GEngine->GameViewport->Viewport->IsForegroundWindow();
 	}
 	return false;
+}
+
+TArray<FAssetData> UPRGameplayStatics::FindAllAssetsOfClass(UClass* BaseClass)
+{
+#if WITH_EDITOR
+	TArray<FAssetData> AssetDataList;
+	if (!BaseClass) return AssetDataList;
+
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+	// Search according to the Class Path (Recursive classes true)
+	FARFilter Filter;
+	Filter.ClassPaths.Add(BaseClass->GetClassPathName());
+	Filter.bRecursiveClasses = true;
+
+	AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+
+	return AssetDataList;
+#endif
+}
+
+void UPRGameplayStatics::AddMissingItemToLootTable(UDataTable* DataTable, UPRItemDefinition* ItemDef, float DefaultWeight)
+{
+#if WITH_EDITOR
+	if (!DataTable || !ItemDef) return;
+
+	// 1. Create Row Name
+	// Generally, using the Asset name is the cleanest approach (e.g., DA_Magnet)
+	FName RowName = ItemDef->GetFName();
+
+	// 2. Is there already a control?
+	if (DataTable->GetRowNames().Contains(RowName))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Item %s already exists in table!"), *RowName.ToString());
+		return;
+	}
+
+	// 3. Create and Populate the Structure
+	// Note: This uses a hardcoded FLootTableRow.
+	// If we have different tables, we need to write Generic Reflection, but this is sufficient for now.
+	FLootTableRow NewRow;
+	NewRow.ItemDefinition = ItemDef;
+	NewRow.Weight = DefaultWeight;
+
+	// 4. Add to Table
+	DataTable->AddRow(RowName, NewRow);
+
+	// 5. Tell the editor, “This file has been changed, mark it with a star.”
+	DataTable->MarkPackageDirty();
+
+	UE_LOG(LogTemp, Log, TEXT("Added %s to Loot Table."), *RowName.ToString());
+#endif
 }
 
 void Generic_GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, void* OutRowPtr, FProperty* OutRowProp, ERowResult& OutResult)

@@ -284,7 +284,6 @@ bool UPRGameplayStatics::IsGameWindowFocused()
 
 TArray<FAssetData> UPRGameplayStatics::FindAllAssetsOfClass(UClass* BaseClass)
 {
-#if WITH_EDITOR
 	TArray<FAssetData> AssetDataList;
 	if (!BaseClass) return AssetDataList;
 
@@ -298,7 +297,6 @@ TArray<FAssetData> UPRGameplayStatics::FindAllAssetsOfClass(UClass* BaseClass)
 	AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
 
 	return AssetDataList;
-#endif
 }
 
 void UPRGameplayStatics::AddMissingItemToLootTable(UDataTable* DataTable, UPRItemDefinition* ItemDef, float DefaultWeight)

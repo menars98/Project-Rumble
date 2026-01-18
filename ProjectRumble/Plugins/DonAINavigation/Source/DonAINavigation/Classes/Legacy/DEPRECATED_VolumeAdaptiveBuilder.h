@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "Components/BillboardComponent.h"
 #include "GameFramework/Actor.h"
 #include "Legacy/DEPRECATED_DoNNavigationVolumeComponent.h"
 #include "DonNavigationCommon.h"

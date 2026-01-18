@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "Components/BillboardComponent.h"
 #include "DonNavigationCommon.h"
 #include "Multithreading/DonDrawDebugThreadSafe.h"
 #include "Components/BoxComponent.h"

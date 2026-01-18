@@ -22,6 +22,13 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Identity")
     FText DisplayName;
 
+    /**
+     * Item description shown in tooltips or reward screens.
+     * meta = (MultiLine = true) allows typing multiple lines in the editor.
+     */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Identity", meta = (MultiLine = "true"))
+    FText Description;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Identity")
     TObjectPtr<UTexture2D> Icon;
 

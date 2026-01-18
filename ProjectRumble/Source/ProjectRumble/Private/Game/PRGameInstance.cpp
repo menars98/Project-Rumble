@@ -73,7 +73,7 @@ void UPRGameInstance::FindGames(bool bIsLAN)
 	SessionSearch->MaxSearchResults = 10000;
 
 	// Find only sessions with presence (Steam requirement)
-	SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
+	SessionSearch->QuerySettings.Set(FName("PRESENCESEARCH"), true, EOnlineComparisonOp::Equals);
 
 	UE_LOG(LogTemp, Log, TEXT("Starting Session Search..."));
 

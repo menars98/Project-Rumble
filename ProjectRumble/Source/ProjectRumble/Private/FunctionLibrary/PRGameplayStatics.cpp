@@ -12,6 +12,12 @@
 #include "UI/Widgets/PRWorldUserWidget.h"
 #include "Game/PRGameInstance.h"
 #include "Interfaces/PRBPIDamageNumber.h"
+#include <Player/PRPlayerController.h>
+#include <Player/PRPlayerState.h>
+#include "Components/PRSessionTrackerComponent.h"
+#include "GameplayTagContainer.h"
+#include <EnhancedInputSubsystems.h>
+#include "AssetRegistry/AssetRegistryModule.h"
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -51,10 +57,11 @@ FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStats
 	return Result;
 }
 
-float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor* DamagedActor, float BaseDamage, const FDamageCalculationResult& DamageResult, AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration)
+float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor* DamagedActor, float BaseDamage, const FDamageCalculationResult& DamageResult, 
+	FGameplayTag DamageSourceTag,AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, 
+	const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration, USoundBase* HitSound)
 {
 	
-
 	// --- 1. APPLY KNOCKBACK FIRST (OR INDEPENDENTLY) ---
 	// Knockback should happen even if the damage is 0 or absorbed.
 	if (KnockbackMagnitude > 0.f)
@@ -64,6 +71,12 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 			FVector LaunchVelocity = KnockbackDirection * KnockbackMagnitude;
 			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
 			
+			// Close Input connection to notify the character it has been knocked back.
+			if (APRCharacterBase* PRChar = Cast<APRCharacterBase>(TargetCharacter))
+			{
+				PRChar->OnKnockbackReceived();
+
+			}
 		}
 	}
 	// --- 2. APPLY STUN  ---
@@ -130,6 +143,16 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 					{
 						AttackerStats->Heal(RoundedHealth);
 						UE_LOG(LogTemp, Log, TEXT("%s lifesteals %d health."), *Attacker->GetName(), RoundedHealth);
+						if (AActor* OwnerActor = AttackerStats->GetOwner())
+						{
+							if (APRPlayerState* AttackerPS = Cast<APRPlayerState>(OwnerActor))
+							{
+								if (AttackerPS->TrackerComponent)
+								{
+									AttackerPS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Health_Healing_Lifesteal, (float)RoundedHealth);
+								}
+							}
+						}
 					}
 				}
 			}
@@ -141,7 +164,36 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 	// For now, let's just spawn a non-crit number.
 	if (ActualDamage > 0.f && WorldContextObject)
 	{
-		SpawnDamageNumber(WorldContextObject, ActualDamage, DamageResult.bWasCriticalHit, DamagedActor);
+		// Check if the damage dealer is a Player
+		if (APRPlayerController* PC = Cast<APRPlayerController>(EventInstigator))
+		{
+			// Send the visual/audio cue ONLY to the player who dealt the damage.
+			PC->Client_ShowDamageEffect(DamagedActor, ActualDamage, DamageResult.bWasCriticalHit, HitSound);
+		}
+	}
+
+	// --- 5. TRACK DAMAGE DEALT STATISTIC ---
+	if (ActualDamage > 0.f)
+	{
+		if (APRCharacterBase* PlayerChar = Cast<APRCharacterBase>(DamageCauser))
+		{
+			if (APRPlayerState* PS = PlayerChar->GetPlayerState<APRPlayerState>())
+			{
+				if (PS->TrackerComponent)
+				{
+					// Total Damage
+					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Main_Combat_DamageDealt, ActualDamage);
+
+					// For damage breakdown
+					if (DamageSourceTag.IsValid())
+					{
+						// Example: Add damage to "Item.Weapon.Axe" tag
+						// Dont forget we need to set the DamageSourceTag when calling this function!
+						PS->TrackerComponent->AddStat(DamageSourceTag, ActualDamage);
+					}
+				}
+			}
+		}
 	}
 	return ActualDamage;
 }
@@ -201,3 +253,163 @@ void UPRGameplayStatics::SpawnDamageNumber(UObject* WorldContextObject, float Da
 		DamageWidget->AddToViewport();
 	}
 }
+
+bool UPRGameplayStatics::IsKeyMappedToAction(UObject* WorldContextObject, FKey Key, const UInputAction* Action)
+{
+	if (!Action || !WorldContextObject) return false;
+
+	APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0);
+	if (!PC) return false;
+
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+	{
+		// Oyuncunun þu anki tuþ atamalarýný sorguluyoruz
+		TArray<FKey> MappedKeys = Subsystem->QueryKeysMappedToAction(Action);
+
+		// Basýlan tuþ (Key), bu listenin içinde var mý?
+		return MappedKeys.Contains(Key);
+	}
+
+	return false;
+}
+
+bool UPRGameplayStatics::IsGameWindowFocused()
+{
+	if (GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport)
+	{
+		return GEngine->GameViewport->Viewport->IsForegroundWindow();
+	}
+	return false;
+}
+
+TArray<FAssetData> UPRGameplayStatics::FindAllAssetsOfClass(UClass* BaseClass)
+{
+	TArray<FAssetData> AssetDataList;
+	if (!BaseClass) return AssetDataList;
+
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+	// Search according to the Class Path (Recursive classes true)
+	FARFilter Filter;
+	Filter.ClassPaths.Add(BaseClass->GetClassPathName());
+	Filter.bRecursiveClasses = true;
+
+	AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+
+	return AssetDataList;
+}
+
+void UPRGameplayStatics::AddMissingItemToLootTable(UDataTable* DataTable, UPRItemDefinition* ItemDef, float DefaultWeight)
+{
+#if WITH_EDITOR
+	if (!DataTable || !ItemDef) return;
+
+	// 1. Create Row Name
+	// Generally, using the Asset name is the cleanest approach (e.g., DA_Magnet)
+	FName RowName = ItemDef->GetFName();
+
+	// 2. Is there already a control?
+	if (DataTable->GetRowNames().Contains(RowName))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Item %s already exists in table!"), *RowName.ToString());
+		return;
+	}
+
+	// 3. Create and Populate the Structure
+	// Note: This uses a hardcoded FLootTableRow.
+	// If we have different tables, we need to write Generic Reflection, but this is sufficient for now.
+	FLootTableRow NewRow;
+	NewRow.ItemDefinition = ItemDef;
+	NewRow.Weight = DefaultWeight;
+
+	// 4. Add to Table
+	DataTable->AddRow(RowName, NewRow);
+
+	// 5. Tell the editor, “This file has been changed, mark it with a star.”
+	DataTable->MarkPackageDirty();
+
+	UE_LOG(LogTemp, Log, TEXT("Added %s to Loot Table."), *RowName.ToString());
+#endif
+}
+
+void Generic_GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, void* OutRowPtr, FProperty* OutRowProp, ERowResult& OutResult)
+{
+	OutResult = ERowResult::NotFound;
+
+	if (!DataTable || !OutRowPtr || !OutRowProp) return;
+
+	// 1. Get the Struct type used by the Data Table
+	const UScriptStruct* TableStruct = DataTable->GetRowStruct();
+
+	// 2. Is the Struct connected to the output pin the same as the table's Struct? (Security)
+	const FStructProperty* StructProp = CastField<FStructProperty>(OutRowProp);
+	if (!StructProp || StructProp->Struct != TableStruct)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GetDataTableRowByTag: Output Struct type does not match DataTable Struct type!"));
+		return;
+	}
+
+	// 3. Search for a variable of type “GameplayTag” in the Struct (Automatic Detection)
+	FStructProperty* TagProperty = nullptr;
+
+	for (TFieldIterator<FProperty> It(TableStruct); It; ++It)
+	{
+		if (FStructProperty* StructPropInRow = CastField<FStructProperty>(*It))
+		{
+			if (StructPropInRow->Struct->GetFName() == FName("GameplayTag"))
+			{
+				TagProperty = StructPropInRow;
+				break; // Use the first Tag variable you find (usually the first ID), the problem with that you need to set id tag first. If you use multiple tags, you need to be careful.
+			}
+		}
+	}
+
+	if (!TagProperty)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GetDataTableRowByTag: No 'GameplayTag' property found in struct '%s'"), *TableStruct->GetName());
+		return;
+	}
+
+	// 4. Scan the table
+	for (auto It : DataTable->GetRowMap())
+	{
+		uint8* RowData = It.Value;
+
+		//  Read the tag value
+		FGameplayTag* ValuePtr = TagProperty->ContainerPtrToValuePtr<FGameplayTag>(RowData);
+
+		// Compare
+		if (ValuePtr && *ValuePtr == TagToFind)
+		{
+			// FOUND IT! 
+			// Copy the row data (RowData) to the output pin (OutRowPtr).
+			TableStruct->CopyScriptStruct(OutRowPtr, RowData);
+
+			OutResult = ERowResult::Found;
+			return;
+		}
+	}
+}
+
+// This function is called by the Unreal VM. It resolves the parameters and passes them to the function above.
+DEFINE_FUNCTION(UPRGameplayStatics::execGetDataTableRowByTag)
+{
+	// 1. Read Parameters
+	P_GET_OBJECT(UDataTable, DataTable);
+	P_GET_STRUCT(FGameplayTag, TagToFind);
+
+	// 2. Resolve the Wildcard (OutRow) parameter
+	Stack.StepCompiledIn<FProperty>(NULL);
+	void* OutRowPtr = Stack.MostRecentPropertyAddress;
+	FProperty* OutRowProp = Stack.MostRecentProperty;
+
+	// 3. Read the Enum (Execs) parameter
+	P_GET_ENUM_REF(ERowResult, OutResult);
+
+	P_FINISH;
+
+	// 4. Do the real work
+	Generic_GetDataTableRowByTag(DataTable, TagToFind, OutRowPtr, OutRowProp, OutResult);
+}
+
+

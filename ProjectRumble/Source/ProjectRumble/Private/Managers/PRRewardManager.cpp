@@ -102,30 +102,22 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateLootRewards(const UPRInventory
 	TArray<UPRUpgradeData*> LootRewards;
 	if (!LootTable) return LootRewards;
 
+	// 1. READ THE TABLE WITH REFLECTION 
+	TArray<FGenericLootEntry> PossibleLoot;
+	float TotalWeight = 0.f;
+
+	if (!ParseLootTable(LootTable, PossibleLoot, TotalWeight))
+	{
+		return LootRewards;
+	}
+
 	//Get the player's current Luck stat to influence loot quality.
 	float CurrentPlayerLuck = 0.0f;
 	if (APRCharacterBase* Player = Cast<APRCharacterBase>(PlayerInventory->GetOwner()))
 	{
 		if (UPRStatsComponent* PlayerStats = Player->GetStatsComponent())
 		{
-			CurrentPlayerLuck = PlayerStats->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Luck);
-		}
-	}
-	CurrentPlayerLuck = FMath::Max(1.0f, CurrentPlayerLuck);
-
-	// 1. Get all valid rows from the Loot Table
-	TArray<FLootTableRow*> PossibleLoot;
-	float TotalWeight = 0.f;
-	FString ContextString;
-	for (FName RowName : LootTable->GetRowNames())
-	{
-		if (FLootTableRow* Row = LootTable->FindRow<FLootTableRow>(RowName, ContextString))
-		{
-			if (Row->ItemDefinition)
-			{
-				PossibleLoot.Add(Row);
-				TotalWeight += Row->Weight;
-			}
+			CurrentPlayerLuck = FMath::Max(1.0f, PlayerStats->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Luck));
 		}
 	}
 
@@ -137,23 +129,21 @@ TArray<UPRUpgradeData*> UPRRewardManager::GenerateLootRewards(const UPRInventory
 		float RandomValue = FMath::FRandRange(0.f, TotalWeight);
 		float CurrentWeight = 0.f;
 
-		for (int32 j = 0; j < PossibleLoot.Num(); ++j)
+		for (const FGenericLootEntry& Entry : PossibleLoot)
 		{
-			CurrentWeight += PossibleLoot[j]->Weight;
+			CurrentWeight += Entry.Weight;
 			if (RandomValue <= CurrentWeight)
 			{
 				// FOUND THE WINNER!
-				FLootTableRow* SelectedRow = PossibleLoot[j];
-
 				// Check if it's a new item or an upgrade for the player
 				bool bIsNewItem = true;
-				if (PlayerInventory && PlayerInventory->FindItemByDefinition(SelectedRow->ItemDefinition))
+				if (PlayerInventory && PlayerInventory->FindItemByDefinition(Entry.ItemDef))
 				{
 					bIsNewItem = false;
 				}
 
 				// Create the upgrade data offer
-				UPRUpgradeData* LootOffer = CreateUpgradeOfferForItem(SelectedRow->ItemDefinition, PlayerInventory, bIsNewItem, CurrentPlayerLuck);
+				UPRUpgradeData* LootOffer = CreateUpgradeOfferForItem(Entry.ItemDef, PlayerInventory, bIsNewItem, CurrentPlayerLuck);
 				if (LootOffer)
 				{
 					LootRewards.Add(LootOffer);
@@ -175,7 +165,17 @@ UPRUpgradeData* UPRRewardManager::CreateUpgradeOfferForItem(UPRItemDefinition* I
 	if (!ItemDef) return nullptr;
 
 	// --- 1. ROLL FOR RARITY ---
-	EUpgradeRarity RolledRarity = RollForRarity(PlayerLuck);
+	EUpgradeRarity RolledRarity;
+
+	// Items have static rarity, upgrades are rolled.
+	if (ItemDef->ItemType == EItemType::Item)
+	{
+		RolledRarity = ItemDef->StaticRarity;
+	}
+	else
+	{
+		RolledRarity = RollForRarity(PlayerLuck);
+	}
 
 	// --- 2. DETERMINE NUMBER OF EFFECTS ---
 	int32 NumEffectsToPick = 0;
@@ -377,5 +377,45 @@ EUpgradeRarity UPRRewardManager::RollForRarity(float PlayerLuck) const
 
 	// 5. Legendary Check (Everything remaining)
 	return EUpgradeRarity::Legendary;
+}
+
+bool UPRRewardManager::ParseLootTable(UDataTable* Table, TArray<FGenericLootEntry>& OutEntries, float& OutTotalWeight)
+{
+	OutTotalWeight = 0.0f;
+	if (!Table) return false;
+
+	const UScriptStruct* RowStruct = Table->GetRowStruct();
+
+	// Find the “ItemDefinition” and “Weight” properties(Reflection)
+	FObjectProperty* ItemProp = CastField<FObjectProperty>(RowStruct->FindPropertyByName(FName("ItemDefinition")));
+	FFloatProperty* WeightProp = CastField<FFloatProperty>(RowStruct->FindPropertyByName(FName("Weight")));
+
+	// If these columns are not present, this is not our loot table.
+	if (!ItemProp || !WeightProp)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GenerateLootRewards: DataTable %s missing 'ItemDefinition' or 'Weight' columns!"), *Table->GetName());
+		return false;
+	}
+
+	// Loop the lines
+	for (auto It : Table->GetRowMap())
+	{
+		uint8* RowData = It.Value;
+
+		// Retrieve data using pointer arithmetic
+		UObject* RawItem = ItemProp->GetObjectPropertyValue(ItemProp->ContainerPtrToValuePtr<void>(RowData));
+		float WeightVal = WeightProp->GetFloatingPointPropertyValue(WeightProp->ContainerPtrToValuePtr<void>(RowData));
+
+		// Cast to UPRItemDefinition (Since it's a base class, both Weapon and Passive are compatible)
+		if (UPRItemDefinition* ItemDef = Cast<UPRItemDefinition>(RawItem))
+		{
+			if (WeightVal > 0.0f)
+			{
+				OutEntries.Add({ ItemDef, WeightVal });
+				OutTotalWeight += WeightVal;
+			}
+		}
+	}
+	return true;
 }
 

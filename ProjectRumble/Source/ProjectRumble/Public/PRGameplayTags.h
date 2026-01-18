@@ -27,6 +27,7 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_ProjectileBounce); // Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_Size); // Multiplicative
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_Damage_Elites); // Multiplicative vs Elites
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Offense_PierceCount); // Flat 
 		}
 		namespace Defense
 		{
@@ -80,6 +81,8 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_XP_Reward); // Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_Gold_Reward); // Flat
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_Silver_Reward); // Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_AttackRange); // Flat
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_AI_AttackDamage)
 		}
 	}
 
@@ -95,11 +98,13 @@ namespace NativeGameplayTags
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_IsStunned);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_State_IsDead);
 	}
+
 	namespace StatusEffect
 	{
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Effect_StunChance);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Effect_StunDuration);
 	}
+
 	namespace Enemies
 	{
 		namespace Type
@@ -107,13 +112,56 @@ namespace NativeGameplayTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Goblin);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Skeleton);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Neuron);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_Cactus);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Type_VoidWalker);
+		}
+		namespace Tier
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_1); // Fodder (Goblin, Skeleton)
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_2); // Medium (Cactus)
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_3); // Elite
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Tier_Endless);
+		}
+		namespace Biome
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Biome_Forest);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Biome_Desert);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Enemies_Biome_Global); // Appears everywhere
 		}
 	}
+
 	namespace Destructible
 	{
 		namespace Type
 		{
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Destructible_Type_Vase);
 		}
+	}
+
+	namespace Tracker
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Combat_Kills);				// Total Kill
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Combat_DamageDealt);			// Total Damage
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Combat_DamageTaken);			// Total Damage Taken
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Combat_DiedTo);				// Died To
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Health_Healing_Regen);     // Regen
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Time_TimeAlive);			// Alive Time(sec)
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Survival_Health_Healing_Lifesteal);	// Lifesteal
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Main_Economy_GoldEarned);			// Gold Earned
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Tracker_Combat_Damage_DamageDealt);
+		
+	}
+
+	namespace UI_Layers
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_UI_Layer_Game);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_UI_Layer_Menu);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_UI_Layer_Modal);
+	}
+
+	namespace ItemTypes
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Type_Weapon); // "Item.Weapon"
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Type_Passive); // "Item.Passive"
 	}
 }

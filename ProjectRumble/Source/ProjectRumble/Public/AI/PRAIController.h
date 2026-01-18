@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AIController.h"
+#include "DetourCrowdAIController.h"
 #include "PRAIController.generated.h"
 
 class UBehaviorTree;
 class UBlackboardData;
 
 UCLASS()
-class PROJECTRUMBLE_API APRAIController : public AAIController
+class PROJECTRUMBLE_API APRAIController : public ADetourCrowdAIController
 {
 	GENERATED_BODY()
 	
@@ -24,5 +24,7 @@ protected:
 
 	// OnPossess is called when the controller takes control of a pawn.
 	virtual void OnPossess(APawn* InPawn) override;
+
+	
 
 };

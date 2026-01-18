@@ -9,7 +9,11 @@
 #include "Datas/PRItemDefinition.h"
 #include "PRRewardManager.generated.h"
 
-
+struct FGenericLootEntry
+{
+	UPRItemDefinition* ItemDef;
+	float Weight;
+};
 
 class UPRItemDefinition; 
 class UPRInventoryComponent;
@@ -76,4 +80,7 @@ private:
 	// This is set during Initialize.
 	UPROPERTY()
 	TObjectPtr<UDataTable> StatsInfoTable;
+
+	// Helper: Retrieves data from the table using reflection
+	bool ParseLootTable(UDataTable* Table, TArray<FGenericLootEntry>& OutEntries, float& OutTotalWeight);
 };

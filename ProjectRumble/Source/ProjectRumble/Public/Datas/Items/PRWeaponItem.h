@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Datas/PRBaseItem.h"
+#include <Datas/PRWeaponDefinition.h>
 #include "PRWeaponItem.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnDamageDealtSignature, float, DamageDealt, AActor*, DamagedActor);
@@ -39,6 +40,10 @@ public:
 	// Override the LevelUp function to potentially update the timer.
 	virtual void LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects) override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual void Deactivate() override;
+
 	UPROPERTY(BlueprintAssignable)
 	FOnDamageDealtSignature OnDamageDealt;
 
@@ -48,6 +53,18 @@ public:
 	TArray<FLevelMilestone> Milestones;
 
 protected:
+
+	// The timer handle that manages the attack loop.
+	FTimerHandle AttackTimerHandle;
+
+	// Cached reference to the weapon definition for easy access.
+	UPROPERTY(Transient)
+	const UPRWeaponDefinition* CachedWeaponDef = nullptr;
+
+	// Local stat modifiers specific to this weapon instance.
+	UPROPERTY()
+	TMap<FGameplayTag, float> LocalStatModifiers;
+
 	// The function that performs the actual attack logic (spawning projectiles, etc.).
 	// This should be overridden by specific weapon Blueprints or C++ classes.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
@@ -56,6 +73,9 @@ protected:
 	// The function that is bound to the timer.
 	UFUNCTION()
 	void Attack();
+
+	UFUNCTION()
+	void HandleGameStarted();
 
 	// -- Helper Functions for Calculations --
 	// A helper function to get the final, calculated cooldown for this weapon.
@@ -90,11 +110,11 @@ protected:
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	int32 GetCalculatedProjectileBounce() const;
 
-	// The timer handle that manages the attack loop.
-	FTimerHandle AttackTimerHandle;
-
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	int32 GetCalculatedProjectileCount() const;
+
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	int32 GetCalculatedPierceCount() const;
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedProjectileSpeed() const;
@@ -106,17 +126,26 @@ protected:
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedStunDuration() const;
 
+	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
+	float GetCalculatedTickRate() const;
+
 	// This function will now be the central point for all damage calculations.
 	// It can be called from Blueprint.
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Calculations")
 	FDamageCalculationResult CalculateFinalDamage(const APRAIBase* Target);
 
 	/** The list of all effects this weapon instance has applied to the player. */
-	UPROPERTY(VisibleAnywhere, Category = "Weapon")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AppliedEffects, Category = "Weapon")
 	TArray<FPotentialUpgradeEffect> AppliedEffects;
 
 	/** Helper function to apply a list of effects to the owner's StatsComponent. */
-	void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
+	//void ApplyBonuses(const TArray<FPotentialUpgradeEffect>& EffectsToApply);
+
+	UFUNCTION()
+	void OnRep_AppliedEffects();
+
+	// Recalculates local stats based on current effects and upgrades.
+	void RecalculateLocalStats();
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	FPRWeaponAttackStats GetCalculatedAttackStats() const;

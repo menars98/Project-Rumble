@@ -15,17 +15,27 @@
 #include "AI/PRAIBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/PRInventoryComponent.h"
-#include"Components/PRInteractionComponent.h"
+#include "Components/PRInteractionComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/CapsuleComponent.h" 
 #include "Actors/PRXpShard.h"
+#include "Net/UnrealNetwork.h"
+#include "Player/PRPlayerController.h"
+#include <Game/PRGameState.h>
+#include "Components/PRSessionTrackerComponent.h"
 
 APRCharacterBase::APRCharacterBase()
 {
+	// This actor needs to be replicated.
+	bReplicates = true;
 
+	// For smooth movement on clients, this is also crucial.
+	SetReplicateMovement(true);
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
 	SpringArmComp->SetupAttachment(RootComponent);
 	SpringArmComp->bUsePawnControlRotation = true; // Rotate the arm based on the controller
+	SpringArmComp->PrimaryComponentTick.TickGroup = TG_PostPhysics;
 
 	// Create a follow camera
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
@@ -80,33 +90,53 @@ void APRCharacterBase::BeginPlay()
 {
 	Super::BeginPlay(); 
 
-	InitializeFromDataAsset();
-	InitializeInput();
+	// Determine if we are on the server or client
+	FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
 
-	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
+	if (IsLocallyControlled() || HasAuthority())
 	{
-		OnStatChanged(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange));
+		if (Controller)
+		{
+			UE_LOG(LogTemp, Log, TEXT("[%s] %s BeginPlay: Controller found."), *RoleString, *GetName());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[%s] %s BeginPlay: I am locally controlled/server but NO CONTROLLER!"), *RoleString, *GetName());
+		}
+	}
+	if (HasAuthority())
+	{
+		if (APRGameState* GS = GetWorld()->GetGameState<APRGameState>())
+		{
+			SpawnTime = GS->GetServerGameTime();
+		}
 	}
 
-	if (UPRStatsComponent* MyStatsComponent = GetStatsComponent())
-	{
-		// Bind to the virtual functions inherited from EntityBase.
-		MyStatsComponent->OnHealthChangedDelegate.AddDynamic(this, &APRCharacterBase::OnHealthChanged);
-		MyStatsComponent->OnDeathDelegate.AddDynamic(this, &APRCharacterBase::OnDeath);
-		MyStatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
-		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight));
-		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump, MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump));
-		
-	}
-	if (PickupSphere)
-	{
-		PickupSphere->OnComponentBeginOverlap.AddDynamic(this, &APRCharacterBase::OnPickupSphereOverlap);
-		UE_LOG(LogTemp, Error, TEXT("OnPickupSphereOverlap Binded!"), *GetName());
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("CharacterBase %s could not find its StatsComponent!"), *GetName());
-	}
+}
+
+void APRCharacterBase::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] PossessedBy called for %s"), *GetName());
+
+	//Only works for the server
+	InitializeCharacter();
+}
+
+void APRCharacterBase::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+	UE_LOG(LogTemp, Warning, TEXT("[CLIENT] OnRep_Controller called for %s"), *GetName());
+	// Only works for clients
+	InitializeCharacter();
+}
+
+void APRCharacterBase::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	InitializeCharacter();
 }
 
 void APRCharacterBase::InitializeFromDataAsset()
@@ -208,12 +238,12 @@ void APRCharacterBase::Move(const FInputActionValue& Value)
 
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
+	
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
+		
 	}
 }
-
 
 void APRCharacterBase::Look(const FInputActionValue& Value)
 {
@@ -228,6 +258,12 @@ void APRCharacterBase::Look(const FInputActionValue& Value)
 
 void APRCharacterBase::TakeDebugDamage()
 {
+	// This function should only execute its logic on the server.
+	if (!HasAuthority())
+	{
+		return;
+
+	}
 	// Simple sphere trace in front of the character to find an enemy to damage
 	FVector Start = GetActorLocation();
 	FVector End = Start + (GetActorForwardVector() * 200.0f);
@@ -262,6 +298,15 @@ void APRCharacterBase::TakeDebugDamage()
 // A simple wrapper function to call the component's function.
 void APRCharacterBase::Interact()
 {
+	// Ensure we are the locally controlled player before sending an RPC.
+	if (IsLocallyControlled())
+	{
+		Server_Interact();
+	}
+}
+
+void APRCharacterBase::Server_Interact_Implementation()
+{
 	if (InteractionComp)
 	{
 		InteractionComp->PrimaryInteract();
@@ -278,6 +323,9 @@ void APRCharacterBase::OnHealthChanged(float CurrentHealth, float MaxHealth)
 
 void APRCharacterBase::OnStatChanged(FGameplayTag StatTag, float NewValue)
 {
+	FString RoleString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
+	UE_LOG(LogTemp, Log, TEXT("[%s] Character %s received Stat Update: %s = %f"), *RoleString, *GetName(), *StatTag.ToString(), NewValue);
+
 	// --- EXTRA JUMP LOGIC ---
 	if (StatTag == NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump)
 	{
@@ -336,12 +384,242 @@ void APRCharacterBase::OnDeath()
 {
 	Super::OnDeath(); // Call parent implementation to disable collision/movement.
 
+	//@TODO: When a character dies change his camera to alive one, so he can watch his friend.
+	if (HasAuthority())
+	{
+		SetLastDamageCauser();
+		if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+		{
+			if (APRGameState* GS = GetWorld()->GetGameState<APRGameState>())
+			{
+				float DeathTime = GS->GetServerGameTime();
+				float TimeAlive = DeathTime - SpawnTime;
+
+				if (PS->TrackerComponent)
+				{
+					PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Time_TimeAlive, TimeAlive);
+					PS->TrackerComponent->DebugLogAllStats();
+				}
+			}
+			if (UPRInventoryComponent* InvComp = PS->InventoryComponent)
+			{
+				InvComp->ShutdownInventory();
+			}
+		}
+	}
+
+	// We want to call again the ShutdownStats to ensure no further stat changes occur.
+	if (GetStatsComponent())
+	{
+		GetStatsComponent()->ShutdownStats();
+	}
+
+	if (InteractionComp)
+	{
+		InteractionComp->Deactivate();
+	}
+
+	// Note: Using UnPossess in multiplayer can sometimes cause camera issues. 
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCharacterMovement()->DisableMovement();
+	}
+
+	if (GetCapsuleComponent())
+	{
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	if (GetMesh())
+	{
+		GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+		GetMesh()->SetSimulatePhysics(true);
+
+		// Multiplayer Note: Since it is ragdoll physics-based, it may fall differently on each client.
+		// This is acceptable as it is “cosmetic.”
+	}
+
 	// Player-specific logic here:
 	// For example, disable input and show a "Game Over" screen.
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	if (APRPlayerController* PC = Cast<APRPlayerController>(GetController()))
 	{
 		DisableInput(PC);
+
+		if (HasAuthority())
+		{
+			PC->Server_OnPlayerDied();
+		}
 	}
 	UE_LOG(LogTemp, Warning, TEXT("PLAYER HAS DIED. GAME OVER."));
 }
+
+void APRCharacterBase::InitializeCharacter()
+{
+	//Data asset initialization
+	InitializeFromDataAsset();
+	//Input initialization for local player
+	if (IsLocallyControlled())
+	{
+		InitializeInput();
+		UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeInput called for %s"),HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"), *GetName());
+	}
+	// Wait for the PlayerState to tell us the StatsComponent is ready.
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		PS->StatsComponent->OnStatChangedDelegate.RemoveDynamic(this, &APRCharacterBase::OnStatChanged);
+		PS->StatsComponent->OnStatChangedDelegate.AddDynamic(this, &APRCharacterBase::OnStatChanged);
+
+		if (PS->StatsComponent)
+		{
+			//Just in case if we missed the ready event
+			PS->StatsComponent->RefreshCurrentStats();
+		}
+		// Subscribe to the event.
+		PS->OnStatsComponentReady.RemoveDynamic(this, &APRCharacterBase::OnStatsComponentReady);
+		PS->OnStatsComponentReady.AddDynamic(this, &APRCharacterBase::OnStatsComponentReady);
+	}
+
+	if (PickupSphere)
+	{
+		PickupSphere->OnComponentBeginOverlap.RemoveDynamic(this, &APRCharacterBase::OnPickupSphereOverlap);
+		PickupSphere->OnComponentBeginOverlap.AddDynamic(this, &APRCharacterBase::OnPickupSphereOverlap);
+	}
+}
+
+void APRCharacterBase::OnStatsComponentReady(UPRStatsComponent* ReadyStatsComp)
+{
+	// 1. SAFETY CHECK: Ensure both the Character and the Component are valid and not being destroyed.
+	if (!IsValid(this) || !IsValid(ReadyStatsComp))
+	{
+		return;
+	}
+	UE_LOG(LogTemp, Log, TEXT("[%s] Binding to StatsComponent delegates for %s"),
+		HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"), *GetName());
+	// 2. SAFE BINDING: Use AddUniqueDynamic to prevent multiple bindings (though AddDynamic usually handles this, Unique is safer here).
+	// @TODO: We can also, verify IsBound checks internally if needed, but AddUnique is the key.
+
+	if (ReadyStatsComp)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[%s] Binding to StatsComponent delegates for %s"),
+			HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"), *GetName());
+
+		ReadyStatsComp->OnHealthChangedDelegate.RemoveDynamic(this, &APRCharacterBase::OnHealthChanged);
+		ReadyStatsComp->OnHealthChangedDelegate.AddUniqueDynamic(this, &APRCharacterBase::OnHealthChanged);
+
+		ReadyStatsComp->OnDeathDelegate.RemoveDynamic(this, &APRCharacterBase::OnDeath);
+		ReadyStatsComp->OnDeathDelegate.AddUniqueDynamic(this, &APRCharacterBase::OnDeath);
+
+		ReadyStatsComp->OnStatChangedDelegate.RemoveDynamic(this, &APRCharacterBase::OnStatChanged);
+		ReadyStatsComp->OnStatChangedDelegate.AddUniqueDynamic(this, &APRCharacterBase::OnStatChanged);
+
+		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight, ReadyStatsComp->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_JumpHeight));
+		OnStatChanged(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump, ReadyStatsComp->GetStatValue(NativeGameplayTags::Stats::Mobility::TAG_Stat_Mobility_ExtraJump));
+		OnStatChanged(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange, ReadyStatsComp->GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_PickRange));
+
+		// Force Initial Update
+		// We connected delegates but we also want to ensure the UI is in sync immediately.
+		ReadyStatsComp->ForceUpdateUI();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[%s] GetStatsComponent returned NULL for %s!"),
+			HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"), *GetName());
+	}
+}
+
+void APRCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
+
+float APRCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	// 1. First, perform the Base Class (EntityBase) operations (Armor, Evasion, Shield, etc.)
+	// This function returns the “actual amount of health lost.”
+	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	// 2. If damage is taken, process it in Tracker
+	if (ActualDamage > 0.f && HasAuthority())
+	{
+		// Since we are a player, PlayerState definitely exists
+		if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+		{
+			if (PS->TrackerComponent)
+			{
+				PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Main_Combat_DamageTaken, ActualDamage);
+			}
+		}
+	}
+
+	return ActualDamage;
+}
+
+void APRCharacterBase::ReEnableInput()
+{
+	if (Controller)
+	{
+		Controller->SetIgnoreMoveInput(false);
+	}
+}
+
+void APRCharacterBase::SetLastDamageCauser()
+{
+	if (APRPlayerState* PS = GetPlayerState<APRPlayerState>())
+	{
+		// 
+		if (LastDamageCauser.IsValid())
+		{
+			// Is the last damage causer an AI?
+			if (APRAIBase* KillerAI = Cast<APRAIBase>(LastDamageCauser.Get()))
+			{
+				FText Name = KillerAI->GetEnemyName();
+
+				// Get the tag (e.g., Enemy.Type.Goblin)
+				FGameplayTag Tag = FGameplayTag::EmptyTag;
+				if (KillerAI->GetAITags().IsValid())
+				{
+					// Get the first tag or Type tag
+					Tag = KillerAI->GetAITags().GetByIndex(0);
+				}
+				PS->SetKillerInfo(Name, Tag);
+			}
+		}
+		else
+		{
+			// If there is no murderer (Environment, Poison, etc.)
+			PS->SetKillerInfo(FText::FromString("Unknown Force"), FGameplayTag::EmptyTag);
+		}
+	}
+}
+
+void APRCharacterBase::OnKnockbackReceived()
+{
+	// 1. Stop movement
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+	}
+
+	// 2. Close input for a brief moment
+	if (Controller)
+	{
+		FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+
+		// --- COUNTER CHECK ---
+		// If the Timer is already running, the character has already been stunned.
+		// In this case, do not increase the counter (Stack) by saying “Ignore Input” again.
+		if (!TimerManager.IsTimerActive(KnockbackTimerHandle))
+		{
+			Controller->SetIgnoreMoveInput(true); 
+		}
+
+		// Always restart/extend the timer.
+		// This way, if we take consecutive hits, the stun duration increases but the input remains intact.
+		TimerManager.SetTimer(KnockbackTimerHandle, this, &APRCharacterBase::ReEnableInput, 0.15f, false);
+
+	}
+}
+
+
 

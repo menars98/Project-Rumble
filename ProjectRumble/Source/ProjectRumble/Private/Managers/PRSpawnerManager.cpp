@@ -6,176 +6,295 @@
 #include "GameModes/PRGameMode.h" 
 #include "Kismet/GameplayStatics.h"
 #include <Game/PRGameState.h>
+#include "Datas/Wave/PRSpawnConfig.h" 
+#include "PRGameplayTags.h"
+#include "Curves/CurveFloat.h"
+#include "Curves/CurveLinearColor.h"
 
 APRSpawnerManager::APRSpawnerManager()
 {
 	PrimaryActorTick.bCanEverTick = true; // We need tick to check the game time
-	NextWaveIndex = 0;
-	TargetAICount = 0;
-	NextBossIndex = 0;
+	// This actor shouldnt live on client
+	bReplicates = false;
 }
 
 void APRSpawnerManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CurrentMaxActiveAI = BaseMaxActiveAI;
-
-	// Start the spawn loop timer
-	GetWorld()->GetTimerManager().SetTimer(SpawnTimerHandle, this, &APRSpawnerManager::SpawnLoop, SpawnCheckInterval, true, 1.0f);
-	
-}
-
-// Called every frame
-void APRSpawnerManager::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	// GameTime is needed by the Wave Processor and the Max AI Logic.
-	// GetTimeSeconds() automatically pauses when the game is paused.
-	float GameTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-
-	// --- GET DIFFICULTY MULTIPLIER ---
-	float DifficultyMultiplier = 1.0f;
-	if (APRGameState* PRGameState = GetWorld()->GetGameState<APRGameState>())
+	if (!HasAuthority())
 	{
-		DifficultyMultiplier = PRGameState->GetActiveDifficultyMultiplier();
-	}
-
-	ProcessWaveTimeline(GameTime, DifficultyMultiplier);
-	ProcessBossTimeline(GameTime);
-	// --- OUR DYNAMIC MAX AI LOGIC (Endless Mode Prep) ---
-
-	// For now, let's assume Endless Mode starts after a fixed duration (e.g., 10 minutes).
-	// The GameMode is a better place to define this length.
-	const float EndlessModeStartTime = 600.0f; // 10 minutes (600 seconds)
-
-	bool bInEndlessMode = (GameTime >= EndlessModeStartTime);
-
-	// The max number of active AI is also scaled by difficulty.
-	int32 ScaledBaseMaxAI = FMath::RoundToInt(BaseMaxActiveAI * DifficultyMultiplier);
-
-	if (bInEndlessMode)
-	{
-		// Calculate time passed since the beginning of Endless Mode.
-		float EndlessTime = GameTime - EndlessModeStartTime;
-		int32 MinutesPassed = FMath::FloorToInt(EndlessTime / 60.f);
-
-		// Increase the max AI limit.
-		CurrentMaxActiveAI = ScaledBaseMaxAI + (MinutesPassed * MaxAIIncreasePerMinute_Endless);
-
-		// @TODO: Add logic to spawn Endless AI types here.
-	}
-	else
-	{
-		// Maintain the base limit during the initial 10 minutes.
-		CurrentMaxActiveAI = ScaledBaseMaxAI;
-	}
-
-}
-
-void APRSpawnerManager::ProcessWaveTimeline(float GameTime, float DifficultyMultiplier)
-{
-	if (!GetWorld() || !GetWorld()->GetAuthGameMode()) return;
-
-	// Check if there are any waves left to process
-	if (!WaveTimeline.IsValidIndex(NextWaveIndex))
-	{
-		return; // All scheduled waves are done
-	}
-
-	// Check if it's time for the next wave
-	if (GameTime >= WaveTimeline[NextWaveIndex].TimeToStart)
-	{
-		// Scale the population increase by the difficulty multiplier.
-		int32 ScaledPopulationIncrease = FMath::RoundToInt(WaveTimeline[NextWaveIndex].PopulationIncrease * DifficultyMultiplier);
-
-		// It's time! Increase the target population
-		TargetAICount += ScaledPopulationIncrease;
-		UE_LOG(LogTemp, Log, TEXT("Wave %d triggered! Target AI count is now %d (Scaled by %.2fx)"), NextWaveIndex, TargetAICount, DifficultyMultiplier);
-
-		// Move to the next wave in the timeline
-		NextWaveIndex++;
-	}
-}
-
-void APRSpawnerManager::ProcessBossTimeline(float GameTime)
-{
-	// Check if all bosses are spawned or if we don't have a valid boss to check.
-	if (!BossTimeline.IsValidIndex(NextBossIndex))
-	{
+		SetActorTickEnabled(false);
 		return;
 	}
 
-	const FBossWaveData& NextBoss = BossTimeline[NextBossIndex];
-
-	// Check if it's time for the next boss to spawn.
-	if (GameTime >= NextBoss.TimeToSpawn)
+    // 1. Take config from GameMode
+	if (APRGameMode* GM = Cast<APRGameMode>(UGameplayStatics::GetGameMode(this)))
 	{
-		// 1. Spawn the Boss
-		ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-		if (PlayerCharacter && NextBoss.BossAIClass)
+		if (UPRSpawnConfig* ConfigFromGM = GM->GetLevelSpawnConfig())
 		{
-			FVector SpawnLocation = FindSafeSpawnLocation(PlayerCharacter->GetActorLocation(), SpawnRadius);
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+			SpawnConfig = ConfigFromGM;
+			UE_LOG(LogTemp, Log, TEXT("SpawnerManager: Config loaded from GameMode: %s"), *SpawnConfig->GetName());
+		}
+	}
 
-			GetWorld()->SpawnActor<APRAIBase>(NextBoss.BossAIClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+	if (!SpawnConfig)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SpawnerManager: No Config found in GameMode! Checking local fallback..."));
+	}
 
-			// @TODO: Start Boss Music
+	if (!SpawnConfig)
+	{
+		UE_LOG(LogTemp, Error, TEXT("SpawnerManager: CRITICAL ERROR - No SpawnConfig assigned!"));
+		SetActorTickEnabled(false);
+		return;
+	}
+
+	// 3. Deck Oluþtur
+	BuildRunDeck();
+
+	// 2. Start Spawning
+	GetWorld()->GetTimerManager().SetTimer(SpawnTimerHandle, this, &APRSpawnerManager::SpawnLoop, SpawnCheckInterval, true);
+	
+}
+
+void APRSpawnerManager::BuildRunDeck()
+{
+	if (!SpawnConfig)
+	{
+		UE_LOG(LogTemp, Error, TEXT("SpawnerManager has no Config assigned!"));
+		return;
+	}
+
+	CurrentRunDeck.Empty();
+
+	// --- 1. FILTER CATALOG (Biome Check) ---
+	// Group all valid candidates by their Tier.
+	TMap<FGameplayTag, TArray<TSubclassOf<APRAIBase>>> CandidatesByTier;
+
+	for (const FEnemyCatalogEntry& Entry : SpawnConfig->EnemyCatalog)
+	{
+		if (!Entry.AIClass) continue;
+
+		// --- 1. POPULATE SPECIFIC CACHE (O(1) Access) ---
+	    // We assume the AI Class has an identifying tag in its "AITags" or we use a tag from the Catalog entry.
+	    // For this to work, FEnemyCatalogEntry needs a "TypeTag" property, OR 
+	    // we assume the user adds the "Enemy.Type.X" tag to the AI's CDO (Class Default Object).
+
+	    // Let's assume we added a "TypeTag" to FEnemyCatalogEntry in SpawnConfig.h for simplicity,
+	    // OR we can read it from the Blueprint Default Properties.
+	    // Let's grab tags from the CDO (Class Default Object) to be safe and dynamic.
+		if (const APRAIBase* CDO = Cast<APRAIBase>(Entry.AIClass->GetDefaultObject()))
+		{
+			// The AI should have a tag like "Enemy.Type.Goblin" in its AITags container.
+			for (const FGameplayTag& Tag : CDO->GetAITags())
+			{
+				if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag("Enemies.Type")))
+				{
+					SpecificEnemyCache.Add(Tag, Entry.AIClass);
+				}
+			}
 		}
 
-		NextBossIndex++;
+		// --- 2. BIOME FILTER FOR RUN DECK ---
+		bool bBiomeMatch = Entry.BiomeTags.HasTag(NativeGameplayTags::Enemies::Biome::TAG_Enemies_Biome_Global) ||
+			Entry.BiomeTags.HasTag(SpawnConfig->LevelBiomeTag);
+
+		if (bBiomeMatch)
+		{
+			CandidatesByTier.FindOrAdd(Entry.TierTag).Add(Entry.AIClass);
+		}
+	}
+
+	// --- 3. DRAFT THE DECK (Selection) ---
+	// For each Tier, pick 'N' random enemies as defined in config.
+	for (const auto& Pair : SpawnConfig->RunDeckSelectionCounts)
+	{
+		FGameplayTag Tier = Pair.Key;
+		int32 NumToSelect = Pair.Value;
+
+		if (TArray<TSubclassOf<APRAIBase>>* Candidates = CandidatesByTier.Find(Tier))
+		{
+			// Shuffle the candidates to pick random ones
+			int32 LastIndex = Candidates->Num() - 1;
+			for (int32 i = 0; i <= LastIndex; ++i)
+			{
+				int32 Index = FMath::RandRange(i, LastIndex);
+				if (i != Index) Candidates->Swap(i, Index);
+			}
+
+			// Take the first N items (or all if N is larger than available)
+			int32 Count = FMath::Min(NumToSelect, Candidates->Num());
+			for (int32 i = 0; i < Count; ++i)
+			{
+				CurrentRunDeck.FindOrAdd(Tier).Add((*Candidates)[i]);
+				UE_LOG(LogTemp, Log, TEXT("Deck Draft: Added %s to %s"), *((*Candidates)[i]->GetName()), *Tier.ToString());
+			}
+		}
 	}
 }
 
-TSubclassOf<APRAIBase> APRSpawnerManager::GetWeightedRandomActiveAIClass(float GameTime) const
+void APRSpawnerManager::Tick(float DeltaTime)
 {
-	TArray<FSpawnWeight> CurrentSpawnWeights;
-	float TotalWeight = 0.0f;
+	Super::Tick(DeltaTime);
+	if (!HasAuthority() || !SpawnConfig) return;
 
-	// Only iterate through waves that have already started.
-	for (int32 i = 0; i < NextWaveIndex; ++i)
+	float GameTime = 0.f;
+	float MatchDuration = 0.0f;
+	float DifficultyMultiplier = 1.0f;
+
+	if (APRGameState* GS = GetWorld()->GetGameState<APRGameState>())
 	{
-		const FWaveData& Wave = WaveTimeline[i];
-		if (!Wave.AIClass) continue;
+		GameTime = GS->GetServerGameTime();
+		MatchDuration = GS->GetMatchDuration();
+		DifficultyMultiplier = GS->GetActiveDifficultyMultiplier();
+	}
 
-		// 1. Calculate the time this wave has been active, in minutes.
-		float TimeActive = GameTime - Wave.TimeToStart;
-		int32 MinutesActive = FMath::FloorToInt(TimeActive / 60.f);
+	// --- 1. CALCULATE TARGET COUNT (FROM CURVE) ---
+	float BaseTarget = 0.f;
+	if (SpawnConfig->SpawnCapCurve)
+	{
+		// Read directly from the curve
+		BaseTarget = SpawnConfig->SpawnCapCurve->GetFloatValue(GameTime);
+	}
 
-		// 2. Calculate the decay: Initial % - (Time Active * Decay Rate)
-		float CurrentPercentage = Wave.InitialSpawnPercentage - (MinutesActive * Wave.PercentageDecayPerMinute);
+	int32 EndlessBonus = 0;
 
-		// 3. Apply the Minimum Spawn Percentage (The core fix)
-		// The weight is either the calculated percentage or the defined minimum, whichever is higher.
-		CurrentPercentage = FMath::Max(Wave.MinimumSpawnPercentage, CurrentPercentage);
+	if (GameTime > MatchDuration)
+	{
+		float TimeInEndless = GameTime - MatchDuration;
+		float MinutesInEndless = TimeInEndless / 60.0f;
 
-		// Only add to the pool if the weight is positive.
-		if (CurrentPercentage > 0.0f)
+		// Each minute in endless adds a flat amount to the target.
+		EndlessBonus = FMath::FloorToInt(MinutesInEndless * EndlessCountGrowthPerMinute);
+	}
+
+	// --- 3. FINAL TARGET & CAP ---
+	// Ex: (100 + 50) * 1.0 = 150
+	int32 CalculatedTarget = FMath::RoundToInt((BaseTarget + EndlessBonus) * DifficultyMultiplier);
+
+	TargetAICount = FMath::Min(CalculatedTarget, AbsoluteMaxAI);
+	CurrentMaxActiveAI = TargetAICount;
+
+	ACharacter* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+	if (Player)
+	{
+		CheckBossEvents(GameTime, Player);
+	}
+}
+
+TSubclassOf<APRAIBase> APRSpawnerManager::GetEnemyToSpawn(float GameTime)
+{
+	if (!SpawnConfig || SpawnConfig->Timeline.Num() == 0) return nullptr;
+
+	// 1. Find Current Segment
+	const FSpawnSegment* ActiveSegment = nullptr;
+	// Iterate backwards to find latest valid segment (Handles Endless if last segment is kept)
+	for (int32 i = SpawnConfig->Timeline.Num() - 1; i >= 0; --i)
+	{
+		if (GameTime >= SpawnConfig->Timeline[i].StartTime)
 		{
-			CurrentSpawnWeights.Add({ Wave.AIClass, CurrentPercentage });
-			TotalWeight += CurrentPercentage;
+			ActiveSegment = &SpawnConfig->Timeline[i];
+			break;
 		}
 	}
 
-	// 4. Perform Weighted Random Selection
-	if (TotalWeight <= 0.0f) return nullptr;
+	if (!ActiveSegment) return nullptr;
 
-	float RandomValue = FMath::FRandRange(0.0f, TotalWeight);
-	float CurrentWeightSum = 0.0f;
-
-	for (const FSpawnWeight& SpawnWeight : CurrentSpawnWeights)
+	// 2. Weighted Random Selection for TAG (Tier OR Specific)
+	float TotalWeight = 0.f;
+	for (const auto& Pair : ActiveSegment->SpawnWeights)
 	{
-		CurrentWeightSum += SpawnWeight.Weight;
-		if (RandomValue <= CurrentWeightSum)
+		TotalWeight += Pair.Value;
+	}
+
+	if (TotalWeight <= 0.f) return nullptr;
+
+	float RandomRoll = FMath::FRandRange(0.f, TotalWeight);
+	float CurrentWeight = 0.f;
+	FGameplayTag SelectedTag = FGameplayTag::EmptyTag;
+
+	for (const auto& Pair : ActiveSegment->SpawnWeights)
+	{
+		CurrentWeight += Pair.Value;
+		if (RandomRoll <= CurrentWeight)
 		{
-			return SpawnWeight.AIClass; // Found the winning AI type.
+			SelectedTag = Pair.Key;
+			break;
 		}
 	}
 
-	// Fallback in case of floating point errors, return a random one (should not happen if TotalWeight > 0).
-	return CurrentSpawnWeights[FMath::RandRange(0, CurrentSpawnWeights.Num() - 1)].AIClass;
+	// 3. Resolve the Tag into a Class
+	return ResolveSpawnTag(SelectedTag);
+}
+
+TSubclassOf<APRAIBase> APRSpawnerManager::ResolveSpawnTag(FGameplayTag Tag)
+{
+	if (!Tag.IsValid()) return nullptr;
+
+	// CASE A: It is a TIER Tag (e.g., "Enemies.Tier.1")
+	// Check if we have a deck for this tier.
+	if (TArray<TSubclassOf<APRAIBase>>* Deck = CurrentRunDeck.Find(Tag))
+	{
+		if (Deck->Num() > 0)
+		{
+			int32 RandIndex = FMath::RandRange(0, Deck->Num() - 1);
+			return (*Deck)[RandIndex];
+		}
+	}
+
+	// CASE B: It is a SPECIFIC TYPE Tag (e.g., "Enemies.Type.Goblin")
+	// Check our cache.
+	if (TSubclassOf<APRAIBase>* SpecificClass = SpecificEnemyCache.Find(Tag))
+	{
+		return *SpecificClass;
+	}
+
+	// Fallback: If tag found nowhere (maybe logic error in config)
+	UE_LOG(LogTemp, Warning, TEXT("Spawn Manager: Could not resolve spawn tag %s"), *Tag.ToString());
+	return nullptr;
+}
+
+void APRSpawnerManager::CheckBossEvents(float GameTime, ACharacter* Player)
+{
+	if (!SpawnConfig) return;
+
+	// Have we reached the end of the list ?
+	if (!SpawnConfig->BossEvents.IsValidIndex(NextBossEventIndex)) return;
+
+	const FBossSpawnEvent& NextEvent = SpawnConfig->BossEvents[NextBossEventIndex];
+
+	if (GameTime >= NextEvent.TriggerTime)
+	{
+		// --- SPAWN BOSS ---
+		if (NextEvent.BossClass)
+		{
+			FVector Loc = FindSafeSpawnLocation(Player->GetActorLocation(), SpawnRadius);
+
+			// Bosses generally spawn a bit further away; we can increase the radius
+			// Loc = FindSafeSpawnLocation(Player->GetActorLocation(), SpawnRadius * 1.5f);
+			APRAIBase* Boss = GetWorld()->SpawnActorDeferred<APRAIBase>(
+				NextEvent.BossClass,
+				FTransform(FRotator::ZeroRotator, Loc),
+				nullptr, nullptr,
+				ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+			);
+
+			if (Boss)
+			{
+				// If there is a special setup for the boss (HP bar, etc.), we can do it here.
+				// Boss->SetAsBoss(); 
+				UGameplayStatics::FinishSpawningActor(Boss, FTransform(FRotator::ZeroRotator, Loc));
+
+				UE_LOG(LogTemp, Warning, TEXT("BOSS SPAWNED: %s"), *Boss->GetName());
+
+				// UI Message (Optional)
+				// if (!NextEvent.WarningMessage.IsEmpty()) { ... }
+			}
+		}
+		// Proceed to the next boss
+		NextBossEventIndex++;
+	}
 }
 
 FVector APRSpawnerManager::FindSafeSpawnLocation(const FVector& CenterLocation, float Radius) const
@@ -235,51 +354,79 @@ FVector APRSpawnerManager::FindSafeSpawnLocation(const FVector& CenterLocation, 
 
 void APRSpawnerManager::SpawnLoop()
 {
-	// 1. DETERMINE CURRENT AI COUNT (Slow but standard prototype method)
+	// Check current count
 	TArray<AActor*> FoundAIs;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRAIBase::StaticClass(), FoundAIs);
-	int32 ActiveAICount = FoundAIs.Num();
 
-	// 2. CALCULATE NUMBER TO SPAWN
-	int32 NumToSpawn = TargetAICount - ActiveAICount;
+	int32 Gap = TargetAICount - FoundAIs.Num();
+	int32 MaxPerTick = 5;
+	int32 NumToSpawn = FMath::Clamp(Gap, 0, MaxPerTick);
 
-	// Clamp NumToSpawn so it doesn't exceed the CurrentMaxActiveAI limit.
-	NumToSpawn = FMath::Min(NumToSpawn, CurrentMaxActiveAI - ActiveAICount);
+	if (NumToSpawn <= 0) return;
 
-	if (NumToSpawn <= 0)
+	float GameTime = 0.f;
+	float MatchDuration = 0.0f;
+	if (APRGameState* GS = GetWorld()->GetGameState<APRGameState>())
 	{
-		return; // No need to spawn
+		GameTime = GS->GetServerGameTime();
+		MatchDuration = GS->GetMatchDuration();
 	}
 
-	// 3. GET WEIGHTED AI CLASS
-	float GameTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-	TSubclassOf<APRAIBase> AIToSpawn = GetWeightedRandomActiveAIClass(GameTime);
+	// 1. Calculate Endless Metrics
+	float EndlessMultiplier = 1.0f;
+	FLinearColor EndlessColor = FLinearColor::White;
+	bool bInEndless = false;
 
-	if (!AIToSpawn)
+	if (GameTime > MatchDuration)
 	{
-		// Log error if no AI class could be selected (e.g., if TotalWeight is 0).
-		UE_LOG(LogTemp, Warning, TEXT("SpawnLoop failed to select a weighted AI class."));
-		return;
+		bInEndless = true;
+		float TimeInEndless = GameTime - MatchDuration;
+		float MinutesInEndless = TimeInEndless / 60.0f;
+
+		// A. Stat Multiplier (Linear Growth)
+		// Base 1.0 + (Minutes * 0.2) -> Min 1: 1.2x, Min 5: 2.0x
+		if (SpawnConfig)
+		{
+			EndlessMultiplier = 1.0f + (MinutesInEndless * SpawnConfig->EndlessStatMultiplierPerMinute);
+
+			// B. Color Curve (Visuals)
+			if (SpawnConfig->EndlessColorCurve)
+			{
+				// Sample the color from the curve based on minutes
+				EndlessColor = SpawnConfig->EndlessColorCurve->GetLinearColorValue(MinutesInEndless);
+			}
+		}
 	}
 
-	// 4. FIND PLAYER AND SPAWN
-	ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-	if (!PlayerCharacter)
-	{
-		return; // Cannot spawn without a player reference.
-	}
-
-	FVector PlayerLocation = PlayerCharacter->GetActorLocation();
+	ACharacter* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+	if (!Player) return;
 
 	for (int32 i = 0; i < NumToSpawn; ++i)
 	{
-		FVector SpawnLocation = FindSafeSpawnLocation(PlayerCharacter->GetActorLocation(), SpawnRadius);
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		TSubclassOf<APRAIBase> ClassToSpawn = GetEnemyToSpawn(GameTime);
+		if (!ClassToSpawn) continue;
 
-		// @TODO: Add "camera check" (not too close to the screen) and "ground check" logic here.
+		FVector Loc = FindSafeSpawnLocation(Player->GetActorLocation(), SpawnRadius);
 
-		// Spawn the selected AI class
-		GetWorld()->SpawnActor<APRAIBase>(AIToSpawn, SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+		APRAIBase* NewEnemy = GetWorld()->SpawnActorDeferred<APRAIBase>(
+			ClassToSpawn,
+			FTransform(FRotator::ZeroRotator, Loc),
+			nullptr, nullptr,
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn
+		);
+
+		if (NewEnemy)
+		{
+			// APPLY ENDLESS BUFFS BEFORE INITIALIZATION
+			if (bInEndless)
+			{
+				NewEnemy->SetEndlessBuffs(EndlessMultiplier, EndlessColor);
+			}
+			// If regular tint logic exists from WaveConfig, handle priority here.
+			// Endless Color usually overrides everything.
+
+			UGameplayStatics::FinishSpawningActor(NewEnemy, FTransform(FRotator::ZeroRotator, Loc));
+		}
 	}
 }
+

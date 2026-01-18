@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Net/UnrealNetwork.h"
 #include "Datas/PRCharacterDefinition.h"
 #include "PRCharacterBase.generated.h"
 
@@ -29,6 +30,18 @@ public:
 
 	// We override the function from our base class to provide player-specific logic.
 	virtual UPRStatsComponent* GetStatsComponent() const override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
+	/**
+	 * Called when the character takes significant damage/knockback.
+	 * Stops movement and briefly disables input to sell the impact.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void OnKnockbackReceived();
+
 protected:
 	// -- INPUT --
 	// This is the main Input Mapping Context that will be loaded for gameplay.
@@ -57,11 +70,18 @@ protected:
 	TObjectPtr<UInputAction> InteractAction;
 
 	// -- CORE FUNCTIONS --
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	// Called to bind functionality to input
+	virtual void PossessedBy(AController* NewController) override;
+
+	virtual void OnRep_Controller() override;
+
+	virtual void OnRep_PlayerState() override;
+
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION()
+	void OnStatsComponentReady(UPRStatsComponent* ReadyStatsComp);
 
 	// -- INPUT HANDLING FUNCTIONS --
 	/** Called for movement input */
@@ -75,6 +95,10 @@ protected:
 
 	/** Handles interaction input. */
 	void Interact();
+
+	/** [SERVER] The actual implementation of the interaction logic, runs only on the server. */
+	UFUNCTION(Server, Reliable)
+	void Server_Interact();
 
 	// -- INITIALIZATION FUNCTIONS --
 	/** Initializes the character's properties from its assigned CharacterDefinition Data Asset. */
@@ -129,10 +153,22 @@ protected:
 
 	float BaseGravityScale = 1.0f;
 
+	float SpawnTime = 0.0f;
+	// Knockback Functions & Properties
+	void ReEnableInput();
+
+	FTimerHandle KnockbackTimerHandle;
+
+	void SetLastDamageCauser();
 private:
 	// The cached pointer for performance now lives here, where it's needed.
 	UPROPERTY()
 	mutable TObjectPtr<UPRStatsComponent> CachedStatsComponent;
+
+	void InitializeCharacter();
+
+	// The actor that caused us the most damage (Using a weak pointer is safe; if the actor no longer exists, it becomes null)
+	TWeakObjectPtr<AActor> LastDamageCauser;
 };
 
 

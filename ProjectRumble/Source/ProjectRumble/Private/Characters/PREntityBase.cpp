@@ -8,6 +8,7 @@
 #include "PRGameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -15,7 +16,8 @@ APREntityBase::APREntityBase()
 {
 	// Set this character to call Tick() every frame. You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	bReplicates = true;
+	SetReplicateMovement(true); 
 }
 
 UPRStatsComponent* APREntityBase::GetStatsComponent() const
@@ -36,10 +38,20 @@ void APREntityBase::BeginPlay()
 
 float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (!HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CLIENT] TakeDamage blocked for %s - not authority"), *GetName());
+		return 0.f;
+	}
+
 	if (DamageAmount <= 0.f)
 	{
 		return 0.f;
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] %s taking %.1f damage from %s"),
+		*GetName(), DamageAmount, DamageCauser ? *DamageCauser->GetName() : TEXT("Unknown"));
+
 
 	UPRStatsComponent* MyStatsComponent = GetStatsComponent();
 	if (!MyStatsComponent)
@@ -48,9 +60,18 @@ float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 		return Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	}
 
+	const float CurrentHP = MyStatsComponent->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+
+	// If already dead, ignore further damage.
+	if (CurrentHP <= 0.0f)
+	{
+		return 0.0f;
+	}
+
 	// --- 1. EVASION ---
 	if (CheckForEvasion(MyStatsComponent))
 	{
+		UE_LOG(LogTemp, Log, TEXT("[SERVER] %s EVADED the attack!"), *GetName());
 		return 0.f; // Damage is completely negated.
 	}
 
@@ -59,16 +80,15 @@ float APREntityBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	float DamageAfterShields = ProcessShieldDamage(DamageAmount, MyStatsComponent);
 	if (DamageAfterShields <= 0.f)
 	{
+		UE_LOG(LogTemp, Log, TEXT("[SERVER] Shield absorbed all damage for %s"), *GetName());
 		// If shield absorbed all damage, we are done.
 		return 0.f; // Report that 0 damage was taken by health.
 	}
 
 	// --- 3. ARMOR REDUCTION ---
 	const float DamageToApply = CalculateArmorReduction(DamageAmount, MyStatsComponent);
-
 	// Round the damage to the nearest integer.
 	const int32 RoundedDamage = FMath::RoundToInt(DamageToApply);
-
 	// Ensure the rounded damage is at least 1 (We don't want 0 damage unless it was evaded).
 	const int32 FinalHealthDamage = FMath::Max(RoundedDamage, 1);
 
@@ -192,4 +212,9 @@ float APREntityBase::ProcessShieldDamage(float InitialDamage, UPRStatsComponent*
 
 	// Return the damage that was NOT absorbed.
 	return RemainingDamage;
+}
+
+void APREntityBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }

@@ -25,6 +25,7 @@ namespace NativeGameplayTags
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_ProjectileBounce, "Stat.Offense.ProjectileBounce");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_Size, "Stat.Offense.Size");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_Damage_Elites, "Stat.Offense.Damage.Elites");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Offense_PierceCount, "Stat.Offense.PierceCount");
 			
 		}
 		namespace Defense
@@ -80,6 +81,7 @@ namespace NativeGameplayTags
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_BaseKnockback, "Stat.AI.BaseKnockback");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_DetectionRange, "Stat.AI.DetectionRange");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_AttackRange, "Stat.AI.AttackRange");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_AI_AttackDamage, "Stat.AI.AttackDamage");
 		}
 	}
 
@@ -102,12 +104,28 @@ namespace NativeGameplayTags
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Effect_StunDuration, "Stat.Effect.StunDuration");
 	}
 
-	namespace Enemy
+	namespace Enemies
 	{
 		namespace Type
 		{
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Goblin, "Enemies.Type.Goblin");
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Skeleton, "Enemies.Type.Skeleton");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Neuron, "Enemies.Type.Neuron");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_Cactus, "Enemies.Type.Cactus");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Type_VoidWalker, "Enemies.Type.VoidWalker");
+		}
+		namespace Tier
+		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Tier_1, "Enemies.Tier.1");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Tier_2, "Enemies.Tier.2");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Tier_3, "Enemies.Tier.3");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Tier_Endless, "Enemies.Tier.Endless");
+		}
+		namespace Biome
+		{
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Biome_Forest, "Enemies.Biome.Forest");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Biome_Desert, "Enemies.Biome.Desert");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Enemies_Biome_Global, "Enemies.Biome.Global");
 		}
 	}
 
@@ -117,5 +135,32 @@ namespace NativeGameplayTags
 		{
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Destructible_Type_Vase, "Destructible.Type.Vase");
 		}
+	}
+	
+	namespace Tracker
+	{
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_Kills, "Tracker.Main.Combat.Kills");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DamageDealt, "Tracker.Main.Combat.DamageDealt");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DamageTaken, "Tracker.Main.Combat.DamageTaken");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Combat_DiedTo, "Tracker.Main.Combat.DiedTo");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Health_Healing_Regen, "Tracker.Survival.Regen");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Health_Healing_Lifesteal, "Tracker.Survival.Lifesteal");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Survival_Time_TimeAlive, "Tracker.Survival.TimeAlive");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Main_Economy_GoldEarned, "Tracker.Economy.GoldEarned");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Tracker_Combat_Damage_DamageDealt, "Tracker.Combat.DamageDealt");
+	}
+
+	namespace UI_Layers
+	{
+		UE_DEFINE_GAMEPLAY_TAG(TAG_UI_Layer_Game, "UI.Layer.Game");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_UI_Layer_Menu, "UI.Layer.Menu");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_UI_Layer_Modal, "UI.Layer.Modal");
+	}
+
+	namespace ItemTypes
+	{
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Type_Weapon, "Item.Type.Weapon");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Type_Passive, "Item.Type.Passive");
+		
 	}
 }

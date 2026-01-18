@@ -6,11 +6,18 @@
 #include "Characters/PRCharacterBase.h"
 #include "AI/PRAIBase.h"
 #include "Components/AudioComponent.h"
+#include "Components/PRStatsComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+#include "PRGameplayTags.h"
+#include "ProjectRumble/ProjectRumble.h"
 
 APRBaseAttack::APRBaseAttack()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+    bReplicates = true;
+    SetReplicateMovement(true);
 
 	// Setup the default lifespan
 	InitialLifeSpan = AttackStats.LifeDuration; 
@@ -18,6 +25,27 @@ APRBaseAttack::APRBaseAttack()
     AudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComponent"));
     AudioComp->SetupAttachment(RootCollision);
     AudioComp->bAutoActivate = false;
+
+	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
+	// Default Settings(For straight-flying bullets)
+
+	if (ProjectileMovement)
+	{
+		if (AttackStats.ProjectileSpeed > 0.f)
+		{
+			ProjectileMovement->InitialSpeed = AttackStats.ProjectileSpeed;
+			ProjectileMovement->MaxSpeed = AttackStats.ProjectileSpeed;
+			ProjectileMovement->UpdatedComponent = RootCollision;
+			ProjectileMovement->bRotationFollowsVelocity = true;
+			ProjectileMovement->bShouldBounce = false;
+			ProjectileMovement->bSweepCollision = true;
+			ProjectileMovement->ProjectileGravityScale = 0.f;
+
+			// If the bullet is fired at spawn, update its velocity
+			ProjectileMovement->Velocity = ProjectileMovement->Velocity.GetSafeNormal() * AttackStats.ProjectileSpeed;
+		}
+	}
+	
 }
 
 void APRBaseAttack::BeginPlay()
@@ -30,81 +58,259 @@ void APRBaseAttack::BeginPlay()
 
 void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 {
-    if (ImpactSound)
-    {
-        UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
-    }
+    if (!HasAuthority()) return;
+    if (!IsValid(TargetActor) || !IsValid(GetOwner())) return;
 
-    // Ensure all necessary actors are valid.
-    if (!IsValid(TargetActor) || !IsValid(GetOwner()))
-    {
-        return;
-    }
+    // 
+    float FinalDamage = AttackStats.Damage;
+    FDamageCalculationResult DamageResult;
+    DamageResult.FinalDamage = FinalDamage;
 
-    // 1. Get Required Components/Actors
+	FGameplayTag MyTag = FGameplayTag::EmptyTag;
+	if (SourceItemDef)
+	{
+		MyTag = SourceItemDef->ItemIdentityTag;
+	}
 
-    // Owner is the Player Character, which is the actual damage dealer.
-    APRCharacterBase* PlayerCharacter = Cast<APRCharacterBase>(GetOwner());
-    if (!PlayerCharacter)
-    {
-        return;
-    }
 
-    // Get the Stats Component from the Player Character.
-    UPRStatsComponent* AttackerStats = PlayerCharacter->GetStatsComponent();
-    if (!AttackerStats)
-    {
-        return;
-    }
+    AController* InstigatorController = nullptr;
+    AActor* DamageCauser = GetOwner();
+	APawn* MyInstigator = GetInstigator();
 
-    // Get Instigator Controller (The Controller of the Owner/Player).
-    AController* InstigatorController = PlayerCharacter->GetController();
-    AActor* DamageCauser = GetOwner(); // The actual character dealing the damage.
+	// Check if the instigator is still alive
+	if (MyInstigator)
+	{
+		if (APRCharacterBase* MyChar = Cast<APRCharacterBase>(MyInstigator))
+		{
+			if (UPRStatsComponent* Stats = MyChar->GetStatsComponent())
+			{
+				float CurrentHP = Stats->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
 
-    // Get the target as a Base AI to pass to the damage calculator.
-    const APRAIBase* TargetAI = Cast<APRAIBase>(TargetActor);
+				if (CurrentHP <= 0.0f)
+				{
+					Destroy();
+					return;
+				}
+			}
+		}
+	}
 
-    // 2. Calculate Final Damage using the UPRGameplayStatics Helper
-    // We pass the base stats from the AttackStats struct.
-    FDamageCalculationResult DamageResult = UPRGameplayStatics::CalculateFinalDamage(
-        AttackerStats,
-        AttackStats.Damage,           // Base Damage from the struct
-        AttackStats.CritChance,       // Base Crit Chance from the struct
-        AttackStats.CritMultiplier,   // Base Crit Multiplier from the struct
-        TargetAI
-    );
+	// --- (PLAYER) ---
+	if (APRCharacterBase* PlayerOwner = Cast<APRCharacterBase>(GetOwner()))
+	{
+		InstigatorController = PlayerOwner->GetController();
 
-    // 3. Apply Damage
+		if (UPRStatsComponent* PlayerStats = PlayerOwner->GetStatsComponent())
+		{
+			const APRAIBase* TargetAI = Cast<APRAIBase>(TargetActor);
 
-    // Call the central damage application function.
-    UPRGameplayStatics::ApplyRumbleDamage(
-        this, // WorldContextObject (The Projectile Actor itself)
-        TargetActor,
-        AttackStats.Damage, 
-        DamageResult,             
-        InstigatorController,
-        DamageCauser,
-        UDamageType::StaticClass(),
-        GetActorForwardVector(), // Knockback Direction (Can be changed in BP if needed)
-        AttackStats.KnockbackMagnitude,
-        AttackStats.StunChance,
-        AttackStats.StunDuration
-    );
+			DamageResult = UPRGameplayStatics::CalculateFinalDamage(
+				PlayerStats,
+				AttackStats.Damage,
+				AttackStats.CritChance,
+				AttackStats.CritMultiplier,
+				TargetAI
+			);
+			FinalDamage = DamageResult.FinalDamage;
+		}
+	}
+	// --- (AI) ---
+	else if (APRAIBase* AIOwner = Cast<APRAIBase>(GetOwner()))
+	{
+		InstigatorController = AIOwner->GetController();
+		//We need to take damage from tag
+		FinalDamage = AttackStats.Damage;
+		DamageResult.FinalDamage = FinalDamage;
+		DamageResult.bWasCriticalHit = false; // AI Crit atmasýn (veya buraya eklenebilir)
+	}
+
+	// --- Apply Damage ---
+	UPRGameplayStatics::ApplyRumbleDamage(
+		this,
+		TargetActor,
+		FinalDamage,
+		DamageResult,
+		MyTag,
+		InstigatorController,
+		DamageCauser,
+		UDamageType::StaticClass(),
+		GetActorForwardVector(),
+		AttackStats.KnockbackMagnitude,
+		AttackStats.StunChance,
+		AttackStats.StunDuration,
+		ImpactSound
+	);
 }
 
 void APRBaseAttack::OnAttackOverlap_Implementation(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor == GetOwner() || OtherActor == this)
+	// 1. Basic Validations
+	if (!OtherActor || OtherActor == GetOwner() || OtherActor == this) return;
+	if (!HasAuthority()) return;
+
+	// 2. Apply Damage
+	ApplyDamageToTarget(OtherActor);
+}
+
+void APRBaseAttack::HandleOverlap(AActor* OtherActor)
+{
+	// 1. Validations
+	if (!OtherActor || OtherActor == GetOwner() || OtherActor == this) return;
+	if (!HasAuthority()) return;
+
+	if (HitHistory.Contains(OtherActor))
 	{
 		return;
 	}
 
+	// --- TICK RATE LOGIC ---
+	// If TickRate is 0, it fires every frame (Dangerous).
+	// If TickRate > 0, check it.
+	if (AttackStats.TickRate > 0.0f)
+	{
+		double CurrentTime = GetWorld()->GetTimeSeconds();
+
+		// Have we hit this actor before?
+		if (double* LastHitTime = DamageCooldownMap.Find(OtherActor))
+		{
+			// If we did hit it, has enough time passed?
+			if ((CurrentTime - *LastHitTime) < AttackStats.TickRate)
+			{
+				// The cooldown hasn't ended yet, DON'T ATTACK.
+				return;
+			}
+		}
+
+		// Update the list (or add a new one)
+		DamageCooldownMap.Add(OtherActor, CurrentTime);
+	}
+
+	HitHistory.Add(OtherActor);
+
+	// 2. Apply Damage
 	ApplyDamageToTarget(OtherActor);
+
+	// --- 3. BOUNCE LOGIC ---
+	if (AttackStats.ProjectileBounce > 0)
+	{
+		if (TryBounce(OtherActor))
+		{
+			AttackStats.ProjectileBounce--;
+
+			return;
+		}
+	}
+
+	// --- 4. PIERCE LOGIC ---
+
+	// If PierceCount is -1, it means infinite pierce.
+	if (AttackStats.PierceCount == -1)
+	{
+		return;
+	}
+
+	if (AttackStats.PierceCount <= 0)
+	{
+		Destroy();
+	}
+	else
+	{
+		AttackStats.PierceCount--;
+	}
+}
+
+bool APRBaseAttack::TryBounce(AActor* HitActor)
+{
+	// 1. Find Actors in Radius
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+	IgnoreActors.Add(GetOwner());
+
+	IgnoreActors.Append(HitHistory);
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Enemy)); // Only look for Enemies
+
+	TArray<AActor*> OutActors;
+	bool bFound = UKismetSystemLibrary::SphereOverlapActors(
+		this,
+		GetActorLocation(),
+		BounceSearchRadius,
+		ObjectTypes,
+		APRAIBase::StaticClass(), // Only look for Enemies
+		IgnoreActors,
+		OutActors
+	);
+
+	if (!bFound || OutActors.Num() == 0) return false;
+
+	// 2. Find the CLOSEST valid target
+	AActor* ClosestTarget = nullptr;
+	float MinDistSq = FLT_MAX;
+
+	for (AActor* Candidate : OutActors)
+	{
+		if (Candidate && !Candidate->IsPendingKillPending())
+		{
+			// Check if alive (using StatsComponent)
+			bool bIsAlive = true;
+			if (APRAIBase* AI = Cast<APRAIBase>(Candidate))
+			{
+				if (UPRStatsComponent* Stats = AI->GetStatsComponent())
+				{
+					if (Stats->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health) <= 0)
+						bIsAlive = false;
+				}
+			}
+
+			if (bIsAlive)
+			{
+				float DistSq = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+				if (DistSq < MinDistSq)
+				{
+					MinDistSq = DistSq;
+					ClosestTarget = Candidate;
+				}
+			}
+		}
+	}
+
+	// 3. Redirect the Projectile
+	if (ClosestTarget)
+	{
+		FVector Direction = (ClosestTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
+		// Update Velocity
+		if (ProjectileMovement)
+		{
+			float CurrentSpeed = ProjectileMovement->Velocity.Size();
+			
+			// If the current speed is very low, reset to default projectile speed
+			if (CurrentSpeed < 500.f) CurrentSpeed = AttackStats.ProjectileSpeed;
+			if (CurrentSpeed <= 0.f) CurrentSpeed = 1000.f;
+			// Keep the same speed, just change direction
+			ProjectileMovement->Velocity = Direction * CurrentSpeed;
+
+			// Force update rotation
+			SetActorRotation(Direction.Rotation());
+		}
+
+		DrawDebugLine(GetWorld(), GetActorLocation(), ClosestTarget->GetActorLocation(), FColor::Green, false, 1.0f, 0, 2.0f);
+
+		return true; // Bounced!
+	}
+
+	return false; // No valid target found
 }
 
 void APRBaseAttack::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void APRBaseAttack::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 

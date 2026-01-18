@@ -4,6 +4,7 @@
 #include "Datas/PRBaseItem.h"
 #include "Datas/PRItemDefinition.h"
 #include "Engine/World.h"
+#include "Net/UnrealNetwork.h"
 
 UPRBaseItem::UPRBaseItem()
 {
@@ -22,6 +23,13 @@ void UPRBaseItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InOwni
 	UE_LOG(LogTemp, Log, TEXT("Item '%s' initialized at Level %d."), *ItemDefinition->DisplayName.ToString(), CurrentLevel);
 }
 
+void UPRBaseItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UPRBaseItem, CurrentLevel);
+	DOREPLIFETIME(UPRBaseItem, ItemDefinition);
+}
+
 void UPRBaseItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
 {
 	CurrentLevel++;
@@ -38,4 +46,8 @@ UWorld* UPRBaseItem::GetWorld() const
 		return OwningActor->GetWorld();
 	}
 	return nullptr;
+}
+
+void UPRBaseItem::Deactivate()
+{
 }

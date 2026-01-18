@@ -5,10 +5,20 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Datas/Items/PRWeaponItem.h"
+#include "AssetRegistry/AssetRegistryModule.h" 
+#include "PRTypes.h" 
 #include "PRGameplayStatics.generated.h"
 
 class APRAIBase;
 class UPRStatsComponent;
+class USoundBase;
+
+UENUM(BlueprintType)
+enum class ERowResult : uint8
+{
+	Found,
+	NotFound
+};
 
 UCLASS()
 class PROJECTRUMBLE_API UPRGameplayStatics : public UBlueprintFunctionLibrary
@@ -56,13 +66,15 @@ public:
 		AActor* DamagedActor,
 		float BaseDamage,
 		const FDamageCalculationResult& DamageResult,
+		FGameplayTag DamageSourceTag,
 		AController* EventInstigator,
 		AActor* DamageCauser,
 		TSubclassOf<class UDamageType> DamageTypeClass,
 		const FVector& KnockbackDirection,
 		float KnockbackMagnitude,
 		float StunChance,
-		float StunDuration
+		float StunDuration,
+		USoundBase* HitSound = nullptr
 	);
 
 	/**
@@ -83,4 +95,43 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	static void SpawnDamageNumber(UObject* WorldContextObject, float Damage, bool bIsCrit, AActor* TargetActor);
+
+	/**
+	* Searches for a tag in the Data Table and returns the Row data directly.
+	* @param DataTable The table to be scanned.
+	* @param TagToFind The tag to be searched for.
+	* @param OutRow (Wildcard) The found row data is copied here.
+	*/
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = "Rumble|Data", meta = (CustomStructureParam = "OutRow", ExpandEnumAsExecs = "OutResult"))
+	static void GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, int32& OutRow, ERowResult& OutResult);
+
+	// We are defining the “exec” function required for CustomThunk.
+	DECLARE_FUNCTION(execGetDataTableRowByTag);
+
+	/**
+	* Checks if a specific Key is mapped to a specific Input Action for the given Player.
+	* Useful for UI to detect "Action" presses dynamically.
+	*/
+	UFUNCTION(BlueprintPure, Category = "Rumble|Input", meta = (WorldContext = "WorldContextObject"))
+	static bool IsKeyMappedToAction(UObject* WorldContextObject, FKey Key, const UInputAction* Action);
+
+	/**
+    * Checks if the game viewport currently has operating system focus.
+    * Useful for detecting Alt-Tab.
+    */
+	UFUNCTION(BlueprintPure, Category = "Rumble|System")
+	static bool IsGameWindowFocused();
+
+	/**
+	* Finds all Data Assets derived from a specific class in the project.
+	* Example: Get all UPRPassiveItemDefinition instances.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Editor Tools")
+	static TArray<FAssetData> FindAllAssetsOfClass(UClass* BaseClass);
+
+	/**
+	 * Editor Only: Adds a new row to the Loot Table for the given item.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Editor Tools")
+	static void AddMissingItemToLootTable(UDataTable* DataTable, UPRItemDefinition* ItemDef, float DefaultWeight = 1.0f);
 };

@@ -148,10 +148,16 @@ struct FWeaponStats
     int32 BaseProjectileBounce = 1;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    int32 BasePierceCount = 1;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     float BaseStunChance = 0.0f; // 0.0 to 1.0
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     float BaseStunDuration = 0.5f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float BaseTickRate = 0.0f;
 };
 
 USTRUCT(BlueprintType)
@@ -166,6 +172,7 @@ struct FDamageCalculationResult
     bool bWasCriticalHit = false;
 };
 
+// General Loot Accepts Everything
 USTRUCT(BlueprintType)
 struct FLootTableRow : public FTableRowBase
 {
@@ -181,6 +188,32 @@ public:
     float Weight = 1.0f;
 
     // (Optional) Minimum/Maximum quantity if we want stacks of items later.
+};
+
+// 2. Passive Loot
+USTRUCT(BlueprintType)
+struct FPassiveLootTableRow : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    TObjectPtr<class UPRPassiveItemDefinition> ItemDefinition; 
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    float Weight = 1.0f;
+};
+
+// 3. Weapon Loot (Sadece Silahlarý gösterir - Yeni)
+USTRUCT(BlueprintType)
+struct FWeaponLootTableRow : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    TObjectPtr<class UPRWeaponDefinition> ItemDefinition; 
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+    float Weight = 1.0f;
 };
 
 // Defines a single type of loot that can be dropped (e.g., 15 XP).
@@ -225,10 +258,20 @@ struct PROJECTRUMBLE_API FPRWeaponAttackStats
 
     // Constructor with defaults to ensure valid values
     FPRWeaponAttackStats()
-        : Damage(0.0f), CritChance(0.0f), CritMultiplier(1.0f), SizeMultiplier(1.0f), KnockbackMagnitude(0.0f),
-        StunChance(0.0f), StunDuration(0.0f), LifeDuration(0.0f), ProjectileCount(1),
-        ProjectileSpeed(0.0f), ProjectileBounce(0), TickRate(0.0f) {
-    }
+        : Damage(0.0f)
+        , CritChance(0.0f)
+        , CritMultiplier(1.0f)
+        , KnockbackMagnitude(0.0f) 
+        , StunChance(0.0f)
+        , StunDuration(0.0f)
+        , SizeMultiplier(1.0f)     
+        , LifeDuration(0.0f)
+        , ProjectileCount(1)
+        , ProjectileSpeed(0.0f)
+        , ProjectileBounce(0)
+        , TickRate(1.0f)
+		, PierceCount(1)
+    { }
 
     // 1. Core Combat Properties (Used by most/all attacks)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Combat")
@@ -276,6 +319,10 @@ struct PROJECTRUMBLE_API FPRWeaponAttackStats
     // For DOT/Aura attacks, the frequency of damage application (in seconds).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|AuraDOT")
     float TickRate;
+
+	// How many enemies the projectile can pierce through.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rumble|Projectile")
+    int32 PierceCount;
 };
 
 // --- FOR AI ---
@@ -307,4 +354,25 @@ public:
         UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Stats")
     TArray<FStatDefinition> BaseStats;
 
+};
+// ---
+
+USTRUCT(BlueprintType)
+struct FTrackerUIConfig : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FGameplayTag StatTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    FText DisplayName;
+
+    // Seconds? (If its true 120 -> 02:00 )
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    bool bIsTime = false;
+
+    // If we want special sorting we can change its value
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    int32 SortPriority = 0;
 };

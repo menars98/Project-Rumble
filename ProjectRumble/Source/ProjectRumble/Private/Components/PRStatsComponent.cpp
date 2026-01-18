@@ -5,6 +5,8 @@
 #include "PRGameplayTags.h"
 #include "GameModes/PRGameMode.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/PRPlayerState.h"
+#include "Components/PRSessionTrackerComponent.h"
 
 UPRStatsComponent::UPRStatsComponent()
 {
@@ -12,7 +14,94 @@ UPRStatsComponent::UPRStatsComponent()
 	// We turned Tick off because this component doesn't need to do anything every single frame.
 	// This is a good performance optimization.
 	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
 
+}
+
+void UPRStatsComponent::OnRep_ReplicatedStats()
+{
+	// Update the local cache from the replicated array
+	SyncCacheFromReplicatedData();
+
+	// Update UI
+	BroadcastHealth();
+	BroadcastShield();
+	BroadcastXP();
+
+	UE_LOG(LogTemp, Log, TEXT("[CLIENT] Stats replicated (%d stats received)"), ReplicatedStats.Num());
+}
+
+void UPRStatsComponent::SyncCacheFromReplicatedData()
+{
+	const FString OwnerName = GetOwner() ? GetOwner()->GetName() : TEXT("Unknown");
+	const FString NetRole = (GetOwner() && GetOwner()->HasAuthority()) ? TEXT("SERVER") : TEXT("CLIENT");
+
+	for (const FReplicatedStatEntry& Entry : ReplicatedStats)
+	{
+		// 1. Did this stat exist before, and what was its value?
+		float OldValue = 0.0f;
+		bool bIsNewOrChanged = false;
+		//	Find the stat in the cache
+		if (float* CachedValPtr = CurrentStatsCache.Find(Entry.StatTag))
+		{
+			OldValue = *CachedValPtr;
+
+			if (!FMath::IsNearlyEqual(OldValue, Entry.Value))
+			{
+				bIsNewOrChanged = true;
+				*CachedValPtr = Entry.Value;
+			}
+		}
+		else
+		{
+			// New stat, add it to the cache
+			bIsNewOrChanged = true;
+			CurrentStatsCache.Add(Entry.StatTag, Entry.Value);
+		}
+
+		// 2. If its new or changed, broadcast the appropriate delegates
+		if (bIsNewOrChanged)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s] Stat CHANGED on %s: %s | Old: %f -> New: %f"),
+				*NetRole,
+				*OwnerName,
+				*Entry.StatTag.ToString(),
+				OldValue,
+				Entry.Value);
+				BroadcastSingleStatChange(Entry.StatTag, Entry.Value);
+		}
+	}
+
+	// If we delete stats on the server side, we would need to handle that here as well.
+}
+
+void UPRStatsComponent::SyncReplicatedDataFromCache()
+{
+	//Copy from Map to Array(on the server side)
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	ReplicatedStats.Empty();
+	for (const TPair<FGameplayTag, float>& Pair : CurrentStatsCache)
+	{
+		ReplicatedStats.Add(FReplicatedStatEntry(Pair.Key, Pair.Value));
+	}
+}
+
+TMap<FGameplayTag, float> UPRStatsComponent::GetCurrentStats() const
+{
+	return CurrentStatsCache;
+}
+
+void UPRStatsComponent::ForceUpdateUI()
+{
+	// Simply call the broadcast functions to update any UI or systems listening to these delegates.
+	BroadcastHealth();
+	BroadcastShield();
+	BroadcastXP();
+	BroadcastResources();
 }
 
 void UPRStatsComponent::BeginPlay()
@@ -58,21 +147,31 @@ void UPRStatsComponent::InitializeStats()
 
 		if (StatRow)
 		{
-			// Use the GameplayTag from the data row as the key for our map.
-			CurrentStats.Add(StatRow->StatID, StatRow->DefaultValue);
+			// Add the stat ID and its default value to the CurrentStats map 
+			CurrentStatsCache.Add(StatRow->StatID, StatRow->DefaultValue);
 
 			UE_LOG(LogTemp, Log, TEXT("Initialized Stat: %s with value: %f"), *StatRow->StatID.ToString(), StatRow->DefaultValue);
 		}
 	}
 	
-	BroadcastHealth();
-	BroadcastShield();
+	// If it's a server, update the replicated array as well.
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		SyncReplicatedDataFromCache();
+	}
+
+	const float CurrentHealth = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+	const float MaxHealth = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP);
+
+	UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeStats complete | Health: %.0f/%.0f | Stats Count: %d"),GetOwner()->HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT"),
+		CurrentHealth, MaxHealth, CurrentStatsCache.Num());
+	ForceUpdateUI();
 }
 
 void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStatsArray, float DifficultyMultiplier)
 {
 	// 1. Clear any existing stats.
-	CurrentStats.Empty();
+	CurrentStatsCache.Empty();
 
 	// Clamp the multiplier for safety.
 	if (DifficultyMultiplier < 1.0f) { DifficultyMultiplier = 1.0f; }
@@ -92,15 +191,22 @@ void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStats
 		// Example: 39.2f becomes 39.0f, 39.8f becomes 40.0f.
 		float FinalValue = FMath::RoundToFloat(ScaledValue);
 
+		UE_LOG(LogTemp, Warning, TEXT("AI Init: Adding Stat %s with Value %f"), *StatDef.StatID.ToString(), FinalValue);
 		// Add the stat tag and the final calculated value to the runtime map.
-		CurrentStats.Add(StatDef.StatID, FinalValue);
+		CurrentStatsCache.Add(StatDef.StatID, FinalValue);
 
+		UpdateReplicatedStat(StatDef.StatID, FinalValue);
 		// Check for MaxHealth to set CurrentHealth.
 		if (StatDef.StatID == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP)
 		{
 			LoadedMaxHealth = FinalValue;
 			bMaxHealthFound = true;
 		}
+	}
+
+	if (GetOwner()->HasAuthority())
+	{
+		SyncReplicatedDataFromCache(); 
 	}
 
 	// 3. Set Current Health to Max Health.
@@ -116,8 +222,8 @@ void UPRStatsComponent::InitializeForAI(const TArray<FStatDefinition>& BaseStats
 
 float UPRStatsComponent::GetStatValue(FGameplayTag StatTag) const
 {
-	// Find() returns a pointer to the value if the key exists in the map.
-	const float* FoundValue = CurrentStats.Find(StatTag);
+	// Use the cache for fast lookups.
+	const float* FoundValue = CurrentStatsCache.Find(StatTag);
 
 	if (FoundValue)
 	{
@@ -131,33 +237,27 @@ float UPRStatsComponent::GetStatValue(FGameplayTag StatTag) const
 
 void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 {
+	// Only make changes on the server
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CLIENT] Attempted to SetStatValue - ignored (must be called on server)"));
+		return;
+	}
+
 	// Find() here returns a pointer that we can change.
-	float* FoundValue = CurrentStats.Find(StatTag);
+	float* FoundValue = CurrentStatsCache.Find(StatTag);
 
 	if (FoundValue)
 	{
 		*FoundValue = NewValue;
 
+		// Update the replicated array to reflect the change.
+		UpdateReplicatedStat(StatTag, NewValue);
+
 		// Broadcast that a generic stat has changed
 		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
 
-		// Check if the changed stat is a "Resource" and broadcast the specific event.
-		if (StatTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Stat.Resource"))))
-		{
-			// Convert the float value to an integer for the delegate.
-			const int32 NewAmount = FMath::RoundToInt(NewValue);
-			OnResourceChangedDelegate.Broadcast(StatTag, NewAmount);
-		}
-
-		// If the stat that changed is relevant to the shield, broadcast the shield delegate.
-		if (StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield || StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield)
-		{
-			BroadcastShield();
-		}
-		if (StatTag == NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty)
-		{
-			OnDifficultyChangedDelegate.Broadcast(NewValue);
-		}
+		BroadcastSingleStatChange(StatTag, NewValue);
 	}
 	else
 	{
@@ -209,15 +309,20 @@ void UPRStatsComponent::InitializeWithDataTable(UDataTable* DataTableToUse)
 		{
 			// The key is now StatRow->StatID, which is an FGameplayTag.
 			// The old version used RowName as the key.
-			CurrentStats.Add(StatRow->StatID, StatRow->DefaultValue);
+			CurrentStatsCache.Add(StatRow->StatID, StatRow->DefaultValue);
 		}
 	}
 
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		SyncReplicatedDataFromCache();
+	}
 	BroadcastHealth();
 }
 
 void UPRStatsComponent::Die()
 {
+	ShutdownStats();
 	// Broadcast the death event.
 	// The owner of this component (e.g., the character) should listen to this and handle its own death logic
 	// (playing animations, enabling ragdoll, etc.).
@@ -226,19 +331,49 @@ void UPRStatsComponent::Die()
 	UE_LOG(LogTemp, Log, TEXT("%s has died."), *GetOwner()->GetName());
 }
 
+void UPRStatsComponent::UpdateReplicatedStat(FGameplayTag StatTag, float NewValue)
+{
+	// Only run on server
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	// 1. Try to find the existing stat in the array and update it.
+	for (FReplicatedStatEntry& Entry : ReplicatedStats)
+	{
+		if (Entry.StatTag == StatTag)
+		{
+			// Found it! Update value and stop.
+			// Since we modify the value inside the array, Unreal's replication system 
+			// will detect ONLY this change and send a small packet.
+			Entry.Value = NewValue;
+			return;
+		}
+	}
+
+	// 2. If we are here, the stat doesn't exist in the array yet. Add it.
+	ReplicatedStats.Add(FReplicatedStatEntry(StatTag, NewValue));
+}
+
 void UPRStatsComponent::BroadcastHealth()
 {
-	// Ensure the delegate is bound before broadcasting.
+	const FGameplayTag HealthTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health.GetTag();
+	const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP.GetTag();
+
+	const float CurrentHealth = GetStatValue(HealthTag);
+	const float MaxHealth = GetStatValue(MaxHPTag);
+
 	if (OnHealthChangedDelegate.IsBound())
 	{
-		// Request the tags once for clarity. In a real project, you might store these in a central header.
-		const FGameplayTag HealthTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health.GetTag();
-		const FGameplayTag MaxHPTag = NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP.GetTag();
-
-		const float CurrentHealth = GetStatValue(HealthTag);
-		const float MaxHealth = GetStatValue(MaxHPTag);
+		UE_LOG(LogTemp, Warning, TEXT("Broadcasting Health Update: %.1f / %.1f (Listeners Bound)"), CurrentHealth, MaxHealth);
 		OnHealthChangedDelegate.Broadcast(CurrentHealth, MaxHealth);
 	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("BroadcastHealth called but NO LISTENERS BOUND! HP: %.1f / %.1f"), CurrentHealth, MaxHealth);
+	}
+
 }
 
 void UPRStatsComponent::BroadcastShield()
@@ -249,6 +384,81 @@ void UPRStatsComponent::BroadcastShield()
 		const float CurrentShield = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield);
 		const float MaxShield = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield);
 		OnShieldChangedDelegate.Broadcast(CurrentShield, MaxShield);
+	}
+}
+
+void UPRStatsComponent::BroadcastXP()
+{
+	if(OnXPChangedDelegate.IsBound())
+	{
+		const float CurrentXP = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_XP);
+		const float MaxXP = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxXP);
+		OnXPChangedDelegate.Broadcast(CurrentXP, MaxXP);
+	}
+}
+
+void UPRStatsComponent::BroadcastResources()
+{
+	if (!OnResourceChangedDelegate.IsBound())
+	{
+		return;
+	}
+
+	// Define the parent tag for resources
+	const FGameplayTag ResourceParentTag = FGameplayTag::RequestGameplayTag(FName("Stat.Resource"));
+
+	for (const TPair<FGameplayTag, float>& Pair : CurrentStatsCache)
+	{
+		// Check if the stat tag matches the Resource parent tag
+		if (Pair.Key.MatchesTag(ResourceParentTag))
+		{
+			int32 ResourceAmount = FMath::RoundToInt(Pair.Value);
+
+			OnResourceChangedDelegate.Broadcast(Pair.Key, ResourceAmount);
+		}
+	}
+}
+
+void UPRStatsComponent::BroadcastSingleStatChange(const FGameplayTag& StatTag, float NewValue)
+{
+	// 1. Generic Stat Change
+	if (OnStatChangedDelegate.IsBound())
+	{
+		OnStatChangedDelegate.Broadcast(StatTag, NewValue);
+	}
+
+	// 2. Resource Control
+	if (StatTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Stat.Resource"))))
+	{
+		if (OnResourceChangedDelegate.IsBound())
+		{
+			OnResourceChangedDelegate.Broadcast(StatTag, FMath::RoundToInt(NewValue));
+		}
+	}
+
+	// 3. Difficulty Control
+	if (StatTag == NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty)
+	{
+		if (OnDifficultyChangedDelegate.IsBound())
+		{
+			OnDifficultyChangedDelegate.Broadcast(NewValue);
+		}
+	}
+
+	// 4. Health Control 
+	if (StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health ||
+		StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Health/MaxHP Change Detected! Calling BroadcastHealth..."));
+
+		BroadcastHealth();
+	}
+
+	// 5. Shield Control
+	if (StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield ||
+		StatTag == NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxShield)
+	{
+		BroadcastShield();
 	}
 }
 
@@ -292,6 +502,19 @@ void UPRStatsComponent::AddXP(float XPAmount)
 
 	// Broadcast the XP change
 	OnXPChangedDelegate.Broadcast(CurrentXP, MaxXP);
+}
+
+void UPRStatsComponent::ShutdownStats()
+{
+	// Clear all timers related to stats
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(HealthRegenTimerHandle);
+		World->GetTimerManager().ClearTimer(ShieldRegenDelayTimerHandle);
+		World->GetTimerManager().ClearTimer(ShieldRegenTickTimerHandle);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Stats Component Shutdown for %s"), *GetOwner()->GetName());
 }
 
 void UPRStatsComponent::Heal(float HealAmount)
@@ -343,8 +566,19 @@ void UPRStatsComponent::ProcessHealthRegen()
 
 	if (NewHealth > CurrentHealth) // Only update if there was an actual change
 	{
+		float AmountHealed = NewHealth - CurrentHealth;
+
 		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health, NewHealth);
 		BroadcastHealth(); // Notify the UI
+
+		if (APRPlayerState* PS = Cast<APRPlayerState>(GetOwner())) // Owner PlayerState ise (Veya karakterden PS'ye ulaþ)
+		{
+			// Not: StatsComponent PlayerState üzerinde duruyor olabilir, direkt Owner'a cast et.
+			if (PS->TrackerComponent)
+			{
+				PS->TrackerComponent->AddStat(NativeGameplayTags::Tracker::TAG_Tracker_Survival_Health_Healing_Regen, AmountHealed);
+			}
+		}
 	}
 }
 
@@ -406,4 +640,29 @@ void UPRStatsComponent::ProcessShieldRegenTick()
 	{
 		SetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Shield, NewShield);
 	}
+}
+
+void UPRStatsComponent::RefreshCurrentStats()
+{
+	if (OnStatChangedDelegate.IsBound())
+	{
+		for (const TPair<FGameplayTag, float>& Pair : CurrentStatsCache)
+		{
+			OnStatChangedDelegate.Broadcast(Pair.Key, Pair.Value);
+		}
+	}
+
+	BroadcastHealth();
+	BroadcastShield();
+	BroadcastXP();
+	BroadcastResources();
+
+	UE_LOG(LogTemp, Log, TEXT("Refreshed all stats for %s. Processed %d entries."), *GetOwner()->GetName(), CurrentStatsCache.Num());
+}
+
+void UPRStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UPRStatsComponent, ReplicatedStats);
 }

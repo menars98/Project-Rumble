@@ -10,6 +10,8 @@
 class UAudioComponent;
 class USoundBase;
 class USphereComponent;
+class UProjectileMovementComponent;
+class UPRItemDefinition;
 
 UCLASS()
 class PROJECTRUMBLE_API APRBaseAttack : public AActor
@@ -22,8 +24,9 @@ public:
 
 	// --- COMPONENTS ---
 
-	// Root Component olarak kullanýlacak Sphere Collision. 
-	// Diðer Projectile'larda (Axe, Arrow) deðiþtirilebilir.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USphereComponent> RootCollision;
 
@@ -39,6 +42,13 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack|Stats", meta = (ExposeOnSpawn = "true"))
 	FPRWeaponAttackStats AttackStats;
+
+	/**
+	* The definition of the item (Weapon) that spawned this attack.
+	* Used to retrieve the ItemIdentityTag for stat tracking.
+	*/
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Rumble|Stats", meta = (ExposeOnSpawn = "true"))
+	TObjectPtr<UPRItemDefinition> SourceItemDef;
 
 	// --- AUDIO PROPERTIES ---
 
@@ -70,8 +80,28 @@ protected:
 	void OnAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	virtual void OnAttackOverlap_Implementation(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	UFUNCTION(BlueprintCallable, Category = "Rumble|Combat")
+	void HandleOverlap(AActor* OtherActor);
+
+	/**
+	 * Attempts to find a new target nearby and redirect the projectile.
+	 * @param HitActor The actor we just hit (to ignore).
+	 * @return True if a valid bounce target was found.
+	 */
+	bool TryBounce(AActor* HitActor);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Combat")
+	float BounceSearchRadius = 1000.0f;
+
+	UPROPERTY()
+	TArray<AActor*> HitHistory;
+
+	UPROPERTY()
+	TMap<AActor*, double> DamageCooldownMap;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

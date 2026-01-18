@@ -27,6 +27,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Rumble | Combat")
 	EFaction GetFaction() const { return Faction; }
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

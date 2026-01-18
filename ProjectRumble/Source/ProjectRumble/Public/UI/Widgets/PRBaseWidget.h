@@ -3,13 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "CommonUserWidget.h"
 #include "PRBaseWidget.generated.h"
 
 class USoundBase;
 
+/**
+ * Base class for non-interactive widgets (HUD elements, Damage Numbers).
+ */
 UCLASS()
-class PROJECTRUMBLE_API UPRBaseWidget : public UUserWidget
+class PROJECTRUMBLE_API UPRBaseWidget : public UCommonUserWidget
 {
 	GENERATED_BODY()
 	

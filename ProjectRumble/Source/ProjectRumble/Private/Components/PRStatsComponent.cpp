@@ -393,7 +393,12 @@ void UPRStatsComponent::BroadcastXP()
 	{
 		const float CurrentXP = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_XP);
 		const float MaxXP = GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_MaxXP);
+		UE_LOG(LogTemp, Warning, TEXT("STATS: Broadcasting XP Change. Current: %f, Max: %f"), CurrentXP, MaxXP);
 		OnXPChangedDelegate.Broadcast(CurrentXP, MaxXP);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("STATS: XP Changed but NO ONE is listening! (Delegate not bound)"));
 	}
 }
 
@@ -501,7 +506,7 @@ void UPRStatsComponent::AddXP(float XPAmount)
 	SetStatValue(XPTag, CurrentXP);
 
 	// Broadcast the XP change
-	OnXPChangedDelegate.Broadcast(CurrentXP, MaxXP);
+	BroadcastXP();
 }
 
 void UPRStatsComponent::ShutdownStats()

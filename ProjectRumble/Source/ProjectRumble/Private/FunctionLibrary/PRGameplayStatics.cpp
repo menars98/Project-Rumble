@@ -3,6 +3,7 @@
 
 #include "FunctionLibrary/PRGameplayStatics.h"
 #include "Components/PRStatsComponent.h"
+#include "Characters/PREntityBase.h" 
 #include "AI/PRAIBase.h"
 #include "AI/PRAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
@@ -18,6 +19,7 @@
 #include "GameplayTagContainer.h"
 #include <EnhancedInputSubsystems.h>
 #include "AssetRegistry/AssetRegistryModule.h"
+#include <ProjectRumble/ProjectRumble.h>
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -198,6 +200,194 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 	return ActualDamage;
 }
 
+void UPRGameplayStatics::ApplyRadialRumbleDamage(UObject* WorldContextObject, AActor* Attacker, FVector Origin, float BaseRadius, float BaseDamage, float CritChance, float CritMultiplier, float KnockbackStrength, FGameplayTag DamageSourceTag, bool bDrawDebug)
+{
+	if (!WorldContextObject || !Attacker) return;
+
+	// --- 1. SIZE SCALING (Yarýçap Hesabý) ---
+	// Saldýrganýn "Size" statýný al (Default 1.0 gelir)
+	// Stat.Offense.Size tagini kullandýðýný varsayýyoruz.
+	float SizeMult = 1.0f;
+
+	// Eðer saldýran oyuncuysa statlarýna bak
+	float PlayerSizeBonus = GetActorStatValue(Attacker, NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Size);
+	if (PlayerSizeBonus > 0.0f)
+	{
+		// Tag genelde additive (0.5 gibi) tutuluyorsa: 1.0 + Bonus
+		// Eðer direkt çarpan tutuluyorsa (1.5 gibi): Bonus
+		// Senin sisteminde genelde 1.0 taban + bonus þeklinde gidiyorduk:
+		SizeMult += PlayerSizeBonus;
+	}
+
+	float FinalRadius = BaseRadius * SizeMult;
+
+	// --- 2. SPHERE OVERLAP ---
+	TArray<AActor*> IgnoredActors;
+	IgnoredActors.Add(Attacker); // Kendine vurma
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Enemy)); // Define ettiðimiz kanal
+
+	TArray<AActor*> OutActors;
+	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
+		WorldContextObject,
+		Origin,
+		FinalRadius,
+		ObjectTypes,
+		APREntityBase::StaticClass(), // Only EntityBase (Living Things)
+		IgnoredActors,
+		OutActors
+	);
+
+	if (bDrawDebug)
+	{
+		DrawDebugSphere(WorldContextObject->GetWorld(), Origin, FinalRadius, 12, FColor::Red, false, 1.0f);
+	}
+
+	if (!bHit) return;
+
+	// --- 3. APPLY DAMAGE LOOP ---
+	// Retrieve the Statistics Component once (Performance)
+	UPRStatsComponent* AttackerStats = nullptr;
+	if (APREntityBase* Entity = Cast<APREntityBase>(Attacker))
+	{
+		AttackerStats = Entity->GetStatsComponent();
+	}
+
+	AController* InstigatorCtrl = Attacker->GetInstigatorController();
+
+	for (AActor* Victim : OutActors)
+	{
+		if (!Victim || !AttackerStats) continue;
+
+		//@TODO:
+		// Faction Control (If Friendly Fire is Off)
+		// if (IsAlly(Attacker, Victim)) continue;
+
+		// Calculate Damage (Crit, Elites, etc. are calculated here)
+		const APRAIBase* AIVictim = Cast<APRAIBase>(Victim);
+
+		FDamageCalculationResult DmgResult = CalculateFinalDamage(
+			AttackerStats,
+			BaseDamage,
+			CritChance,
+			CritMultiplier,
+			AIVictim
+		);
+
+		// Knockback Direction (Outward from the center)
+		FVector KnockbackDir = (Victim->GetActorLocation() - Origin).GetSafeNormal();
+
+		// Apply Damage
+		ApplyRumbleDamage(
+			WorldContextObject,
+			Victim,
+			DmgResult.FinalDamage,
+			DmgResult,
+			DamageSourceTag, // <-- ÖNEMLÝ: Tracker için
+			InstigatorCtrl,
+			Attacker,
+			UDamageType::StaticClass(),
+			KnockbackDir,
+			KnockbackStrength,
+			0.0f, 0.0f, // Stun (Parametre olarak eklenebilir) // 
+			nullptr //HitSound(Parametre olarak eklenebilir)
+		);
+	}
+}
+
+AActor* UPRGameplayStatics::ApplyRandomRumbleDamage(UObject* WorldContextObject, AActor* Attacker, FVector Origin, float BaseRadius, float BaseDamage, int32 NumTargets, FGameplayTag DamageSourceTag)
+{
+	if (!WorldContextObject || !Attacker) return nullptr;
+
+	// 1. Size Scaling
+	float SizeMult = 1.0f;
+	float PlayerSizeBonus = GetActorStatValue(Attacker, NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Size);
+	if (PlayerSizeBonus > 0.0f) SizeMult += PlayerSizeBonus;
+
+	float FinalRadius = BaseRadius * SizeMult;
+
+	// 2. Overlap
+	TArray<AActor*> IgnoredActors;
+	IgnoredActors.Add(Attacker);
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Enemy));
+
+	TArray<AActor*> OutActors;
+	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
+		WorldContextObject,
+		Origin,
+		FinalRadius,
+		ObjectTypes,
+		APREntityBase::StaticClass(),
+		IgnoredActors,
+		OutActors
+	);
+
+	if (!bHit || OutActors.Num() == 0) return nullptr;
+
+	// --- 3. RANDOM SELECTION ---
+
+	AActor* LastVictim = nullptr;
+	AController* InstigatorCtrl = Attacker->GetInstigatorController();
+	UPRStatsComponent* AttackerStats = nullptr;
+
+	if (APREntityBase* Entity = Cast<APREntityBase>(Attacker))
+	{
+		AttackerStats = Entity->GetStatsComponent();
+	}
+
+	// Shuffle the array (Fisher-Yates)
+	if (OutActors.Num() > 1)
+	{
+		int32 LastIndex = OutActors.Num() - 1;
+		for (int32 i = 0; i <= LastIndex; ++i)
+		{
+			int32 Index = FMath::RandRange(i, LastIndex);
+			if (i != Index) OutActors.Swap(i, Index);
+		}
+	}
+
+	// Then take the first N targets
+	int32 LoopCount = FMath::Min(NumTargets, OutActors.Num());
+
+	for (int32 i = 0; i < LoopCount; ++i)
+	{
+		AActor* Victim = OutActors[i];
+		if (!Victim) continue;
+
+		// Calculate Damage
+		const APRAIBase* AIVictim = Cast<APRAIBase>(Victim);
+
+		FDamageCalculationResult DmgResult = CalculateFinalDamage(
+			AttackerStats,
+			BaseDamage,
+			0.0f, 1.0f, // No crits for random damage
+			AIVictim
+		);
+
+		ApplyRumbleDamage(
+			WorldContextObject,
+			Victim,
+			DmgResult.FinalDamage,
+			DmgResult,
+			DamageSourceTag,
+			InstigatorCtrl,
+			Attacker,
+			UDamageType::StaticClass(),
+			FVector::ZeroVector, // No knockback
+			0.0f,
+			0.0f, 0.0f,
+			nullptr
+		);
+
+		LastVictim = Victim;
+	}
+
+	return LastVictim; // Vurduðu son adamý döndürür (VFX için)
+}
+
 TArray<AActor*> UPRGameplayStatics::SortActorsByDistance(const FVector& TargetLocation, const TArray<AActor*>& ActorsToSort)
 {
 	TArray<AActor*> SortedActors = ActorsToSort;
@@ -330,6 +520,18 @@ void UPRGameplayStatics::AddMissingItemToLootTable(UDataTable* DataTable, UPRIte
 
 	UE_LOG(LogTemp, Log, TEXT("Added %s to Loot Table."), *RowName.ToString());
 #endif
+}
+
+float UPRGameplayStatics::GetActorStatValue(AActor* Actor, FGameplayTag StatTag)
+{
+	if (APREntityBase* Entity = Cast<APREntityBase>(Actor))
+	{
+		if (UPRStatsComponent* Stats = Entity->GetStatsComponent())
+		{
+			return Stats->GetStatValue(StatTag);
+		}
+	}
+	return 0.0f;
 }
 
 void Generic_GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, void* OutRowPtr, FProperty* OutRowProp, ERowResult& OutResult)

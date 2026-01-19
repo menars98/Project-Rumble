@@ -121,7 +121,7 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 		//We need to take damage from tag
 		FinalDamage = AttackStats.Damage;
 		DamageResult.FinalDamage = FinalDamage;
-		DamageResult.bWasCriticalHit = false; // AI Crit atmasýn (veya buraya eklenebilir)
+		DamageResult.bWasCriticalHit = false; // Don't use AI Crit (or it can be added here)
 	}
 
 	// --- Apply Damage ---

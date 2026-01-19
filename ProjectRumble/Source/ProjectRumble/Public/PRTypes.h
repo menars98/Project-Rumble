@@ -161,6 +161,28 @@ struct FWeaponStats
 };
 
 USTRUCT(BlueprintType)
+struct FPassiveAbilityStats
+{
+    GENERATED_BODY()
+
+    // Ne sýklýkla tetiklenecek? (Örn: 2.0 sn)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float Cooldown = 0.0f;
+
+    // Ne kadar vuracak? (Örn: 10)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float Damage = 0.0f;
+
+    // Ne kadar sürecek? (Örn: Puddle 5 sn kalsýn)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float Duration = 0.0f;
+
+    // Etki alaný?
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    float Range = 0.0f;
+};
+
+USTRUCT(BlueprintType)
 struct FDamageCalculationResult
 {
     GENERATED_BODY()

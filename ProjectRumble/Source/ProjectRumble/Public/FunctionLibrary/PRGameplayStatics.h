@@ -78,6 +78,56 @@ public:
 	);
 
 	/**
+	* Performs a sphere overlap, scales radius by attacker's Size stat,
+	* calculates damage (crit etc.), and applies it to all found enemies.
+	* @param WorldContextObject The context object for world access.
+	* @param Attacker The actor dealing the damage (Player/AI).
+	* @param Origin The center point of the explosion.
+	* @param BaseRadius The base radius of the explosion.
+	* @param BaseDamage The base damage of the explosion.
+	* @param CritChance The critical hit chance of the weapon/item.
+	* @param CritMultiplier The critical hit damage multiplier of the weapon/item.
+	* @param KnockbackStrength The strength of the knockback effect.
+	* @param DamageSourceTag The tag representing the source item (for tracking).
+	* @param bDrawDebug Whether to draw debug visuals for the overlap.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Rumble|Combat", meta = (WorldContext = "WorldContextObject"))
+	static void ApplyRadialRumbleDamage(
+		UObject* WorldContextObject,
+		AActor* Attacker,              
+		FVector Origin,                
+		float BaseRadius,              
+		float BaseDamage,              
+		float CritChance,              
+		float CritMultiplier,          
+		float KnockbackStrength,       
+		FGameplayTag DamageSourceTag,  
+		bool bDrawDebug = false        
+	);
+
+	/**
+	 * Finds enemies in radius, picks 'NumTargets' random victims, and deals damage.
+	 * Good for mechanics like "Static Discharge" or "Lightning Strikes".
+	 * @param WorldContextObject The context object for world access.
+	 * @param Attacker The actor dealing the damage (Player/AI).
+	 * @param Origin The center point of the effect.
+	 * @param BaseRadius The base radius to search for targets.
+	 * @param BaseDamage The base damage to apply to each target.
+	 * @param NumTargets The number of random targets to hit.
+	 * @param DamageSourceTag The tag representing the source item (for tracking).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rumble|Combat", meta = (WorldContext = "WorldContextObject"))
+	static AActor* ApplyRandomRumbleDamage( 
+		UObject* WorldContextObject,
+		AActor* Attacker,
+		FVector Origin,
+		float BaseRadius,
+		float BaseDamage,
+		int32 NumTargets,              
+		FGameplayTag DamageSourceTag
+	);
+
+	/**
 	 * Sorts an array of actors by their distance to a target location.
 	 * @param TargetLocation The origin point to measure distance from.
 	 * @param ActorsToSort The array of actors to be sorted.
@@ -134,4 +184,6 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Editor Tools")
 	static void AddMissingItemToLootTable(UDataTable* DataTable, UPRItemDefinition* ItemDef, float DefaultWeight = 1.0f);
+
+	static float GetActorStatValue(AActor* Actor, FGameplayTag StatTag);
 };

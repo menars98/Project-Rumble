@@ -5,6 +5,7 @@
 #include "Characters/PRCharacterBase.h"
 #include "Components/PRStatsComponent.h"
 #include "Datas/PRItemDefinition.h"
+#include "Datas/PRPassiveItemDefinition.h"
 #include "Player/PRPlayerState.h"
 
 
@@ -14,6 +15,66 @@ void UPRPassiveItem::Initialize(UPRItemDefinition* InItemDefinition, AActor* InO
 	// Store and apply the INITIAL effects
 	AppliedEffects = InitialEffects;
 	RecalculateAndApplyStats();
+
+	PassiveDefinition = Cast<UPRPassiveItemDefinition>(InItemDefinition);
+
+	// --- AUTO-BIND ---
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(InOwningActor))
+	{
+		if (UPRStatsComponent* Stats = Player->GetStatsComponent())
+		{
+			// Save the last known XP
+			LastKnownXP = Stats->GetStatValue(NativeGameplayTags::Stats::Primary::TAG_Stat_Primary_XP);
+
+			// Subscribe to XP 
+			Stats->OnXPChangedDelegate.AddDynamic(this, &UPRPassiveItem::HandleXPChanged);
+
+			UE_LOG(LogTemp, Warning, TEXT("ITEM: %s successfully bound to XP Delegate."), *GetName());
+		}
+	}
+
+	ReceiveInitialize();
+	
+	if (PassiveDefinition && PassiveDefinition->AbilityStats.Cooldown > 0.0f)
+	{
+		StartAbilityTimer(PassiveDefinition->AbilityStats.Cooldown);
+	}
+}
+
+void UPRPassiveItem::Deactivate()
+{
+	// Clean up when we die or when items are deleted
+	if (!OwningActor) return;
+
+	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	{
+		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+		{
+			// We are taking back all the bonuses we gave out.
+			for (const TPair<FGameplayTag, float>& Pair : GrantedBonusesMap)
+			{
+				float CurrentVal = StatsComp->GetStatValue(Pair.Key);
+				StatsComp->SetStatValue(Pair.Key, CurrentVal - Pair.Value);
+			}
+		}
+	}
+
+	// Clear the memory
+	GrantedBonusesMap.Empty();
+
+	// --- UNBIND ---
+	if (OwningActor)
+	{
+		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+		{
+			if (UPRStatsComponent* Stats = Player->GetStatsComponent())
+			{
+				Stats->OnXPChangedDelegate.RemoveDynamic(this, &UPRPassiveItem::HandleXPChanged);
+			}
+		}
+	}
+
+	Super::Deactivate();
 }
 
 void UPRPassiveItem::LevelUp(const TArray<FPotentialUpgradeEffect>& UpgradeEffects)
@@ -73,30 +134,37 @@ void UPRPassiveItem::RecalculateAndApplyStats()
 	}
 }
 
-
-
-void UPRPassiveItem::Deactivate()
+void UPRPassiveItem::StartAbilityTimer(float Cooldown)
 {
-	// Clean up when we die or when items are deleted
-	if (!OwningActor) return;
-
-	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+	if (UWorld* World = GetWorld())
 	{
-		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
-		{
-			// We are taking back all the bonuses we gave out.
-			for (const TPair<FGameplayTag, float>& Pair : GrantedBonusesMap)
-			{
-				float CurrentVal = StatsComp->GetStatValue(Pair.Key);
-				StatsComp->SetStatValue(Pair.Key, CurrentVal - Pair.Value);
-			}
-		}
+		// ExecutePassiveAbility fonksiyonunu (BP Eventi) sürekli çaðýr
+		World->GetTimerManager().SetTimer(AbilityTimerHandle, this, &UPRPassiveItem::TriggerAbility, Cooldown, true);
 	}
+}
 
-	// Clear the memory
-	GrantedBonusesMap.Empty();
+void UPRPassiveItem::TriggerAbility()
+{
+	ExecutePassiveAbility();
+}
 
-	Super::Deactivate();
+void UPRPassiveItem::HandleXPChanged(float CurrentXP, float MaxXP)
+{
+	float AmountGained = CurrentXP - LastKnownXP;
+
+	UE_LOG(LogTemp, Warning, TEXT("ITEM: HandleXPChanged C++ Triggered! Gained: %f"), AmountGained);
+
+	// If the level has been increased, XP may have been reset (resulting in a negative value), so it needs to be corrected.
+	// Let's keep it simple for now; we'll address the level increase separately.
+	if (AmountGained < 0) AmountGained = CurrentXP; // Tahmini fix
+
+	LastKnownXP = CurrentXP;
+
+	// Only notify Blueprint if the amount is positive
+	if (AmountGained > 0.0f)
+	{
+		OnXPGained(AmountGained, CurrentXP);
+	}
 }
 
 void UPRPassiveItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

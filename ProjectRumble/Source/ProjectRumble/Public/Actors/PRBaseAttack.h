@@ -66,6 +66,8 @@ protected:
 
 	// --- FUNCTIONALITY ---
 
+	// Applies statuses regardless of damage.
+	void HandleStatusApplication(AActor* TargetActor);
 	/**
 	 * The central function to execute the damage logic.
 	 * This is called in response to an Overlap event.

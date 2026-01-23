@@ -123,6 +123,14 @@ public:
 		return GetStatValue(NativeGameplayTags::Stats::Utility::TAG_Stat_Utiliy_Difficulty); 
 	}
 
+	// Gets the current stack count of a status effect by its GameplayTag.
+	UFUNCTION(BlueprintPure, Category = "Stats|Status")
+	int32 GetStatusStackCount(FGameplayTag StatusTag) const;
+
+	// Modifies the stack count of a status effect by its GameplayTag.
+	UFUNCTION(BlueprintCallable, Category = "Stats|Status")
+	void AddStatusStack(FGameplayTag StatusTag, int32 Amount, AController* Instigator);
+
 	/**
 	 * Internal function to set the value of a stat directly.
 	* @param StatID The ID of the stat to change.
@@ -192,6 +200,24 @@ protected:
 	UFUNCTION() // @TODO UFUNCTION macro is needed if this will be bound to a timer or another delegate later.
 	void Die();
 
+	//function that will run within the specified time interval
+	UFUNCTION()
+	void ProcessStatusEffects();
+
+	// Timer that processes status effects (Poison, Burn)
+	FTimerHandle StatusEffectTimerHandle;
+
+	// --- STATUS EFFECTS ---
+	UPROPERTY(EditDefaultsOnly, Category = "Stats|Status")
+	float PoisonPercentPerStack = 0.001f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stats|Status")
+	float PoisonDuration = 2.5f;
+
+	// The last time the poison was applied/renewed (Server Time)
+	double LastPoisonAppliedTime = 0.0;
+
+	TWeakObjectPtr<AController> LastPoisonInstigator;
 private:
 	// --- PRIVATE PROPERTIES ---
 	/** The Data Table that defines all possible stats and their default values (For Player). */

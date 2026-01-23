@@ -164,4 +164,11 @@ namespace NativeGameplayTags
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Type_Weapon); // "Item.Weapon"
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Type_Passive); // "Item.Passive"
 	}
+
+	namespace Status
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Poison_PoisonCap); // Default 5
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Poison_PoisonStacks);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Status_Imbue_Poison);
+	}
 }

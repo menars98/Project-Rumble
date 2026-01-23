@@ -170,7 +170,7 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 		if (APRPlayerController* PC = Cast<APRPlayerController>(EventInstigator))
 		{
 			// Send the visual/audio cue ONLY to the player who dealt the damage.
-			PC->Client_ShowDamageEffect(DamagedActor, ActualDamage, DamageResult.bWasCriticalHit, HitSound);
+			PC->Client_ShowDamageEffect(DamagedActor, ActualDamage, DamageResult.bWasCriticalHit, HitSound, DamageSourceTag);
 		}
 	}
 
@@ -403,7 +403,7 @@ TArray<AActor*> UPRGameplayStatics::SortActorsByDistance(const FVector& TargetLo
 	return SortedActors;
 }
 
-void UPRGameplayStatics::SpawnDamageNumber(UObject* WorldContextObject, float Damage, bool bIsCrit, AActor* TargetActor)
+void UPRGameplayStatics::SpawnDamageNumber(UObject* WorldContextObject, float Damage, bool bIsCrit, AActor* TargetActor, FGameplayTag DamageTag)
 {
 
 	if (!WorldContextObject || !TargetActor) return;
@@ -432,7 +432,7 @@ void UPRGameplayStatics::SpawnDamageNumber(UObject* WorldContextObject, float Da
 		if (DamageWidget->GetClass()->ImplementsInterface(UPRBPIDamageNumber::StaticClass()))
 		{
 			// If it does, we can safely call the interface function to pass the damage data.
-			IPRBPIDamageNumber::Execute_InitializeNumber(DamageWidget, Damage, bIsCrit);
+			IPRBPIDamageNumber::Execute_InitializeNumber(DamageWidget, Damage, bIsCrit, DamageTag);
 		}
 		else
 		{

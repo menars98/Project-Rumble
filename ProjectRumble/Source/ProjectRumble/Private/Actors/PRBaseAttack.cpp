@@ -56,6 +56,31 @@ void APRBaseAttack::BeginPlay()
 	SetLifeSpan(AttackStats.LifeDuration);
 }
 
+void APRBaseAttack::HandleStatusApplication(AActor* TargetActor)
+{
+	// Validations
+	if (AttackStats.StatusEffects.Num() == 0) return;
+
+	APREntityBase* Entity = Cast<APREntityBase>(TargetActor);
+	if (!Entity) return;
+
+	UPRStatsComponent* StatsComp = Entity->GetStatsComponent();
+	if (!StatsComp) return;
+
+	// Loop through and apply each status effect
+	for (const FStatusApplicationData& Status : AttackStats.StatusEffects)
+	{
+		if (Status.StatusTag.IsValid())
+		{
+			AController* InstigatorController = GetInstigator()->GetController();	
+			StatsComp->AddStatusStack(Status.StatusTag, Status.StackAmount, InstigatorController);
+
+			// Debug Log 
+			// UE_LOG(LogTemp, Verbose, TEXT("Applied %s (x%d) to %s"), *Status.StatusTag.ToString(), Status.StackAmount, *TargetActor->GetName());
+		}
+	}
+}
+
 void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 {
     if (!HasAuthority()) return;
@@ -187,7 +212,10 @@ void APRBaseAttack::HandleOverlap(AActor* OtherActor)
 
 	HitHistory.Add(OtherActor);
 
-	// 2. Apply Damage
+	// 2. Status Application
+	HandleStatusApplication(OtherActor);
+
+	// 3. Apply Damage
 	ApplyDamageToTarget(OtherActor);
 
 	// --- 3. BOUNCE LOGIC ---

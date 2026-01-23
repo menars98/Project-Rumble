@@ -6,7 +6,9 @@
 #include "GameModes/PRGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/PRPlayerState.h"
+#include "AI/PRAIBase.h"
 #include "Components/PRSessionTrackerComponent.h"
+#include <FunctionLibrary/PRGameplayStatics.h>
 
 UPRStatsComponent::UPRStatsComponent()
 {
@@ -126,6 +128,9 @@ void UPRStatsComponent::BeginPlay()
 	// --- START THE SHIELD REGENERATION LOOP INITIALLY ---
 	// We assume the player starts with the ability to regen shield.
 	StartShieldRegen();
+
+	// Start the status effect processing timer (server only)
+
 }
 
 void UPRStatsComponent::InitializeStats()
@@ -235,6 +240,61 @@ float UPRStatsComponent::GetStatValue(FGameplayTag StatTag) const
 	return 0.f;
 }
 
+int32 UPRStatsComponent::GetStatusStackCount(FGameplayTag StatusTag) const
+{
+	// We can use the current stat map; it holds floats but we treat it like an int.
+	return (int32)GetStatValue(StatusTag);
+}
+
+void UPRStatsComponent::AddStatusStack(FGameplayTag StatusTag, int32 Amount, AController* Instigator)
+{
+	if (!GetOwner()->HasAuthority()) return;
+
+	// Poison Logic
+	if (StatusTag == NativeGameplayTags::Status::TAG_Status_Poison_PoisonStacks)
+	{
+		// A. Refresh Duration
+		LastPoisonAppliedTime = GetWorld()->GetTimeSeconds();
+
+		// B. Find Cap
+		// Relics or Items can increase the max poison stacks via this stat.
+		float MaxStackCap = GetStatValue(NativeGameplayTags::Status::TAG_Status_Poison_PoisonCap);
+		if (MaxStackCap <= 0.f) MaxStackCap = 5.0f; // Safety
+
+		if (Instigator)
+		{
+			LastPoisonInstigator = Instigator;
+		}
+
+		// C. Clamp
+		float CurrentStacks = GetStatValue(StatusTag);
+		float NewStacks = FMath::Min(CurrentStacks + Amount, MaxStackCap);
+
+		SetStatValue(StatusTag, NewStacks);
+
+		if (NewStacks > 0 && !GetWorld()->GetTimerManager().IsTimerActive(StatusEffectTimerHandle))
+		{
+			GetWorld()->GetTimerManager().SetTimer(StatusEffectTimerHandle, this, &UPRStatsComponent::ProcessStatusEffects, 1.0f, true);
+			// UE_LOG(LogTemp, Log, TEXT("POISON: Timer Started for %s"), *GetOwner()->GetName());
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("POISON: Current: %.0f | Added: %d | Cap: %.0f | Result: %.0f"), 
+            CurrentStacks, Amount, MaxStackCap, NewStacks);
+	}
+	else
+	{
+		//@TODO: Later we need switch case for other status
+		float Current = GetStatValue(StatusTag);
+		SetStatValue(StatusTag, Current + Amount);
+	}
+	float Current = GetStatValue(StatusTag);
+	float NewValue = FMath::Max(0.0f, Current + Amount); // No negative stacks.
+
+	SetStatValue(StatusTag, NewValue);
+
+	//@TODO: Later we should add delegate for visual effects
+}
+
 void UPRStatsComponent::SetStatValue(FGameplayTag StatTag, float NewValue)
 {
 	// Only make changes on the server
@@ -329,6 +389,71 @@ void UPRStatsComponent::Die()
 	OnDeathDelegate.Broadcast();
 
 	UE_LOG(LogTemp, Log, TEXT("%s has died."), *GetOwner()->GetName());
+}
+
+void UPRStatsComponent::ProcessStatusEffects()
+{
+	// 1. POISON LOGIC
+	float PoisonStacks = GetStatValue(NativeGameplayTags::Status::TAG_Status_Poison_PoisonStacks);
+
+	// Clear timer if no stacks remain
+	if (PoisonStacks <= 0.0f)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(StatusEffectTimerHandle);
+		// UE_LOG(LogTemp, Log, TEXT("POISON: Timer Stopped for %s (No Stacks)"), *GetOwner()->GetName());
+		return;
+	}
+
+	if (PoisonStacks > 0.0f)
+	{
+		double CurrentTime = GetWorld()->GetTimeSeconds();
+
+		// --- 1. Expiration ---
+		if ((CurrentTime - LastPoisonAppliedTime) > PoisonDuration)
+		{
+			SetStatValue(NativeGameplayTags::Status::TAG_Status_Poison_PoisonStacks, 0.0f);
+			GetWorld()->GetTimerManager().ClearTimer(StatusEffectTimerHandle);
+			return;
+		}
+
+		// --- 2. Calculate Damage ---
+		float MaxHP = GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_MaxHP);
+		float DamagePerTick = (MaxHP * PoisonPercentPerStack) * PoisonStacks;
+
+		DamagePerTick = FMath::Max(DamagePerTick, 1.0f);
+
+		AController* DamageInstigator = LastPoisonInstigator.Get();
+
+		// If no instigator recorded, try to get it from the owner (if it's an AI)
+		/*if (!DamageInstigator && Cast<APRAIBase>(GetOwner()))
+		{
+			DamageInstigator = Cast<APRAIBase>(GetOwner())->GetLastAttacker();
+		}*/
+
+		FGameplayTag PoisonTag = NativeGameplayTags::Status::TAG_Status_Poison_PoisonStacks;
+
+		// B. Apply Damage
+		// We pass nullptr as the DamageCauser, or it could be a special “StatusActor”.
+		// But we can call the damage type Poison.
+		UPRGameplayStatics::ApplyRumbleDamage(
+			this, // Context
+			GetOwner(), // Victim
+			DamagePerTick,
+			FDamageCalculationResult(DamagePerTick, false),
+			PoisonTag,// For Tracker!
+			DamageInstigator, // Damage Instigator
+			nullptr, // No Causer
+			UDamageType::StaticClass(),
+			FVector::ZeroVector, 
+			0.f, 0.f, 0.f, 
+			nullptr // No sound
+		);
+
+		// @TODO: Visual Effect: A green number appears above the enemy.
+		// We can distinguish this using the DamageSourceTag in ApplyDamage.
+
+		UE_LOG(LogTemp, Error, TEXT("POISON DEBUG: Dealing %.1f Damage to %s!"), DamagePerTick, *GetOwner()->GetName());
+	}
 }
 
 void UPRStatsComponent::UpdateReplicatedStat(FGameplayTag StatTag, float NewValue)
@@ -517,6 +642,7 @@ void UPRStatsComponent::ShutdownStats()
 		World->GetTimerManager().ClearTimer(HealthRegenTimerHandle);
 		World->GetTimerManager().ClearTimer(ShieldRegenDelayTimerHandle);
 		World->GetTimerManager().ClearTimer(ShieldRegenTickTimerHandle);
+		World->GetTimerManager().ClearTimer(StatusEffectTimerHandle);
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Stats Component Shutdown for %s"), *GetOwner()->GetName());

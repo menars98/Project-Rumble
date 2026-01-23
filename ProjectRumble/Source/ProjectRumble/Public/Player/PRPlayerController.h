@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include <GameplayTagContainer.h>
 #include "PRPlayerController.generated.h"
+
 
 class UDataTable;
 class UUserWidget;
@@ -125,7 +127,7 @@ public:
 	void Client_ShowRewardPopup(UPRUpgradeData* RewardToDisplay);
 
 	UFUNCTION(Client, Unreliable)
-	void Client_ShowDamageEffect(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound);
+	void Client_ShowDamageEffect(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound, FGameplayTag DamageTag);
 
 	/** [CLIENT] Shows the Game Over screen with stats. */
 	UFUNCTION(Client, Reliable)

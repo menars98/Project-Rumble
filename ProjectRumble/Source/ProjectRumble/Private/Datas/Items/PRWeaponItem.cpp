@@ -557,10 +557,38 @@ FPRWeaponAttackStats UPRWeaponItem::GetCalculatedAttackStats() const
 	FinalStats.ProjectileBounce = GetCalculatedProjectileBounce();
 	FinalStats.PierceCount = GetCalculatedPierceCount();
 	FinalStats.TickRate = GetCalculatedTickRate();
+	FinalStats.StatusEffects = CachedWeaponDef->WeaponStats.AppliedStatuses;
 
-	// Note: TickRate (for DOT) must come from ItemDefinition.
-	//For example, FinalStats.TickRate = ItemDefinition->WeaponStats.BaseTickRate;
+	// --- GLOBAL IMBUES ---
+	if (OwningActor)
+	{
+		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+		{
+			if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+			{
+				// 1. Poison Imbue Control
+				float GlobalImbue = StatsComp->GetStatValue(NativeGameplayTags::Status::TAG_Status_Imbue_Poison);
+				float LocalImbue = LocalStatModifiers.FindRef(NativeGameplayTags::Status::TAG_Status_Imbue_Poison);
 
+				float TotalPoison = LocalImbue + GlobalImbue;
+
+				if (TotalPoison > 0.0f)
+				{
+					// Create a new status effect entry for Poison
+					FStatusApplicationData NewStatus;
+					NewStatus.StatusTag = NativeGameplayTags::Status::TAG_Status_Poison_PoisonStacks;
+					NewStatus.StackAmount = FMath::RoundToInt(TotalPoison);
+
+					// Add it to the final stats
+					FinalStats.StatusEffects.Add(NewStatus);
+				}
+
+				// @TODO: Add other imbues like Fire, Ice, etc. here as needed. 
+			}
+		}
+		// Note: TickRate (for DOT) must come from ItemDefinition.
+		//For example, FinalStats.TickRate = ItemDefinition->WeaponStats.BaseTickRate;
+	}
 	return FinalStats;
 }
 

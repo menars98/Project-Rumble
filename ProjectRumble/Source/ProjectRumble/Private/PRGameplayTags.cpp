@@ -163,4 +163,11 @@ namespace NativeGameplayTags
 		UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Type_Passive, "Item.Type.Passive");
 		
 	}
+
+	namespace Status
+	{
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Poison_PoisonCap, "Status.Poison.PoisonCap");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Poison_PoisonStacks, "Status.Poison.PoisonStack");
+		UE_DEFINE_GAMEPLAY_TAG(TAG_Status_Imbue_Poison, "Status.Imbue.Poison");
+	}
 }

@@ -24,5 +24,5 @@ class PROJECTRUMBLE_API IPRBPIDamageNumber
 public:
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-	void InitializeNumber(float Damage, bool bIsCriticalHit);
+	void InitializeNumber(float Damage, bool bIsCriticalHit, FGameplayTag DamageTag);
 };

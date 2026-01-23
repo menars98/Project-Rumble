@@ -500,13 +500,13 @@ void APRPlayerController::Client_ShowRewardPopup_Implementation(UPRUpgradeData* 
 	}
 }
 
-void APRPlayerController::Client_ShowDamageEffect_Implementation(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound)
+void APRPlayerController::Client_ShowDamageEffect_Implementation(AActor* TargetActor, float DamageAmount, bool bIsCritical, USoundBase* HitSound, FGameplayTag DamageTag)
 {
 	if (!TargetActor) return;
 
 	// 1. Show Damage Number (Only visible to player)
 	// We use 'this' as WorldContext because we are inside the local controller now.
-	UPRGameplayStatics::SpawnDamageNumber(this, DamageAmount, bIsCritical, TargetActor);
+	UPRGameplayStatics::SpawnDamageNumber(this, DamageAmount, bIsCritical, TargetActor, DamageTag);
 
 	// 2. Play Hit Sound (Only audible to player)
 	if (HitSound)

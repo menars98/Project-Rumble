@@ -144,7 +144,7 @@ public:
 	 * @param PlayerController The player controller for UI context.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	static void SpawnDamageNumber(UObject* WorldContextObject, float Damage, bool bIsCrit, AActor* TargetActor);
+	static void SpawnDamageNumber(UObject* WorldContextObject, float Damage, bool bIsCrit, AActor* TargetActor, FGameplayTag DamageTag);
 
 	/**
 	* Searches for a tag in the Data Table and returns the Row data directly.

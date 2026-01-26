@@ -54,6 +54,7 @@ namespace NativeGameplayTags
 		namespace Physics
 		{
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Physics_Knockback); // Multiplicative
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Defense_KnockbackResistance); 
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Stat_Physics_ThrowingForce); // Percentage
 		}
 		namespace Utility

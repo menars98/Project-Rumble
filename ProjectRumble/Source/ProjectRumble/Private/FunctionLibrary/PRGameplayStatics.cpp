@@ -20,6 +20,7 @@
 #include <EnhancedInputSubsystems.h>
 #include "AssetRegistry/AssetRegistryModule.h"
 #include <ProjectRumble/ProjectRumble.h>
+#include "GameFramework/CharacterMovementComponent.h" 
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -66,21 +67,25 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 	
 	// --- 1. APPLY KNOCKBACK FIRST (OR INDEPENDENTLY) ---
 	// Knockback should happen even if the damage is 0 or absorbed.
-	if (KnockbackMagnitude > 0.f)
+	if (DamagedActor)
 	{
-		if (ACharacter* TargetCharacter = Cast<ACharacter>(DamagedActor))
-		{
-			FVector LaunchVelocity = KnockbackDirection * KnockbackMagnitude;
-			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
-			
-			// Close Input connection to notify the character it has been knocked back.
-			if (APRCharacterBase* PRChar = Cast<APRCharacterBase>(TargetCharacter))
-			{
-				PRChar->OnKnockbackReceived();
+		FVector ForceToApply = FVector::ZeroVector;
 
-			}
+		// Case A: Dynamic (Contact Damage)
+		if (FMath::IsNearlyEqual(KnockbackMagnitude, -1.0f))
+		{
+			ForceToApply = CalculateDynamicKnockback(DamageCauser, DamagedActor);
 		}
+		// Case B: Weapon (Weapon Damage)
+		else if (KnockbackMagnitude > 0.0f)
+		{
+			ForceToApply = KnockbackDirection * KnockbackMagnitude;
+		}
+
+		ApplyFinalKnockback(DamagedActor, ForceToApply);
 	}
+
+
 	// --- 2. APPLY STUN  ---
 	if (StunDuration > 0.f && FMath::FRand() < StunChance)
 	{
@@ -532,6 +537,113 @@ float UPRGameplayStatics::GetActorStatValue(AActor* Actor, FGameplayTag StatTag)
 		}
 	}
 	return 0.0f;
+}
+
+FVector UPRGameplayStatics::CalculateDynamicKnockback(AActor* Attacker, AActor* Victim)
+{
+	if (!Attacker || !Victim) return FVector::ZeroVector;
+
+	// A. Speed & Direction Calculation
+	FVector AttackerVelocity = Attacker->GetVelocity();
+	float AttackerSpeed = AttackerVelocity.Size();
+	FVector DirectionToVictim = (Victim->GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal();
+
+	// B. Thresholds & Forces
+	float HighSpeedThreshold = 300.0f;
+	float BaseSeparationForce = 400.0f; 
+
+	FVector FinalForce = FVector::ZeroVector;
+
+	if (AttackerSpeed > HighSpeedThreshold)
+	{
+		// --- Case 1: HIGH SPEED IMPACT ---
+		float TransferRatio = 0.8f;
+		FinalForce = AttackerVelocity * TransferRatio;
+
+		FinalForce.Z += 150.0f;
+	}
+	else
+	{
+		// --- Case2: LOW SPEED IMPACT ---
+		// If the enemy is slow, just push to prevent them from closing in.
+
+		if (ACharacter* VicChar = Cast<ACharacter>(Victim))
+		{
+			if (VicChar->GetCharacterMovement())
+			{
+				VicChar->GetCharacterMovement()->Velocity *= 0.2f;
+			}
+		}
+
+		FinalForce = DirectionToVictim * BaseSeparationForce;
+		FinalForce.Z = 100.0f;
+	}
+
+	return FinalForce;
+}
+
+void UPRGameplayStatics::ApplyFinalKnockback(AActor* Victim, FVector Force)
+{
+	if (Force.IsNearlyZero()) return;
+
+	APREntityBase* Entity = Cast<APREntityBase>(Victim);
+	ACharacter* Char = Cast<ACharacter>(Victim);
+
+	APRAIBase* Enemy = Cast<APRAIBase>(Victim);
+
+	// --- IMMUNITY CHECK ---
+	if (Enemy)
+	{
+		if (!Enemy->CanBeKnockedBack())
+		{
+			return;
+		}
+		Enemy->RegisterKnockback();
+	}
+
+	if (Entity && Char)
+	{
+		// --- Resistance ---
+		float Resistance = 0.0f;
+		if (UPRStatsComponent* Stats = Entity->GetStatsComponent())
+		{
+			Resistance = Stats->GetStatValue(NativeGameplayTags::Stats::Physics::TAG_Stat_Defense_KnockbackResistance);
+		}
+
+		if (FMath::IsNaN(Resistance) || !FMath::IsFinite(Resistance))
+		{
+			UE_LOG(LogTemp, Error, TEXT("Knockback Resistance is NAN! Fixing to 0.0"));
+			Resistance = 0.0f;
+		}
+
+		if (Resistance >= 1.0f) return;
+
+		FVector ResistedForce = FVector::ZeroVector;
+		ResistedForce = Force * (1 - Resistance);
+
+		// Check max limits
+		if (ResistedForce.Z > 600.0f) ResistedForce.Z = 600.0f;
+		float MaxHorizontalForce = 2000.0f;
+		float CurrentHorizontalSpeed = ResistedForce.Size2D();
+
+		if (CurrentHorizontalSpeed > MaxHorizontalForce)
+		{
+			ResistedForce = (ResistedForce.GetSafeNormal2D() * MaxHorizontalForce) + FVector(0, 0, ResistedForce.Z);
+		}
+
+		if (AAIController* AIC = Cast<AAIController>(Char->GetController()))
+		{
+			AIC->StopMovement();
+		}
+
+
+		Char->LaunchCharacter(ResistedForce, true, true);
+
+		if (APRCharacterBase* PRChar = Cast<APRCharacterBase>(Victim))
+		{
+			PRChar->OnKnockbackReceived();
+		}
+	}
 }
 
 void Generic_GetDataTableRowByTag(UDataTable* DataTable, FGameplayTag TagToFind, void* OutRowPtr, FProperty* OutRowProp, ERowResult& OutResult)

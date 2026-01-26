@@ -62,6 +62,9 @@ public:
 	// We override GetStatsComponent to return our own component.
 	virtual UPRStatsComponent* GetStatsComponent() const override;
 
+	bool CanBeKnockedBack() const;
+	void RegisterKnockback();
+
 protected:
 	// -- COMPONENTS --
 	// The AI has its own StatsComponent directly on itself.
@@ -145,6 +148,13 @@ protected:
 	/** The color tint of the enemy. Replicated so clients see the endless mode changes. */
 	UPROPERTY(ReplicatedUsing = OnRep_TintColor, VisibleAnywhere, Category = "Rumble | Visuals")
 	FLinearColor TintColor = FLinearColor::White;
+
+	float LastKnockbackTime = 0.0f;
+
+	// How many seconds does it take to regain “Balance” after being pushed?
+	// @TODO: We could pull this from the Data Asset, but for now, hardcoding 0.65f is sufficient.
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Combat")
+	float KnockbackImmunityDuration = 0.65f;
 
 	UFUNCTION()
 	void OnRep_TintColor();

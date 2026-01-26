@@ -149,6 +149,32 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 		DamageResult.bWasCriticalHit = false; // Don't use AI Crit (or it can be added here)
 	}
 
+	FVector KnockForce = FVector::ZeroVector;
+
+	if (AttackStats.KnockbackMagnitude > 0.0f)
+	{
+		FVector KnockDir;
+
+		// CASE 1: Hýz Bazlý (Ok, Mýzrak) - bUseVelocityForKnockback TRUE ise
+		if (bUseVelocityForKnockback && ProjectileMovement && !ProjectileMovement->Velocity.IsNearlyZero())
+		{
+			KnockDir = ProjectileMovement->Velocity.GetSafeNormal2D(); // Sadece Yatay Yön
+		}
+		// CASE 2: Konum Bazlý (Rock, Aura, Puddle) - bUseVelocityForKnockback FALSE ise
+		else
+		{
+			// Mermiden -> Düþmana olan yön
+			KnockDir = (TargetActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D(); // Z'yi otomatik sýfýrlar
+		}
+
+		// 1. Yatay Gücü Hesapla
+		KnockForce = KnockDir * AttackStats.KnockbackMagnitude;
+
+		// 2. Dikey (Z) Gücü MANUEL Ekle (Patlama etkisi deðil, hafif zýplatma)
+		// Magnitude ne olursa olsun, düþmaný yerden 300 birim yukarý zýplat ki sürtünme onu tutamasýn.
+		KnockForce.Z = 300.0f;
+	}
+
 	// --- Apply Damage ---
 	UPRGameplayStatics::ApplyRumbleDamage(
 		this,
@@ -159,8 +185,8 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 		InstigatorController,
 		DamageCauser,
 		UDamageType::StaticClass(),
-		GetActorForwardVector(),
-		AttackStats.KnockbackMagnitude,
+		KnockForce,
+		1,
 		AttackStats.StunChance,
 		AttackStats.StunDuration,
 		ImpactSound

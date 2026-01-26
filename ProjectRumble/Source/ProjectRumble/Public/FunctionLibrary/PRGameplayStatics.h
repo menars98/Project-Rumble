@@ -186,4 +186,16 @@ public:
 	static void AddMissingItemToLootTable(UDataTable* DataTable, UPRItemDefinition* ItemDef, float DefaultWeight = 1.0f);
 
 	static float GetActorStatValue(AActor* Actor, FGameplayTag StatTag);
+
+protected:
+
+	/**
+	* Calculates the knockback force vector based on attacker and victim positions.
+	*/
+	static FVector CalculateDynamicKnockback(AActor* Attacker, AActor* Victim);
+
+	/**
+	 * Applies the final knockback force to the victim actor.
+	 */
+	static void ApplyFinalKnockback(AActor* Victim, FVector Force);
 };

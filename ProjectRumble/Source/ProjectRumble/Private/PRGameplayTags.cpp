@@ -52,7 +52,8 @@ namespace NativeGameplayTags
 		namespace Physics
 		{
 			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Physics_Knockback, "Stat.Physics.Knockback");
-			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Physics_ThrowingForce, "Stat.Physics.ThrowingForce");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Defense_KnockbackResistance, "Stat.Physics.KnockbackResistance");
+			UE_DEFINE_GAMEPLAY_TAG(TAG_Stat_Physics_ThrowingForce, "Stat.Physics.ThrowingForce");		
 		}
 		namespace Utility
 		{

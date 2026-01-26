@@ -101,6 +101,13 @@ protected:
 	UPROPERTY()
 	TMap<AActor*, double> DamageCooldownMap;
 
+	/**
+	* If true, knockback direction is based on projectile velocity (Arrows, Spears).
+	* If false, knockback is radial from the center of the actor (Explosions, Rocks, Auras).
+	*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Rumble|Combat")
+	bool bUseVelocityForKnockback = true;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

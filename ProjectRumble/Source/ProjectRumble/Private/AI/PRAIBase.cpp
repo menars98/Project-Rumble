@@ -284,6 +284,17 @@ UPRStatsComponent* APRAIBase::GetStatsComponent() const
 	return StatsComponent_AI;
 }
 
+bool APRAIBase::CanBeKnockedBack() const
+{
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	return (CurrentTime - LastKnockbackTime) > KnockbackImmunityDuration;
+}
+
+void APRAIBase::RegisterKnockback()
+{
+	LastKnockbackTime = GetWorld()->GetTimeSeconds();
+}
+
 void APRAIBase::OnDeath()
 {
 	Super::OnDeath(); // Run the base logic from EntityBase (disable collision etc.).
@@ -390,14 +401,7 @@ void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 	DamageResult.FinalDamage = ContactDamage; // The simple float damage value from our AI.
 	DamageResult.bWasCriticalHit = false;   // Contact damage can't crit (design decision).
 
-	// --- 2. APPLY DAMAGE AND KNOCKBACK ---
-	// Player's position - AI position = Direction from AI to Player.
-	FVector DirectionToPlayer = TargetPlayer->GetActorLocation() - GetActorLocation();
-	DirectionToPlayer.Normalize();
-	
-	// Tweak: Add a tiny bit of upward force so ground friction doesn't eat the knockback immediately.
-	DirectionToPlayer.Z = 0.2f;
-	DirectionToPlayer.Normalize();
+	// --- 2. APPLY DAMAGE ---
 
 	UPRGameplayStatics::ApplyRumbleDamage(
 		this,
@@ -408,8 +412,8 @@ void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 		GetController(),
 		this,
 		nullptr,
-		DirectionToPlayer,
-		KnockbackStrengthToPlayer,
+		FVector::ZeroVector,
+		-1.0f,
 		ContactStunChance,
 		ContactStunDuration
 	);

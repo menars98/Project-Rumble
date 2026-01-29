@@ -155,24 +155,22 @@ void APRBaseAttack::ApplyDamageToTarget(AActor* TargetActor)
 	{
 		FVector KnockDir;
 
-		// CASE 1: Hýz Bazlý (Ok, Mýzrak) - bUseVelocityForKnockback TRUE ise
+		// CASE 1: Speed Based (Arrow, Spear) - If bUseVelocityForKnockback is True
 		if (bUseVelocityForKnockback && ProjectileMovement && !ProjectileMovement->Velocity.IsNearlyZero())
 		{
-			KnockDir = ProjectileMovement->Velocity.GetSafeNormal2D(); // Sadece Yatay Yön
+			KnockDir = ProjectileMovement->Velocity.GetSafeNormal2D(); // Only use horizontal direction
 		}
-		// CASE 2: Konum Bazlý (Rock, Aura, Puddle) - bUseVelocityForKnockback FALSE ise
+		// CASE 2: Location Based (Rock, Aura, Puddle) - If bUseVelocityForKnockback is False
 		else
 		{
-			// Mermiden -> Düþmana olan yön
-			KnockDir = (TargetActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D(); // Z'yi otomatik sýfýrlar
+			KnockDir = (TargetActor->GetActorLocation() - GetActorLocation()).GetSafeNormal2D(); // Reset Z component
 		}
 
-		// 1. Yatay Gücü Hesapla
+		// 1. Calculate Horizontal (XY) Knockback
 		KnockForce = KnockDir * AttackStats.KnockbackMagnitude;
 
-		// 2. Dikey (Z) Gücü MANUEL Ekle (Patlama etkisi deðil, hafif zýplatma)
-		// Magnitude ne olursa olsun, düþmaný yerden 300 birim yukarý zýplat ki sürtünme onu tutamasýn.
-		KnockForce.Z = 300.0f;
+		// 2. Add Vertical (Z) Knockback
+		KnockForce.Z = 200.0f;
 	}
 
 	// --- Apply Damage ---
@@ -368,3 +366,34 @@ void APRBaseAttack::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void APRBaseAttack::PulseAuraDamage()
+{
+	// 1. Collision Component
+	UPrimitiveComponent* CollisionComp = Cast<UPrimitiveComponent>(GetRootComponent());
+
+	// If RootComponent is not a PrimitiveComponent, try to find a ShapeComponent
+	if (!CollisionComp)
+	{
+		CollisionComp = GetComponentByClass<UShapeComponent>();
+	}
+
+	if (!CollisionComp)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PulseAuraDamage: No Collision Component found on %s!"), *GetName());
+		return;
+	}
+
+	// 2. Get Overlapping Actors
+	TArray<AActor*> OverlappingActors;
+	CollisionComp->GetOverlappingActors(OverlappingActors, APRAIBase::StaticClass());
+
+	// 3. Apply Damage to Each Overlapping Actor
+	for (AActor* Victim : OverlappingActors)
+	{
+		if (Victim && !Victim->IsPendingKillPending())
+		{
+
+			ApplyDamageToTarget(Victim);
+		}
+	}
+}

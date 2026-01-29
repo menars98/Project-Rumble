@@ -6,6 +6,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Datas/Items/PRWeaponItem.h"
 #include "AssetRegistry/AssetRegistryModule.h" 
+#include "GameplayTagsManager.h"
 #include "PRTypes.h" 
 #include "PRGameplayStatics.generated.h"
 
@@ -186,6 +187,19 @@ public:
 	static void AddMissingItemToLootTable(UDataTable* DataTable, UPRItemDefinition* ItemDef, float DefaultWeight = 1.0f);
 
 	static float GetActorStatValue(AActor* Actor, FGameplayTag StatTag);
+
+	/**
+	* Editor Only: Retrieves tags under a specific Parent Tag.
+     * @param bOnlyLeaves If true, does not retrieve tags that have other tags under them (i.e., category tags).
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Editor Tools")
+	static TArray<FGameplayTag> GetAllTagsUnderParent(FGameplayTag ParentTag, bool bOnlyLeaves = true);
+
+	/**
+	 * Editor Only: Adds the missing stat to the stat table.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Editor Tools")
+	static void AddMissingStatToTable(UDataTable* DataTable, FGameplayTag StatTag);
 
 protected:
 

@@ -250,7 +250,15 @@ struct FWeaponStats
     float BaseStunDuration = 0.5f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    float BaseTickRate = 0.0f;
+    float BaseTickRate = 0.5f;
+
+    /**
+     * If true, Attack Speed stats will reduce the Tick Rate (making it hit faster).
+     * Useful for Auras, Beams, or Puddles.
+     * Should be FALSE for projectile weapons like Axes or Rocks.
+     */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    bool bScaleTickWithAttackSpeed = false;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Status")
     TArray<FStatusApplicationData> AppliedStatuses;

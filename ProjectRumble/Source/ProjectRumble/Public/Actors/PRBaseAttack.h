@@ -22,6 +22,11 @@ public:
 	// Sets default values for this actor's properties
 	APRBaseAttack();
 
+	// --- Weapon Functions ---
+
+	UFUNCTION(BlueprintCallable, Category = "Rumble|Combat")
+	void PulseAuraDamage();
+
 	// --- COMPONENTS ---
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")

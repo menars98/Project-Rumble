@@ -69,22 +69,37 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 	// Knockback should happen even if the damage is 0 or absorbed.
 	if (DamagedActor)
 	{
-		FVector ForceToApply = FVector::ZeroVector;
+		ACharacter* VictimChar = Cast<ACharacter>(DamagedActor);
 
-		// Case A: Dynamic (Contact Damage)
-		if (FMath::IsNearlyEqual(KnockbackMagnitude, -1.0f))
+		// --- 1. Micro-Stagger ---
+		if (VictimChar)
 		{
-			ForceToApply = CalculateDynamicKnockback(DamageCauser, DamagedActor);
-		}
-		// Case B: Weapon (Weapon Damage)
-		else if (KnockbackMagnitude > 0.0f)
-		{
-			ForceToApply = KnockbackDirection * KnockbackMagnitude;
-		}
+			if (UCharacterMovementComponent* MoveComp = VictimChar->GetCharacterMovement())
+			{
+				MoveComp->StopMovementImmediately();
 
-		ApplyFinalKnockback(DamagedActor, ForceToApply);
+				//@TODO: We can add hit react there?
+			}
+		}
+		if (KnockbackMagnitude > 0.0f)
+		{
+			FVector ForceToApply = FVector::ZeroVector;
+
+			// Case A: Dynamic (Contact Damage)
+			if (FMath::IsNearlyEqual(KnockbackMagnitude, -1.0f))
+			{
+				ForceToApply = CalculateDynamicKnockback(DamageCauser, DamagedActor);
+			}
+			// Case B: Weapon (Weapon Damage)
+			else if (KnockbackMagnitude > 0.0f)
+			{
+				ForceToApply = KnockbackDirection * KnockbackMagnitude;
+			}
+
+			ApplyFinalKnockback(DamagedActor, ForceToApply);
+		}
+		
 	}
-
 
 	// --- 2. APPLY STUN  ---
 	if (StunDuration > 0.f && FMath::FRand() < StunChance)
@@ -539,6 +554,80 @@ float UPRGameplayStatics::GetActorStatValue(AActor* Actor, FGameplayTag StatTag)
 	return 0.0f;
 }
 
+TArray<FGameplayTag> UPRGameplayStatics::GetAllTagsUnderParent(FGameplayTag ParentTag, bool bOnlyLeaves)
+{
+	TArray<FGameplayTag> TagList;
+
+	// Access the GameplayTagsManager Singleton
+	if (UGameplayTagsManager* TagManager = &UGameplayTagsManager::Get())
+	{
+		
+		// Get the “Children” list.
+		FGameplayTagContainer AllChildren = TagManager->RequestGameplayTagChildren(ParentTag);
+
+		for (auto It = AllChildren.CreateConstIterator(); It; ++It)
+		{
+			FGameplayTag CurrentTag = *It;
+
+			// If we only want leaves, we need to check if this tag has children.
+			if (bOnlyLeaves)
+			{
+				// We are asking if there are other tags under this tag.
+				// If RequestGameplayTagChildren is not empty, this is a category (e.g., Stat.Defense).
+				FGameplayTagContainer GrandChildren = TagManager->RequestGameplayTagChildren(CurrentTag);
+
+				if (GrandChildren.IsEmpty())
+				{
+					// It has no child, so this is a Stat (e.g., Stat.Defense.Armor). Add.
+					TagList.Add(CurrentTag);
+				}
+			}
+			else
+			{
+				TagList.Add(CurrentTag);
+			}
+		}
+	}
+
+	return TagList;
+}
+
+void UPRGameplayStatics::AddMissingStatToTable(UDataTable* DataTable, FGameplayTag StatTag)
+{
+#if WITH_EDITOR
+	if (!DataTable || !StatTag.IsValid()) return;
+
+	FName RowName = StatTag.GetTagName(); //We are setting the tag name as the Row Name(e.g., Stat.Offense.Damage)
+
+	if (DataTable->GetRowMap().Contains(RowName)) return;
+
+	// We assume you are using the FStatDefinition struct.
+	// If the struct name is different, update this section.
+	FStatDefinition NewStatRow;
+
+	NewStatRow.StatID = StatTag;
+
+	NewStatRow.DefaultValue = 0.0f;
+
+	// Rename(Stat.Offense.Damage->Damage)
+	FString TagString = StatTag.ToString();
+	FString DisplayNameStr;
+	if (TagString.Split(TEXT("."), nullptr, &DisplayNameStr, ESearchCase::IgnoreCase, ESearchDir::FromEnd))
+	{
+		NewStatRow.DisplayName = FText::FromString(DisplayNameStr);
+	}
+	else
+	{
+		NewStatRow.DisplayName = FText::FromString(TagString);
+	}
+
+	DataTable->AddRow(RowName, NewStatRow);
+	DataTable->MarkPackageDirty();
+
+	UE_LOG(LogTemp, Log, TEXT("Added Stat %s to table."), *RowName.ToString());
+#endif
+}
+
 FVector UPRGameplayStatics::CalculateDynamicKnockback(AActor* Attacker, AActor* Victim)
 {
 	if (!Attacker || !Victim) return FVector::ZeroVector;
@@ -586,43 +675,28 @@ void UPRGameplayStatics::ApplyFinalKnockback(AActor* Victim, FVector Force)
 {
 	if (Force.IsNearlyZero()) return;
 
-	APREntityBase* Entity = Cast<APREntityBase>(Victim);
 	ACharacter* Char = Cast<ACharacter>(Victim);
+	APRAIBase* EnemyAI = Cast<APRAIBase>(Victim);
 
-	APRAIBase* Enemy = Cast<APRAIBase>(Victim);
-
-	// --- IMMUNITY CHECK ---
-	if (Enemy)
+	if (Char && EnemyAI)
 	{
-		if (!Enemy->CanBeKnockedBack())
-		{
-			return;
-		}
-		Enemy->RegisterKnockback();
-	}
+		if (!EnemyAI->CanBeKnockedBack()) return;
 
-	if (Entity && Char)
-	{
-		// --- Resistance ---
-		float Resistance = 0.0f;
-		if (UPRStatsComponent* Stats = Entity->GetStatsComponent())
-		{
-			Resistance = Stats->GetStatValue(NativeGameplayTags::Stats::Physics::TAG_Stat_Defense_KnockbackResistance);
-		}
+		float TotalResistance = EnemyAI->GetTotalKnockbackResistance();
 
-		if (FMath::IsNaN(Resistance) || !FMath::IsFinite(Resistance))
+		if (TotalResistance >= 1.0f) return;
+
+		FVector ResistedForce = Force * (1.0f - TotalResistance);
+
+		if (FMath::IsNaN(TotalResistance) || !FMath::IsFinite(TotalResistance))
 		{
 			UE_LOG(LogTemp, Error, TEXT("Knockback Resistance is NAN! Fixing to 0.0"));
-			Resistance = 0.0f;
+			TotalResistance = 0.0f;
 		}
-
-		if (Resistance >= 1.0f) return;
-
-		FVector ResistedForce = FVector::ZeroVector;
-		ResistedForce = Force * (1 - Resistance);
 
 		// Check max limits
 		if (ResistedForce.Z > 600.0f) ResistedForce.Z = 600.0f;
+		if (ResistedForce.Z < 100.0f) ResistedForce.Z = 100.0f;
 		float MaxHorizontalForce = 2000.0f;
 		float CurrentHorizontalSpeed = ResistedForce.Size2D();
 
@@ -638,6 +712,12 @@ void UPRGameplayStatics::ApplyFinalKnockback(AActor* Victim, FVector Force)
 
 
 		Char->LaunchCharacter(ResistedForce, true, true);
+
+		// Register Results
+
+		EnemyAI->RegisterKnockback();
+
+		EnemyAI->AddKnockbackResistance();
 
 		if (APRCharacterBase* PRChar = Cast<APRCharacterBase>(Victim))
 		{

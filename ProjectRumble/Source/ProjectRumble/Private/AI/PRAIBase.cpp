@@ -284,6 +284,35 @@ UPRStatsComponent* APRAIBase::GetStatsComponent() const
 	return StatsComponent_AI;
 }
 
+void APRAIBase::AddKnockbackResistance()
+{
+	AccumulatedResistance = FMath::Min(AccumulatedResistance + ResistanceGainPerHit, MaxResistanceCap);
+
+	UE_LOG(LogTemp, Verbose, TEXT("%s Resistance increased to: %.2f"), *GetName(), AccumulatedResistance);
+}
+
+float APRAIBase::GetTotalKnockbackResistance() const
+{
+	// Base Resistance from Stats
+	float BaseRes = 0.0f;
+	if (StatsComponent_AI)
+	{
+		BaseRes = StatsComponent_AI->GetStatValue(NativeGameplayTags::Stats::Physics::TAG_Stat_Defense_KnockbackResistance);
+	}
+
+	// 2. Sum with accumulated resistance
+	// Formula: Base + Accumulated (Simple sum)
+	// Or: 1 - ((1-Base) * (1-Acc)) (Diminishing)
+	// Simple sum should be sufficient, since we will be clamping anyway.
+
+	return FMath::Clamp(BaseRes + AccumulatedResistance, 0.0f, 1.0f);
+}
+
+void APRAIBase::ResetKnockbackResistance()
+{
+	AccumulatedResistance = 0.0f;
+}
+
 bool APRAIBase::CanBeKnockedBack() const
 {
 	float CurrentTime = GetWorld()->GetTimeSeconds();
@@ -417,6 +446,9 @@ void APRAIBase::ApplyContactDamage(APRCharacterBase* TargetPlayer)
 		ContactStunChance,
 		ContactStunDuration
 	);
+
+	ResetKnockbackResistance();
+
 	// --- 2. START THE COOLDOWN ---
 	// Disable our ability to deal damage immediately.
 	bCanApplyContactDamage = false;

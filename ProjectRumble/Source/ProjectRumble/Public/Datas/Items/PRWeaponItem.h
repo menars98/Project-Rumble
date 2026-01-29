@@ -78,6 +78,10 @@ protected:
 	void HandleGameStarted();
 
 	// -- Helper Functions for Calculations --
+	
+	// Helper: Collects all speed bonuses (Items + Character + Buffs)
+	float GetTotalSpeedMultiplier() const;
+
 	// A helper function to get the final, calculated cooldown for this weapon.
 	UFUNCTION(BlueprintPure, Category = "Weapon|Calculations")
 	float GetCalculatedCooldown() const;

@@ -123,47 +123,34 @@ void UPRWeaponItem::HandleGameStarted()
 
 float UPRWeaponItem::GetCalculatedCooldown() const
 {
-	if (!ItemDefinition) return 1.0f;
+	// CachedWeaponDef kullanýyoruz (Cast maliyeti yok)
+	if (!CachedWeaponDef) return 1.0f;
 
-	float WeaponBaseCooldown = CachedWeaponDef->WeaponStats.BaseCooldown;
+	float BaseCooldown = CachedWeaponDef->WeaponStats.BaseCooldown;
 
-	// Local Bonus: Assuming weapon upgrades provide Attack Speed % (Multiplicative denominator)
-	float LocalAttackSpeedBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
+	// --- 1. Calculate Speed ---
+	float TotalSpeed = GetTotalSpeedMultiplier();
 
-	float GlobalAdditiveReduction = 0.0f; // Flat time reduction (e.g. -0.5s)
-	float GlobalAttackSpeedBonus = 0.0f; // % Speed increase
+	// --- 2.  (Diminishing Returns) ---
+	// %500 Hýz yapýnca cooldown 0 olmasýn diye "Üs" alýyoruz.
+	// 0.8f iyi bir dengedir.
+	float EffectiveSpeed = FMath::Pow(TotalSpeed, 0.8f);
 
-	float FinalCooldown = 0.0f;
+	// --- 3. DÜZ AZALTMA (Varsa) ---
+	float FlatReduction = 0.0f;
 	if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
 	{
 		if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
 		{
-			GlobalAdditiveReduction = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Additive);
-			GlobalAttackSpeedBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
-
-			// Ensure the multiplier is not zero or negative to prevent division by zero
-			if (GlobalAttackSpeedBonus <= 0.f)
-			{
-				GlobalAttackSpeedBonus = 1.0f;
-			}
+			FlatReduction = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Additive);
 		}
 	}
-	// Total Attack Speed Multiplier (Weapon% + Player%)
-	// e.g. Base 1 + 0.2 (Weapon) + 0.5 (Tome) = 1.7x Speed
-	float TotalSpeedMultiplier = LocalAttackSpeedBonus + GlobalAttackSpeedBonus;
 
-	// Ensure we don't divide by zero or negative
-	TotalSpeedMultiplier = FMath::Max(0.1f, TotalSpeedMultiplier);
+	// --- 4. Formula ---
+	float FinalCooldown = (BaseCooldown - FlatReduction) / EffectiveSpeed;
 
-	// Apply diminishing returns to Attack Speed
-	float ScalingFactor = 0.8f;
-
-	float EffectiveSpeed = FMath::Pow(TotalSpeedMultiplier, ScalingFactor);
-
-	// Formula: (BaseTime - FlatReduction) / SpeedMultiplier
-	FinalCooldown = (WeaponBaseCooldown - GlobalAdditiveReduction) / EffectiveSpeed;
-
-	return FMath::Max(FinalCooldown, 0.1f); // Hard cap at 0.1s to prevent infinite spam
+	// Hard Cap: En hýzlý 0.1 saniyede bir ateþ etsin (10 FPS korumasý)
+	return FMath::Max(FinalCooldown, 0.1f);
 }
 
 float UPRWeaponItem::GetCalculatedDamage() const
@@ -451,15 +438,57 @@ float UPRWeaponItem::GetCalculatedStunDuration() const
 	return BaseDuration * (LocalBonus + GlobalBonus);
 }
 
+float UPRWeaponItem::GetTotalSpeedMultiplier() const
+{
+	// 1. Local Bonus (From Weapon)
+	float LocalBonus = LocalStatModifiers.FindRef(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
+
+	// 2. Global Bonus (From Character)
+	float GlobalBonus = 1.0f;
+	if (OwningActor)
+	{
+		if (APRCharacterBase* Player = Cast<APRCharacterBase>(OwningActor))
+		{
+			if (UPRStatsComponent* StatsComp = Player->GetStatsComponent())
+			{
+				GlobalBonus = StatsComp->GetStatValue(NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_AttackSpeed_Multiplicative);
+			}
+		}
+	}
+
+	//Bonuses
+	float TotalSpeed = LocalBonus + GlobalBonus;
+
+	// Hard Cap
+	return FMath::Max(0.1f, TotalSpeed);
+}
+
 float UPRWeaponItem::GetCalculatedTickRate() const
 {
-	if (!ItemDefinition) return 0.0f;
+	 if (!CachedWeaponDef) return 0.0f;
 
-	// For now, we're only returning the Base value.
-	// If we want the “Attack Speed” stat to also increase the Tick Rate in the future, we'll add a formula here.
-	// E.g.: BaseTickRate / AttackSpeedMultiplier
+    float BaseTick = CachedWeaponDef->WeaponStats.BaseTickRate;
 
-	return CachedWeaponDef->WeaponStats.BaseTickRate;
+    // If the Tick Rate is 0 (single-shot bullet), do not perform the calculation.
+    if (BaseTick <= 0.0f) return 0.0f;
+
+	// --- CRITICAL CONTROL ---
+	// Should this weapon's Tick Rate be accelerated with Attack Speed?
+	// Axe/Rock -> FALSE (Remains constant)
+	// Aura/Puddle -> TRUE (Accelerates)
+    if (CachedWeaponDef->WeaponStats.bScaleTickWithAttackSpeed)
+    {
+        float SpeedMult = GetTotalSpeedMultiplier();
+        
+		// We may not apply diminishing returns to Aura; let the player feel empowered as they grow stronger.
+		// Formula: Base / Speed (If Speed is 2x, the duration is halved)
+        float ScaledTick = BaseTick / SpeedMult;
+
+        return FMath::Max(ScaledTick, 0.1f); // En hýzlý 0.1s
+    }
+
+	// If there is no scale, return the base value directly
+    return BaseTick;
 }
 
 FDamageCalculationResult UPRWeaponItem::CalculateFinalDamage(const APRAIBase* Target)
@@ -542,6 +571,8 @@ void UPRWeaponItem::RecalculateLocalStats()
 FPRWeaponAttackStats UPRWeaponItem::GetCalculatedAttackStats() const
 {
 	FPRWeaponAttackStats FinalStats;
+
+	if (!CachedWeaponDef) return FinalStats;
 
 	FinalStats.Damage = GetCalculatedDamage();
 	FinalStats.AttackSpeed = GetCalculatedCooldown();

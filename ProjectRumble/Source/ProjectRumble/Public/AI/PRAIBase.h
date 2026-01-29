@@ -61,8 +61,18 @@ public:
 
 	// We override GetStatsComponent to return our own component.
 	virtual UPRStatsComponent* GetStatsComponent() const override;
+	//Knockback Functions
+
+	void AddKnockbackResistance();
+
+	// Returns the current (stat + accumulated) resistance
+	float GetTotalKnockbackResistance() const;
+
+	// (Optional) Reset resistance (e.g., Should it reset if the player manages to hit it?)
+	void ResetKnockbackResistance();
 
 	bool CanBeKnockedBack() const;
+
 	void RegisterKnockback();
 
 protected:
@@ -149,12 +159,22 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_TintColor, VisibleAnywhere, Category = "Rumble | Visuals")
 	FLinearColor TintColor = FLinearColor::White;
 
+	// Knockback Variables
 	float LastKnockbackTime = 0.0f;
 
-	// How many seconds does it take to regain “Balance” after being pushed?
-	// @TODO: We could pull this from the Data Asset, but for now, hardcoding 0.65f is sufficient.
+	float AccumulatedResistance = 0.0f;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Combat")
-	float KnockbackImmunityDuration = 0.65f;
+	float ResistanceGainPerHit = 0.15f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Combat")
+	float MaxResistanceCap = 0.95f;
+
+	// How many seconds does it take to regain “Balance” after being pushed?
+	// @TODO: We could pull this from the Data Asset, but for now, hardcoding 1.0f is sufficient.
+	UPROPERTY(EditDefaultsOnly, Category = "Rumble|Combat")
+	float KnockbackImmunityDuration = 1.0f;
+	// End
 
 	UFUNCTION()
 	void OnRep_TintColor();

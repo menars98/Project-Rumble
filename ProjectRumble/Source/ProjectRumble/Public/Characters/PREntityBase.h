@@ -5,13 +5,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "PRTypes.h" 
+#include "Interfaces/PRDamageableInterface.h"
 #include "PREntityBase.generated.h"
 
 class UPRStatsComponent;
 
 
 UCLASS()
-class PROJECTRUMBLE_API APREntityBase : public ACharacter
+class PROJECTRUMBLE_API APREntityBase : public ACharacter, public IPRDamageableInterface
 {
 	GENERATED_BODY()
 

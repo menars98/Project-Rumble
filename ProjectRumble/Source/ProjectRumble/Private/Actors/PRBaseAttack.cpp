@@ -11,6 +11,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "PRGameplayTags.h"
 #include "ProjectRumble/ProjectRumble.h"
+#include "Interfaces/PRDamageableInterface.h"
 
 APRBaseAttack::APRBaseAttack()
 {
@@ -385,15 +386,21 @@ void APRBaseAttack::PulseAuraDamage()
 
 	// 2. Get Overlapping Actors
 	TArray<AActor*> OverlappingActors;
-	CollisionComp->GetOverlappingActors(OverlappingActors, APRAIBase::StaticClass());
+	CollisionComp->GetOverlappingActors(OverlappingActors, AActor::StaticClass());
 
-	// 3. Apply Damage to Each Overlapping Actor
 	for (AActor* Victim : OverlappingActors)
 	{
-		if (Victim && !Victim->IsPendingKillPending())
-		{
+		// 1. Ignore owner
+		if (Victim == GetOwner() || Victim == this) continue;
 
-			ApplyDamageToTarget(Victim);
+		if (Victim->GetClass()->ImplementsInterface(UPRDamageableInterface::StaticClass()))
+		{
+			UPRStatsComponent* Stats = IPRDamageableInterface::Execute_GetStatComponent(Victim);
+
+			if (Stats)
+			{
+				ApplyDamageToTarget(Victim); 
+			}
 		}
 	}
 }

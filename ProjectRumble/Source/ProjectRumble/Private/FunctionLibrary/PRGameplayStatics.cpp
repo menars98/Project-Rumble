@@ -21,6 +21,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include <ProjectRumble/ProjectRumble.h>
 #include "GameFramework/CharacterMovementComponent.h" 
+#include <Interfaces/PRDamageableInterface.h>
 
 FDamageCalculationResult UPRGameplayStatics::CalculateFinalDamage(const UPRStatsComponent* AttackerStats, float BaseDamage, float BaseCritChance, float BaseCritMultiplier, const APRAIBase* Target)
 {
@@ -64,13 +65,33 @@ float UPRGameplayStatics::ApplyRumbleDamage(UObject* WorldContextObject, AActor*
 	FGameplayTag DamageSourceTag,AController* EventInstigator, AActor* DamageCauser, TSubclassOf<class UDamageType> DamageTypeClass, 
 	const FVector& KnockbackDirection, float KnockbackMagnitude, float StunChance, float StunDuration, USoundBase* HitSound)
 {
-	
+	if (!DamagedActor) return 0.f;
+
+	UPRStatsComponent* TargetStats = nullptr;
+
+	if (IPRDamageableInterface* Damageable = Cast<IPRDamageableInterface>(DamagedActor))
+	{
+		// O(1) 
+		TargetStats = IPRDamageableInterface::Execute_GetStatComponent(DamagedActor);
+	}
+	else
+	{
+		TargetStats = DamagedActor->FindComponentByClass<UPRStatsComponent>();
+	}
+
+	if (!TargetStats) return 0.f;
+
+	if (TargetStats)
+	{
+		float CurrentHP = TargetStats->GetStatValue(NativeGameplayTags::Stats::Defense::TAG_Stat_Defense_Health);
+		if (CurrentHP <= 0.0f) return 0.0f;
+	}
+
 	// --- 1. APPLY KNOCKBACK FIRST (OR INDEPENDENTLY) ---
 	// Knockback should happen even if the damage is 0 or absorbed.
-	if (DamagedActor)
+	ACharacter* VictimChar = Cast<ACharacter>(DamagedActor);
+	if (VictimChar)
 	{
-		ACharacter* VictimChar = Cast<ACharacter>(DamagedActor);
-
 		// --- 1. Micro-Stagger ---
 		if (VictimChar)
 		{
@@ -225,17 +246,12 @@ void UPRGameplayStatics::ApplyRadialRumbleDamage(UObject* WorldContextObject, AA
 	if (!WorldContextObject || !Attacker) return;
 
 	// --- 1. SIZE SCALING (Yarýçap Hesabý) ---
-	// Saldýrganýn "Size" statýný al (Default 1.0 gelir)
-	// Stat.Offense.Size tagini kullandýðýný varsayýyoruz.
 	float SizeMult = 1.0f;
 
-	// Eðer saldýran oyuncuysa statlarýna bak
+	// If the attacker has a Size stat, scale the radius accordingly.
 	float PlayerSizeBonus = GetActorStatValue(Attacker, NativeGameplayTags::Stats::Offense::TAG_Stat_Offense_Size);
 	if (PlayerSizeBonus > 0.0f)
 	{
-		// Tag genelde additive (0.5 gibi) tutuluyorsa: 1.0 + Bonus
-		// Eðer direkt çarpan tutuluyorsa (1.5 gibi): Bonus
-		// Senin sisteminde genelde 1.0 taban + bonus þeklinde gidiyorduk:
 		SizeMult += PlayerSizeBonus;
 	}
 
@@ -243,10 +259,10 @@ void UPRGameplayStatics::ApplyRadialRumbleDamage(UObject* WorldContextObject, AA
 
 	// --- 2. SPHERE OVERLAP ---
 	TArray<AActor*> IgnoredActors;
-	IgnoredActors.Add(Attacker); // Kendine vurma
+	IgnoredActors.Add(Attacker); 
 
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Enemy)); // Define ettiðimiz kanal
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Enemy)); // Define
 
 	TArray<AActor*> OutActors;
 	bool bHit = UKismetSystemLibrary::SphereOverlapActors(
@@ -304,14 +320,14 @@ void UPRGameplayStatics::ApplyRadialRumbleDamage(UObject* WorldContextObject, AA
 			Victim,
 			DmgResult.FinalDamage,
 			DmgResult,
-			DamageSourceTag, // <-- ÖNEMLÝ: Tracker için
+			DamageSourceTag,
 			InstigatorCtrl,
 			Attacker,
 			UDamageType::StaticClass(),
 			KnockbackDir,
 			KnockbackStrength,
-			0.0f, 0.0f, // Stun (Parametre olarak eklenebilir) // 
-			nullptr //HitSound(Parametre olarak eklenebilir)
+			0.0f, 0.0f, // Stun  
+			nullptr //HitSound
 		);
 	}
 }

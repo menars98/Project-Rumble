@@ -29,6 +29,11 @@ UPRStatsComponent* APREntityBase::GetStatsComponent() const
 	return FindComponentByClass<UPRStatsComponent>();
 }
 
+UPRStatsComponent* APREntityBase::GetStatComponent_Implementation() const
+{
+	return GetStatsComponent();
+}
+
 // Called when the game starts or when spawned
 void APREntityBase::BeginPlay()
 {

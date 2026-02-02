@@ -33,6 +33,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby")
 	TSoftObjectPtr<UWorld> GameplayMap;
 
+	/** The music track to play when this level starts. */
+	UPROPERTY(EditDefaultsOnly, Category = "PR|Audio")
+	TObjectPtr<USoundBase> LevelMusic;
+
 	// Called when a player successfully logs in.
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 

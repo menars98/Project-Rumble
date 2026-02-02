@@ -61,6 +61,10 @@ protected:
 	UPROPERTY()
 	TObjectPtr<class APRSpawnerManager> SpawnerManagerInstance;
 
+	/** The music track to play when this level starts. */
+	UPROPERTY(EditDefaultsOnly, Category = "PR|Audio")
+	TObjectPtr<USoundBase> LevelMusic;
+
 	// --- DIFFICULTY MANAGEMENT ---
 	/**
 	 * The currently active Difficulty multiplier based on the highest Difficulty stat among all players.
@@ -86,6 +90,9 @@ protected:
 	 */
 	UFUNCTION()
 	void RecalculateActiveDifficulty();
+
+	UFUNCTION()
+	void UpdateMusicDynamicParameters();
 
 	/** Called when a PlayerState reports that its StatsComponent is ready. */
 

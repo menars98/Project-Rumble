@@ -208,34 +208,34 @@ void APRBaseAttack::HandleOverlap(AActor* OtherActor)
 	if (!OtherActor || OtherActor == GetOwner() || OtherActor == this) return;
 	if (!HasAuthority()) return;
 
-	if (HitHistory.Contains(OtherActor))
-	{
-		return;
-	}
+	// --- DAMAGE FREQUENCY LOGIC ---
 
-	// --- TICK RATE LOGIC ---
-	// If TickRate is 0, it fires every frame (Dangerous).
-	// If TickRate > 0, check it.
+	// Check if we should use TickRate (multiple hits) or HitHistory (single hit)
 	if (AttackStats.TickRate > 0.0f)
 	{
 		double CurrentTime = GetWorld()->GetTimeSeconds();
 
-		// Have we hit this actor before?
 		if (double* LastHitTime = DamageCooldownMap.Find(OtherActor))
 		{
-			// If we did hit it, has enough time passed?
 			if ((CurrentTime - *LastHitTime) < AttackStats.TickRate)
 			{
-				// The cooldown hasn't ended yet, DON'T ATTACK.
+				// Too soon for another hit!
 				return;
 			}
 		}
-
-		// Update the list (or add a new one)
+		// Update hit time
 		DamageCooldownMap.Add(OtherActor, CurrentTime);
 	}
+	else
+	{
+		// If TickRate is 0, we use HitHistory to ensure it only hits ONCE per projectile life
+		if (HitHistory.Contains(OtherActor))
+		{
+			return;
+		}
+		HitHistory.Add(OtherActor);
+	}
 
-	HitHistory.Add(OtherActor);
 
 	// 2. Status Application
 	HandleStatusApplication(OtherActor);
@@ -249,6 +249,10 @@ void APRBaseAttack::HandleOverlap(AActor* OtherActor)
 		if (TryBounce(OtherActor))
 		{
 			AttackStats.ProjectileBounce--;
+
+			// IMPORTANT: If you want the axe to be able to hit the same target 
+			// AGAIN after bouncing off someone else, clear its history or cooldown here.
+			// HitHistory.Remove(OtherActor); 
 
 			return;
 		}

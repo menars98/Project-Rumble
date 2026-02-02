@@ -284,6 +284,11 @@ UPRStatsComponent* APRAIBase::GetStatsComponent() const
 	return StatsComponent_AI;
 }
 
+UPRStatsComponent* APRAIBase::GetStatComponent_Implementation() const
+{
+	return GetStatsComponent();
+}
+
 void APRAIBase::AddKnockbackResistance()
 {
 	AccumulatedResistance = FMath::Min(AccumulatedResistance + ResistanceGainPerHit, MaxResistanceCap);

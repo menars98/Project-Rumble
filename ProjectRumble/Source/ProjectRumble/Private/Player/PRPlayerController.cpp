@@ -22,12 +22,11 @@
 #include "FunctionLibrary/PRGameplayStatics.h"
 #include "GameModes/PRGameMode.h"
 #include "Components/PRSessionTrackerComponent.h"
+#include "Game/PRMusicSubsystem.h"
 
 APRPlayerController::APRPlayerController()
 {
 	bReplicates = true;
-
-
 }
 
 void APRPlayerController::BeginPlay()
@@ -344,6 +343,23 @@ void APRPlayerController::Client_ShowGameOverScreen_Implementation(bool bWon)
 	// 2. Send the “Won/Lost” information to the Widget
 	// (We can use an Interface for this or it can be a function within the Widget)
 	// @TODO: Example: IPRBPIGameOverScreen::Execute_SetupScreen(GameOverWidget, bWon, GetPlayerState<APRPlayerState>());
+}
+
+void APRPlayerController::Client_UpdateLevelMusic_Implementation(USoundBase* NewMusic)
+{
+	// Access the persistent music subsystem
+	if (UPRMusicSubsystem* MusicSubsystem = GetGameInstance()->GetSubsystem<UPRMusicSubsystem>())
+	{
+		MusicSubsystem->PlayBackgroundMusic(NewMusic);
+	}
+}
+
+void APRPlayerController::Client_SetMusicSpeed_Implementation(float NewSpeed)
+{
+	if (UPRMusicSubsystem* MusicSubsystem = GetGameInstance()->GetSubsystem<UPRMusicSubsystem>())
+	{
+		MusicSubsystem->SetMusicParameterFloat(FName("MusicSpeed"), NewSpeed);
+	}
 }
 
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)

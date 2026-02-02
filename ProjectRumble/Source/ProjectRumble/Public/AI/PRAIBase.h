@@ -61,6 +61,9 @@ public:
 
 	// We override GetStatsComponent to return our own component.
 	virtual UPRStatsComponent* GetStatsComponent() const override;
+
+	virtual UPRStatsComponent* GetStatComponent_Implementation() const override;
+
 	//Knockback Functions
 
 	void AddKnockbackResistance();

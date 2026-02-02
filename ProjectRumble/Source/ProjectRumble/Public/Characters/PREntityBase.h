@@ -24,6 +24,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Rumble | Components")
 	virtual UPRStatsComponent* GetStatsComponent() const;
 
+	virtual UPRStatsComponent* GetStatComponent_Implementation() const override;
+
 	// A public getter for the entity's faction.
 	UFUNCTION(BlueprintPure, Category = "Rumble | Combat")
 	EFaction GetFaction() const { return Faction; }

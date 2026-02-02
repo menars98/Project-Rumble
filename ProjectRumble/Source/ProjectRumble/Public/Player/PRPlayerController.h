@@ -78,6 +78,13 @@ protected:
 	// Game Over
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<class UCommonActivatableWidget> GameOverWidgetClass;
+
+	// -- AUDIO --
+	
+	// This allows us to select the MetaSound in the Blueprint (BP_LobbyGameMode)
+	UPROPERTY(EditDefaultsOnly, Category = "PR|Audio")
+	TObjectPtr<USoundBase> LevelMusic;
+
 	// -- INTERNAL LOGIC --
 
 	// Tracks if THIS controller currently has the pause menu open.
@@ -132,6 +139,15 @@ public:
 	/** [CLIENT] Shows the Game Over screen with stats. */
 	UFUNCTION(Client, Reliable)
 	void Client_ShowGameOverScreen(bool bWon);
+
+	UFUNCTION(Client, Reliable)
+	void Client_SetMusicSpeed(float NewSpeed);
+	/**
+	* Client RPC to trigger local music playback via MusicSubsystem.
+	* Executed on the owning client, called by the Server.
+	*/
+	UFUNCTION(Client, Reliable)
+	void Client_UpdateLevelMusic(USoundBase* NewMusic);
 
 	// --- PUBLIC INTERFACE ---
 

@@ -22,6 +22,9 @@ void APRGameMode::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	RecalculateActiveDifficulty();
+
+	// logic for dynamic music speed
+	UpdateMusicDynamicParameters();
 }
 
 void APRGameMode::RegisterPlayerInMenu()
@@ -109,6 +112,12 @@ void APRGameMode::PostLogin(APlayerController* NewPlayer)
 		}
 
 	}
+
+	if (APRPlayerController* PC = Cast<APRPlayerController>(NewPlayer))
+	{
+		// Tell the late joiner to start the dungeon music
+		PC->Client_UpdateLevelMusic(LevelMusic);
+	}
 }
 
 void APRGameMode::StartGameDelayed()
@@ -117,6 +126,15 @@ void APRGameMode::StartGameDelayed()
 	{
 		GS->StartGameTimer();
 		UE_LOG(LogTemp, Warning, TEXT("Game Mode: Match Started after delay."));
+
+		// Notify all current players to start the battle music
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (APRPlayerController* PC = Cast<APRPlayerController>(It->Get()))
+			{
+				PC->Client_UpdateLevelMusic(LevelMusic);
+			}
+		} 
 	}
 }
 
@@ -254,6 +272,26 @@ void APRGameMode::RecalculateActiveDifficulty()
 	
 }
 
+void APRGameMode::UpdateMusicDynamicParameters()
+{
+	// 1. Get all active enemies
+	TArray<AActor*> FoundEnemies;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APRAIBase::StaticClass(), FoundEnemies);
+	int32 EnemyCount = FoundEnemies.Num();
+
+	// 2. Calculate music speed multiplier
+	float Tension = EnemyCount * 0.02f; // Every 50 enemies = 1.0 tension
+	Tension = FMath::Clamp(Tension, 0.0f, 1.0f);
+
+	// 3. Notify all clients
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (APRPlayerController* PC = Cast<APRPlayerController>(It->Get()))
+		{
+			PC->Client_SetMusicSpeed(Tension);
+		}
+	}
+}
 
 
 

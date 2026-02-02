@@ -31,6 +31,8 @@ public:
 	// We override the function from our base class to provide player-specific logic.
 	virtual UPRStatsComponent* GetStatsComponent() const override;
 
+	virtual UPRStatsComponent* GetStatComponent_Implementation() const override;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;

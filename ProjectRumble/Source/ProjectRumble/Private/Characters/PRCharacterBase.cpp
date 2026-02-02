@@ -86,6 +86,11 @@ UPRStatsComponent* APRCharacterBase::GetStatsComponent() const
 	return Super::GetStatsComponent();
 }
 
+UPRStatsComponent* APRCharacterBase::GetStatComponent_Implementation() const
+{
+	return GetStatsComponent();
+}
+
 void APRCharacterBase::BeginPlay()
 {
 	Super::BeginPlay(); 

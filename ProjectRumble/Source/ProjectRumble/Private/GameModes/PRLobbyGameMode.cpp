@@ -4,6 +4,7 @@
 #include "GameModes/PRLobbyGameMode.h"
 #include "Player/PRPlayerState.h"
 #include "GameFramework/GameState.h"
+#include "Player/PRPlayerController.h"
 
 void APRLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
@@ -11,6 +12,12 @@ void APRLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
 	// Logic to update UI when someone joins could go here.
 	// For now, we just let the PlayerState replicate and the UI will pick it up.
+
+	if (APRPlayerController* PC = Cast<APRPlayerController>(NewPlayer))
+	{
+		// Tell the client to play the Lobby music
+		PC->Client_UpdateLevelMusic(LevelMusic);
+	}
 }
 
 void APRLobbyGameMode::Logout(AController* Exiting)

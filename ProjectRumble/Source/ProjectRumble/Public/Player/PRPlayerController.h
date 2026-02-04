@@ -142,6 +142,13 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void Client_SetMusicSpeed(float NewSpeed);
+
+	UFUNCTION(Client, Reliable)
+	void Client_SetMusicIntensity(float NewIntensity);
+
+	UFUNCTION(Client, Reliable)
+	void Client_HandleGameOverMusic(bool bWon);
+
 	/**
 	* Client RPC to trigger local music playback via MusicSubsystem.
 	* Executed on the owning client, called by the Server.

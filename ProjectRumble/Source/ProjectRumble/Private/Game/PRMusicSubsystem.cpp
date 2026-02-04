@@ -16,6 +16,8 @@ void UPRMusicSubsystem::PlayBackgroundMusic(USoundBase* NewMusic, float FadeInDu
 	// Fade out existing music if applicable
 	if (ActiveMusicComponent && ActiveMusicComponent->IsPlaying())
 	{
+		// Ensure the sound doesn't auto-destroy when one track ends inside MetaSound
+		ActiveMusicComponent->bAutoDestroy = false;
 		ActiveMusicComponent->FadeOut(FadeInDuration, 0.0f);
 	}
 
@@ -45,6 +47,14 @@ void UPRMusicSubsystem::SetMusicParameterFloat(FName ParameterName, float Value)
 	{
 		// SetParameter is used for MetaSounds to update dynamic logic
 		ActiveMusicComponent->SetFloatParameter(ParameterName, Value);
+	}
+}
+
+void UPRMusicSubsystem::TriggerMusicEvent(FName EventName)
+{
+	if (ActiveMusicComponent)
+	{
+		ActiveMusicComponent->SetTriggerParameter(EventName);
 	}
 }
 

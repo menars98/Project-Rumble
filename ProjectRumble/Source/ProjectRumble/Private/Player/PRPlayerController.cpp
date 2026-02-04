@@ -362,6 +362,29 @@ void APRPlayerController::Client_SetMusicSpeed_Implementation(float NewSpeed)
 	}
 }
 
+void APRPlayerController::Client_SetMusicIntensity_Implementation(float NewIntensity)
+{
+	if (UPRMusicSubsystem* MusicSubsystem = GetGameInstance()->GetSubsystem<UPRMusicSubsystem>())
+	{
+		MusicSubsystem->SetMusicParameterFloat(FName("Intensity"), NewIntensity);
+	}
+}
+
+void APRPlayerController::Client_HandleGameOverMusic_Implementation(bool bWon)
+{
+	if (UPRMusicSubsystem* MusicSubsystem = GetGameInstance()->GetSubsystem<UPRMusicSubsystem>())
+	{
+		// First, stop the normal background music
+		MusicSubsystem->TriggerMusicEvent(FName("StopMusic"));
+
+		// Then, if we lost, play a sad death stinger
+		if (!bWon)
+		{
+			MusicSubsystem->TriggerMusicEvent(FName("PlayDeathMusic"));
+		}
+	}
+}
+
 void APRPlayerController::ApplyReward(UPRUpgradeData* ChosenUpgrade)
 {
 	if (!ChosenUpgrade) return;

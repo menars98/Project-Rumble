@@ -181,6 +181,7 @@ void APRGameMode::GameOver(bool bWon)
 		if (APRPlayerController* PC = Cast<APRPlayerController>(Iterator->Get()))
 		{
 			PC->Client_ShowGameOverScreen(bWon);
+			PC->Client_HandleGameOverMusic(bWon);
 		}
 	}
 
@@ -288,7 +289,10 @@ void APRGameMode::UpdateMusicDynamicParameters()
 	{
 		if (APRPlayerController* PC = Cast<APRPlayerController>(It->Get()))
 		{
+			// Both parameters use the 0-1 Tension value. 
+			// MetaSound's Map Range nodes will convert this to 1-1.5 speed and 500-20000Hz filter.
 			PC->Client_SetMusicSpeed(Tension);
+			PC->Client_SetMusicIntensity(Tension);
 		}
 	}
 }

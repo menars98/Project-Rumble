@@ -28,6 +28,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PR|Audio")
 	void SetMusicParameterFloat(FName ParameterName, float Value);
 
+	/** Triggers a custom event in the active MetaSound (e.g., 'StopMusic', 'PlayDeathMusic'). */
+	UFUNCTION(BlueprintCallable, Category = "PR|Audio")
+	void TriggerMusicEvent(FName EventName);
+
 private:
 	/** Reference to the currently active audio component for background music. */
 	UPROPERTY()

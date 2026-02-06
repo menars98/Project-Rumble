@@ -4,6 +4,7 @@
 #include "UI/Widgets/PRPrimaryGameLayout.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 #include "CommonActivatableWidget.h"
+#include <UI/PRHUD.h>
 
 UCommonActivatableWidget* UPRPrimaryGameLayout::PushWidgetToLayer(FGameplayTag LayerTag, TSubclassOf<UCommonActivatableWidget> WidgetClass)
 {
@@ -13,7 +14,7 @@ UCommonActivatableWidget* UPRPrimaryGameLayout::PushWidgetToLayer(FGameplayTag L
 
 	if (FoundLayer && *FoundLayer)
 	{
-		// AddWidget fonksiyonu eklediði widget'ý döndürür
+		// Add the widget to the found layer container and return it
 		return (*FoundLayer)->AddWidget(WidgetClass);
 	}
 	else
@@ -35,14 +36,30 @@ void UPRPrimaryGameLayout::RegisterLayer(FGameplayTag LayerTag, UCommonActivatab
 
 UCommonActivatableWidget* UPRPrimaryGameLayout::GetActiveWidgetInLayer(FGameplayTag LayerTag)
 {
-	// Map'ten ilgili konteyneri bul
+	// Find the layer container for the given tag
 	UCommonActivatableWidgetContainerBase** FoundLayer = Layers.Find(LayerTag);
 
 	if (FoundLayer && *FoundLayer)
 	{
-		// Konteynerin içindeki aktif widget'ý döndür
+		// Return the active widget in that layer
 		return (*FoundLayer)->GetActiveWidget();
 	}
 
+	return nullptr;
+}
+
+UPRPrimaryGameLayout* UPRPrimaryGameLayout::GetPrimaryGameLayout(const UObject* WorldContextObject)
+{
+	if (!WorldContextObject) return nullptr;
+
+	APlayerController* PC = GEngine->GetFirstLocalPlayerController(WorldContextObject->GetWorld());
+	if (PC && PC->GetHUD())
+	{
+		// Assuming your HUD class has a getter for RootLayout
+		if (APRHUD* PRHUD = Cast<APRHUD>(PC->GetHUD()))
+		{
+			return PRHUD->GetMainLayout();
+		}
+	}
 	return nullptr;
 }

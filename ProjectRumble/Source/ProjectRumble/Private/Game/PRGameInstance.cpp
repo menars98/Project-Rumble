@@ -6,6 +6,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "OnlineSessionSettings.h"
 #include "Online/OnlineSessionNames.h"
+#include "Datas/Audio/PRAudioConfig.h"
+#include "Game/PRMusicSubsystem.h"
 
 void UPRGameInstance::Init()
 {
@@ -25,6 +27,13 @@ void UPRGameInstance::Init()
 
 			UE_LOG(LogTemp, Log, TEXT("Found Online Subsystem: %s"), *Subsystem->GetSubsystemName().ToString());
 		}
+	}
+
+	// Link the config to the subsystem once at game start
+	if (UPRMusicSubsystem* MusicSubsystem = GetSubsystem<UPRMusicSubsystem>())
+	{
+		MusicSubsystem->InitializeConfig(AudioConfig);
+		MusicSubsystem->LoadAndApplySettings();
 	}
 }
 

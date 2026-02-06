@@ -169,6 +169,8 @@ public:
 	/**
     * Checks if the game viewport currently has operating system focus.
     * Useful for detecting Alt-Tab.
+	* But we dont use it and its not efficent, because its Polling, we should use FCoreDelegates::ApplicationHasFocusDelegate instead and set a bool in our GameInstance
+	* Or delete this function!!!
     */
 	UFUNCTION(BlueprintPure, Category = "Rumble|System")
 	static bool IsGameWindowFocused();

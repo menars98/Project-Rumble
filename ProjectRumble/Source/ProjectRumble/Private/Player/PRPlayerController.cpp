@@ -23,6 +23,7 @@
 #include "GameModes/PRGameMode.h"
 #include "Components/PRSessionTrackerComponent.h"
 #include "Game/PRMusicSubsystem.h"
+#include <GameModes/PRLobbyGameMode.h>
 
 APRPlayerController::APRPlayerController()
 {
@@ -612,6 +613,11 @@ void APRPlayerController::OnWindowFocusChanged(bool bIsFocused)
 	{
 		if (!bIsFocused) // Focus Lost (Alt-Tab)
 		{
+			if (GetWorld() && GetWorld()->GetAuthGameMode<APRLobbyGameMode>())
+			{
+				return;
+			}
+
 			if (!IsPaused())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Window Focus Lost! Auto-Pausing."));

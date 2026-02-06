@@ -24,7 +24,6 @@ public:
 
    
     // Registers a widget stack (Layer) to a specific tag.
-    
     UFUNCTION(BlueprintCallable, Category = "Layer")
     void RegisterLayer(FGameplayTag LayerTag, UCommonActivatableWidgetContainerBase* LayerWidget);
 
@@ -34,6 +33,10 @@ public:
     */
     UFUNCTION(BlueprintCallable, Category = "Layer")
     UCommonActivatableWidget* GetActiveWidgetInLayer(FGameplayTag LayerTag);
+
+    /** Static helper to get the primary layout from anywhere. */
+    UFUNCTION(BlueprintPure, Category = "PR|UI", meta = (WorldContext = "WorldContextObject"))
+    static UPRPrimaryGameLayout* GetPrimaryGameLayout(const UObject* WorldContextObject);
 protected:
     // We will connect the “Stacks” we will create in Blueprint here.
     // E.g.: GameLayerStack, MenuLayerStack...

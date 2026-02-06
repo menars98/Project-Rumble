@@ -11,6 +11,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnServerListUpdated, const TArray<FBlueprintSessionResult>&, SessionResults);
 
 class UDataTable;
+class UPRAudioConfig;
 
 UCLASS()
 class PROJECTRUMBLE_API UPRGameInstance : public UGameInstance
@@ -64,4 +65,7 @@ protected:
 	// --- CONFIG ---
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Network|Maps")
 	TSoftObjectPtr<UWorld> LobbyMap;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PR|Audio")
+	TObjectPtr<UPRAudioConfig> AudioConfig;
 };
